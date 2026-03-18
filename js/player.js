@@ -1,0 +1,408 @@
+import * as THREE from "three";
+import { Projectile } from "./projectile.js";
+
+const BASE_SPEED = 2;
+const TURN_SPEED = 1.3;
+const SHOOT_CD = 0.5;
+const BULLET_SPEED = 22;
+const BASE_DAMAGE = 25;
+const MAX_HP = 100;
+const MAX_PITCH = 0.7; // ~31° max barrel elevation
+const MIN_PITCH = 0.4;
+
+const TURRET_TRAVERSE = 0.6; // rad/s horizontal
+const AIM_LOCK_THRESH = 0.1; // rad — "on target"
+const AIM_CHARGE_RATE = 1 / 2.0;
+const AIM_DECAY_RATE = 2.0;
+const MAX_SPREAD = 0.45;
+const POST_FIRE_CHARGE = 0.15;
+
+const MG_CD = 0.085; // ~12 rounds/sec
+const MG_BULLET_SPEED = 26;
+const MG_DAMAGE = 6;
+const MG_AMMO = 30;
+const MG_RELOAD = 2.2; // seconds
+const MG_SPREAD = 0.09;
+
+export class Player {
+  constructor(scene, projectiles) {
+    this.scene = scene;
+    this.projectiles = projectiles;
+    this.hp = MAX_HP;
+    this.maxHp = MAX_HP;
+    this.alive = true;
+    this.shootCd = 0;
+    this.radius = 0.9;
+    this.lives = 0;
+
+    this.speedMult = 1;
+    this.damageMult = 1;
+    this.armorMult = 1;
+    this.traverseMult = 1;
+    this.reloadMult = 1;
+    this.multiShot = 1;
+    this.bulletSpeedMult = 1;
+
+    // Rogue build stats (set by upgrades)
+    this.regenRate = 0; // HP per second passive regen
+    this.hpPerKill = 0; // HP gained on enemy kill
+    this.scoreMult = 1; // score multiplier for kills
+
+    // Temporary buffs (from map pickups) — key: { mult, timer }
+    this._buffs = {};
+
+    this.aimCharge = 0;
+    this.barrelPitch = 0; // current barrel elevation in radians (0 = flat)
+
+    this.shotsFired = 0;
+    this.shotsHit = 0;
+    this._totalAimChargeOnFire = 0;
+    this._justRespawned = false;
+
+    // Machine gun state
+    this.mgAmmo = MG_AMMO;
+    this.mgMaxAmmo = MG_AMMO;
+    this.mgCd = 0;
+    this.mgReloading = false;
+    this.mgReloadTimer = 0;
+
+    this._buildMesh();
+    scene.add(this.group);
+  }
+
+  _buildMesh() {
+    this.group = new THREE.Group();
+
+    const hullMat = new THREE.MeshStandardMaterial({
+      color: 0x003344,
+      emissive: 0x00ffff,
+      emissiveIntensity: 0.15,
+      roughness: 0.4,
+      metalness: 0.8,
+    });
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 2.0), hullMat);
+    hull.castShadow = true;
+    this.group.add(hull);
+
+    this.group.add(
+      new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.BoxGeometry(1.4, 0.9, 2.0)),
+        new THREE.LineBasicMaterial({
+          color: 0x00ffff,
+          opacity: 0.7,
+          transparent: true,
+        }),
+      ),
+    );
+
+    // Engine Compartment Hatch - to show where the back of the tank is
+    const noseMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0x88ffff,
+      emissiveIntensity: 1.0,
+      roughness: 0.2,
+      metalness: 0.5,
+    });
+    const nose = new THREE.Mesh(
+      new THREE.BoxGeometry(0.8, 0.12, 0.42),
+      noseMat,
+    );
+    nose.position.set(0, 0.56, -0.5);
+    this.group.add(nose);
+
+    this.turret = new THREE.Group();
+    this.turret.position.y = 0.75;
+    this.group.add(this.turret);
+
+    const turretMat = new THREE.MeshStandardMaterial({
+      color: 0x002233,
+      emissive: 0x00ffff,
+      emissiveIntensity: 0.2,
+      roughness: 0.3,
+      metalness: 0.9,
+    });
+    this.turret.add(
+      new THREE.Mesh(new THREE.BoxGeometry(1, 0.35, 1.1), turretMat),
+    );
+
+    // Barrel pivot — child of turret, rotates on X for elevation
+    this.barrelPivot = new THREE.Group();
+    this.turret.add(this.barrelPivot);
+
+    const barrel = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.18, 1.1),
+      new THREE.MeshStandardMaterial({
+        color: 0x00ffff,
+        emissive: 0x00ffff,
+        emissiveIntensity: 0.5,
+      }),
+    );
+    barrel.position.z = 0.9;
+    this.barrelPivot.add(barrel);
+
+    // Coaxial MG barrel — thin, offset to the right of main barrel
+    const mgBarrel = new THREE.Mesh(
+      new THREE.BoxGeometry(0.07, 0.07, 0.85),
+      new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0xaaffff,
+        emissiveIntensity: 0.4,
+      }),
+    );
+    mgBarrel.position.set(0.22, -0.04, 0.72);
+    this.barrelPivot.add(mgBarrel);
+
+    const glow = new THREE.PointLight(0x00ffff, 3, 5);
+    glow.position.y = -0.5;
+    this.group.add(glow);
+  }
+
+  applyBuff(key, mult, duration) {
+    this._buffs[key] = { mult, timer: duration };
+  }
+
+  get activeBuffs() {
+    return this._buffs;
+  }
+
+  update(
+    delta,
+    keys,
+    aimTarget,
+    mouseDown,
+    rightMouseDown,
+    bounds,
+    freeLook = false,
+    pitchDelta = 0,
+  ) {
+    if (!this.alive) return;
+
+    // Tick temporary buffs
+    for (const key of Object.keys(this._buffs)) {
+      this._buffs[key].timer -= delta;
+      if (this._buffs[key].timer <= 0) delete this._buffs[key];
+    }
+
+    // Passive HP regen
+    if (this.regenRate > 0 && this.hp < this.maxHp) {
+      this.hp = Math.min(this.maxHp, this.hp + this.regenRate * delta);
+    }
+
+    // MG reload timer
+    if (this.mgReloading) {
+      this.mgReloadTimer -= delta;
+      if (this.mgReloadTimer <= 0) {
+        this.mgReloading = false;
+        this.mgAmmo = MG_AMMO;
+      }
+    }
+
+    // Hull rotation (A/D)
+    if (keys["KeyA"] || keys["ArrowLeft"])
+      this.group.rotation.y += TURN_SPEED * delta;
+    if (keys["KeyD"] || keys["ArrowRight"])
+      this.group.rotation.y -= TURN_SPEED * delta;
+
+    // Drive (W/S) — applies speed buff if active
+    const angle = this.group.rotation.y;
+    const spd = BASE_SPEED * this.speedMult * (this._buffs.speed?.mult ?? 1);
+    if (keys["KeyW"] || keys["ArrowUp"]) {
+      this.group.position.x += Math.sin(angle) * spd * delta;
+      this.group.position.z += Math.cos(angle) * spd * delta;
+    }
+    if (keys["KeyS"] || keys["ArrowDown"]) {
+      this.group.position.x -= Math.sin(angle) * spd * 0.55 * delta;
+      this.group.position.z -= Math.cos(angle) * spd * 0.55 * delta;
+    }
+
+    // Clamp to arena
+    const p = this.group.position;
+    const r = this.radius;
+    p.x = Math.max(bounds.minX + r, Math.min(bounds.maxX - r, p.x));
+    p.z = Math.max(bounds.minZ + r, Math.min(bounds.maxZ - r, p.z));
+
+    // Barrel pitch from mouse Y (frozen during free-look)
+    if (!freeLook) {
+      this.barrelPitch = Math.max(
+        -MIN_PITCH,
+        Math.min(MAX_PITCH, this.barrelPitch + pitchDelta),
+      );
+      this.barrelPivot.rotation.x = -this.barrelPitch; // negative = barrel goes up
+    }
+
+    // Turret horizontal traverse toward aimTarget
+    let aimDelta = Math.PI;
+    if (!freeLook && aimTarget) {
+      const dir = new THREE.Vector3().subVectors(
+        aimTarget,
+        this.group.position,
+      );
+      dir.y = 0;
+      if (dir.lengthSq() > 0.01) {
+        const desiredLocal = Math.atan2(dir.x, dir.z) - this.group.rotation.y;
+        let diff = desiredLocal - this.turret.rotation.y;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+
+        const maxStep = TURRET_TRAVERSE * this.traverseMult * delta;
+        this.turret.rotation.y +=
+          Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
+        aimDelta = Math.abs(diff);
+      }
+    }
+
+    // Aim charge — builds when barrel is horizontally aligned with target
+    if (aimDelta < AIM_LOCK_THRESH) {
+      this.aimCharge = Math.min(1, this.aimCharge + delta * AIM_CHARGE_RATE);
+    } else {
+      this.aimCharge = Math.max(0, this.aimCharge - delta * AIM_DECAY_RATE);
+    }
+
+    // Cannon — right click, arcing, high damage
+    this.shootCd -= delta;
+    if (!freeLook && rightMouseDown && this.shootCd <= 0) {
+      this._shoot();
+      this.shootCd = SHOOT_CD * this.reloadMult;
+    }
+
+    // Machine gun — left click, flat, low damage, limited ammo
+    this.mgCd -= delta;
+    if (
+      !freeLook &&
+      mouseDown &&
+      !this.mgReloading &&
+      this.mgAmmo > 0 &&
+      this.mgCd <= 0
+    ) {
+      this._shootMG();
+      this.mgAmmo--;
+      this.mgCd = MG_CD;
+      if (this.mgAmmo <= 0) {
+        this.mgReloading = true;
+        this.mgReloadTimer = MG_RELOAD;
+      }
+    }
+  }
+
+  _shoot() {
+    const barrelAngle = this.group.rotation.y + this.turret.rotation.y;
+    const pitch = this.barrelPitch;
+    const cp = Math.cos(pitch),
+      sp = Math.sin(pitch);
+
+    // Base direction includes pitch (3D direction)
+    const baseDir = new THREE.Vector3(
+      Math.sin(barrelAngle) * cp,
+      sp,
+      Math.cos(barrelAngle) * cp,
+    );
+
+    const spread = MAX_SPREAD * (1 - this.aimCharge);
+    const speed = BULLET_SPEED * this.bulletSpeedMult;
+    const dmg = Math.round(
+      BASE_DAMAGE * this.damageMult * (this._buffs.damage?.mult ?? 1),
+    );
+    const up = new THREE.Vector3(0, 1, 0);
+
+    for (let i = 0; i < this.multiShot; i++) {
+      const dir = baseDir.clone();
+      if (this.multiShot > 1) {
+        dir.applyAxisAngle(up, (i - (this.multiShot - 1) / 2) * 0.14);
+      }
+      dir.x += (Math.random() - 0.5) * spread;
+      dir.z += (Math.random() - 0.5) * spread;
+      dir.normalize();
+
+      const spawnPos = this.group.position.clone().addScaledVector(dir, 1.5);
+      spawnPos.y = this.group.position.y + 0.75; // barrel height above terrain
+      this.projectiles.push(
+        new Projectile(this.scene, spawnPos, dir, speed, dmg, true, 0xffffff),
+      );
+    }
+
+    this.shotsFired++;
+    this._totalAimChargeOnFire += this.aimCharge;
+    this.aimCharge *= POST_FIRE_CHARGE;
+  }
+
+  _shootMG() {
+    const barrelAngle = this.group.rotation.y + this.turret.rotation.y;
+    const pitch = this.barrelPitch;
+    const cp = Math.cos(pitch),
+      sp = Math.sin(pitch);
+    const dir = new THREE.Vector3(
+      Math.sin(barrelAngle) * cp,
+      sp,
+      Math.cos(barrelAngle) * cp,
+    );
+    dir.x += (Math.random() - 0.5) * MG_SPREAD;
+    dir.z += (Math.random() - 0.5) * MG_SPREAD;
+    dir.normalize();
+
+    // Spawn at MG barrel tip (offset right of main barrel)
+    const spawnPos = this.group.position.clone();
+    spawnPos.y = this.group.position.y + 0.65;
+    spawnPos.x += Math.sin(barrelAngle) * 1.2 + Math.cos(barrelAngle) * 0.22;
+    spawnPos.z += Math.cos(barrelAngle) * 1.2 - Math.sin(barrelAngle) * 0.22;
+
+    // hasGravity = false — MG rounds fly flat
+    this.projectiles.push(
+      new Projectile(
+        this.scene,
+        spawnPos,
+        dir,
+        MG_BULLET_SPEED,
+        MG_DAMAGE,
+        true,
+        0xffee44,
+        false,
+      ),
+    );
+  }
+
+  takeDamage(amount) {
+    const reduced = Math.max(
+      1,
+      Math.round(amount * this.armorMult * (this._buffs.armor?.mult ?? 1)),
+    );
+    this.hp = Math.max(0, this.hp - reduced);
+    if (this.hp <= 0) {
+      if (this.lives > 0) {
+        this.lives--;
+        this.hp = Math.ceil(this.maxHp * 0.4);
+        this._justRespawned = true;
+        this.mgAmmo = MG_AMMO;
+        this.mgReloading = false;
+      } else {
+        this.alive = false;
+      }
+    }
+  }
+
+  recordHit() {
+    this.shotsHit++;
+  }
+
+  get avgAimCharge() {
+    return this.shotsFired > 0
+      ? this._totalAimChargeOnFire / this.shotsFired
+      : 0.5;
+  }
+
+  get barrelWorldAngle() {
+    return this.group.rotation.y + this.turret.rotation.y;
+  }
+  get bulletSpeed() {
+    return BULLET_SPEED * this.bulletSpeedMult;
+  }
+
+  resetWaveStats() {
+    this.shotsFired = 0;
+    this.shotsHit = 0;
+    this._totalAimChargeOnFire = 0;
+  }
+
+  get position() {
+    return this.group.position;
+  }
+}

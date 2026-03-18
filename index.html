@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VECTOR</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <!-- Aim circle — fixed at screen center, size reflects aim charge -->
+  <div id="crosshair"></div>
+
+  <!-- Hit marker — flashes white on enemy hit -->
+  <div id="hit-marker"></div>
+
+  <div id="ui">
+
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-block">
+        <div class="hud-label">HULL</div>
+        <div id="health-track"><div id="health-bar"></div></div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">SCORE</div>
+        <div id="score">0</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">WAVE</div>
+        <div id="wave-num">—</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">RESERVE HULLS</div>
+        <div id="lives-val" class="hud-lives">0</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">COAX MG</div>
+        <div id="mg-ammo-val">30 / 30</div>
+      </div>
+      <div class="hud-block" id="heading-block">
+        <div class="hud-label">HEADING</div>
+        <div id="heading-arrow">▲</div>
+      </div>
+      <div class="hud-block" id="buff-panel" style="display:none">
+        <div class="hud-label">ACTIVE BUFFS</div>
+        <div id="buff-list"></div>
+      </div>
+      <div class="hud-block" id="nn-panel">
+        <div class="hud-label">AI PROTOCOL</div>
+        <div id="active-tactic">—</div>
+        <div class="nn-row"><span>RUSH</span>  <div class="nn-track"><div class="nn-bar" id="bar-rush"></div></div></div>
+        <div class="nn-row"><span>FLANK</span> <div class="nn-track"><div class="nn-bar" id="bar-flank"></div></div></div>
+        <div class="nn-row"><span>SUPR</span>  <div class="nn-track"><div class="nn-bar" id="bar-suppress"></div></div></div>
+        <div class="nn-row"><span>ENCR</span>  <div class="nn-track"><div class="nn-bar" id="bar-encircle"></div></div></div>
+      </div>
+    </div>
+
+    <!-- Wave message -->
+    <div id="wave-msg" class="hidden"></div>
+
+    <!-- Damage flash -->
+    <div id="damage-flash"></div>
+
+    <!-- FPV indicator -->
+    <div id="fpv-indicator" class="hidden">[ FPV ]</div>
+
+    <!-- Start screen -->
+    <div id="start-screen" class="screen">
+      <div class="screen-content">
+        <h1>VECTOR</h1>
+        <p class="subtitle">THE AI LEARNS YOUR WEAKNESSES</p>
+        <div class="controls-grid">
+          <span class="ctrl-key">W / S</span>      <span class="ctrl-desc">Drive forward / reverse</span>
+          <span class="ctrl-key">A / D</span>      <span class="ctrl-desc">Rotate hull</span>
+          <span class="ctrl-key">MOUSE X</span>    <span class="ctrl-desc">Orbit camera</span>
+          <span class="ctrl-key">MOUSE Y</span>    <span class="ctrl-desc">Barrel elevation — aim high to shoot over low walls</span>
+          <span class="ctrl-key">C (HOLD)</span>   <span class="ctrl-desc">Free-look — camera orbits, gun stays locked</span>
+          <span class="ctrl-key">V</span>          <span class="ctrl-desc">Toggle first-person view</span>
+          <span class="ctrl-key">L-CLICK</span>   <span class="ctrl-desc">Coax MG — rapid fire, 30 rounds, auto-reload</span>
+          <span class="ctrl-key">R-CLICK</span>   <span class="ctrl-desc">Main cannon — high damage, arcing shell</span>
+          <span class="ctrl-key">AIM CIRCLE</span> <span class="ctrl-desc">Hold still to lock on — cannon shoots when small</span>
+        </div>
+        <button id="btn-start">ENGAGE</button>
+      </div>
+    </div>
+
+    <!-- Upgrade / Score screen -->
+    <div id="upgrade-screen" class="screen hidden">
+      <div class="screen-content">
+        <div id="upg-wave" style="font-size:38px;letter-spacing:10px;color:var(--cyan);text-shadow:0 0 24px var(--cyan)"></div>
+        <div class="upg-stats">
+          <span class="hud-label">SCORE</span>
+          <span id="upg-score" class="upg-stat">0</span>
+          <span class="hud-label">ACCURACY</span>
+          <span id="upg-accuracy" class="upg-stat">0%</span>
+          <span class="hud-label">HULL</span>
+          <span id="upg-hp" class="upg-stat">100 / 100</span>
+        </div>
+        <p class="subtitle" style="margin-top:4px">SELECT UPGRADE</p>
+        <div id="upgrade-choices" class="upg-grid"></div>
+      </div>
+    </div>
+
+    <!-- Shop / Resupply screen -->
+    <div id="shop-screen" class="screen hidden">
+      <div class="screen-content">
+        <h1 style="font-size:48px;letter-spacing:12px">RESUPPLY</h1>
+        <p class="subtitle">CREDITS: <span id="shop-score">0</span> &nbsp;|&nbsp; RESERVE HULLS: <span id="shop-lives">0</span></p>
+
+        <!-- Current stats -->
+        <div class="shop-stats">
+          <div class="sstat-row">
+            <span class="sstat-label">HULL</span>
+            <div class="sstat-bar-track"><div id="sstat-hp-bar" class="sstat-bar"></div></div>
+            <span id="sstat-hp-val" class="sstat-val">100 / 100</span>
+          </div>
+          <div class="sstat-row">
+            <span class="sstat-label">SPEED</span>
+            <span id="sstat-speed" class="sstat-val">100%</span>
+          </div>
+          <div class="sstat-row">
+            <span class="sstat-label">DAMAGE</span>
+            <span id="sstat-damage" class="sstat-val">100%</span>
+          </div>
+          <div class="sstat-row">
+            <span class="sstat-label">ARMOR</span>
+            <span id="sstat-armor" class="sstat-val">−0%</span>
+          </div>
+        </div>
+
+        <div id="shop-items" class="shop-grid"></div>
+        <button id="btn-shop-skip">DEPLOY</button>
+      </div>
+    </div>
+
+    <!-- Game over screen -->
+    <div id="game-over-screen" class="screen hidden">
+      <div class="screen-content">
+        <h1>DESTROYED</h1>
+        <div class="hud-label" style="margin-top:8px">FINAL SCORE</div>
+        <div id="final-score">0</div>
+        <div class="hud-label">WAVES SURVIVED</div>
+        <div id="waves-survived">0</div>
+        <div id="ai-insight">
+          <div class="hud-label">AI ANALYSIS</div>
+          <div id="ai-insight-text"></div>
+        </div>
+        <button id="btn-restart">TRY AGAIN</button>
+      </div>
+    </div>
+
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
