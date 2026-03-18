@@ -498,6 +498,40 @@ button:hover {
 .shop-desc { font-size: 10px; letter-spacing: 1px; color: var(--text); }
 .shop-cost { font-size: 11px; letter-spacing: 2px; color: #ffdd00; white-space: nowrap; }
 
+/* ── Mobile status strip ── */
+#mob-status {
+  display: none; /* shown via JS on mobile */
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: 7px 14px;
+  background: rgba(2,11,24,0.78);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  z-index: 5;
+}
+#mob-hp-track {
+  flex: 0 0 100px;
+  height: 5px;
+  background: rgba(0,255,255,0.08);
+  border: 1px solid var(--border);
+}
+#mob-hp-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan);
+  transition: width 0.15s, background 0.3s;
+}
+#mob-score-val, #mob-wave-val {
+  font-size: 17px;
+  color: var(--cyan);
+  letter-spacing: 1px;
+}
+.mob-sep { color: var(--border); font-size: 14px; }
+.mob-lbl { font-size: 9px; letter-spacing: 2px; color: var(--label); }
+
 /* ── Mobile touch controls ── */
 #mobile-controls {
   position: absolute;
@@ -505,6 +539,9 @@ button:hover {
   pointer-events: none;
 }
 #mobile-controls.hidden { display: none; }
+
+/* HUD hidden state (mobile toggle) */
+.hud-hidden { display: none !important; }
 
 #joy-zone {
   position: absolute;
@@ -535,21 +572,21 @@ button:hover {
   left: 50%;
   top: 0;
   right: 0;
-  bottom: 110px;
+  bottom: 178px; /* clears 2-row button grid */
   pointer-events: all;
   touch-action: none;
 }
-#btn-fire-cannon, #btn-fire-mg {
+
+/* Bottom-right 2×2 button grid */
+#btn-fire-cannon, #btn-fire-mg,
+#btn-fpv-mob, #btn-hud-mob {
   position: absolute;
-  bottom: 28px;
   width: 110px;
-  height: 74px;
   background: rgba(0,10,30,0.72);
-  border: 1px solid var(--cyan);
+  border: 1px solid rgba(0,255,255,0.45);
   color: var(--cyan);
   font-family: 'Courier New', monospace;
-  font-size: 11px;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -557,14 +594,42 @@ button:hover {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  box-shadow: 0 0 10px rgba(0,255,255,0.12);
+}
+/* Bottom row — fire buttons */
+#btn-fire-cannon, #btn-fire-mg {
+  bottom: 28px;
+  height: 74px;
+  font-size: 11px;
+  letter-spacing: 3px;
+  border-color: var(--cyan);
+  box-shadow: 0 0 10px rgba(0,255,255,0.14);
 }
 #btn-fire-cannon { right: 140px; }
 #btn-fire-mg     { right: 20px; }
 
+/* Top row — secondary buttons */
+#btn-fpv-mob, #btn-hud-mob {
+  bottom: 112px;
+  height: 52px;
+  font-size: 10px;
+  opacity: 0.85;
+}
+#btn-fpv-mob { right: 140px; }
+#btn-hud-mob { right: 20px; }
+
+/* Active state for toggle buttons */
+.mob-btn-active {
+  background: rgba(0,255,255,0.16) !important;
+  border-color: var(--cyan) !important;
+  box-shadow: 0 0 14px rgba(0,255,255,0.28);
+  opacity: 1 !important;
+}
+
 @media (max-width: 600px) {
   #hud { gap: 5px; }
   .hud-block { padding: 5px 8px; min-width: 130px; }
+  /* AI protocol is too dense for mobile — hide it from the toggle HUD */
+  #nn-panel { display: none; }
   h1 { font-size: 48px; letter-spacing: 10px; }
   .upg-grid { flex-direction: column; }
   .shop-grid { max-height: 45vh; }

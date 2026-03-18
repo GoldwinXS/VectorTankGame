@@ -37,11 +37,20 @@ export class UI {
 
   updateHUD(hp, maxHp, score, waveNum, lives) {
     const pct = Math.max(0, (hp / maxHp) * 100);
+    const hpColor = pct > 50 ? '#00ffff' : pct > 25 ? '#ffaa00' : '#ff3333';
     this.healthBar.style.width      = pct + '%';
-    this.healthBar.style.background = pct > 50 ? '#00ffff' : pct > 25 ? '#ffaa00' : '#ff3333';
+    this.healthBar.style.background = hpColor;
     this.scoreEl.textContent   = score;
     this.waveNumEl.textContent = waveNum || '—';
     if (this.livesEl) this.livesEl.textContent = lives ?? 0;
+    // Mobile mini-status strip
+    const mhb = $('mob-hp-bar');
+    if (mhb) {
+      mhb.style.width      = pct + '%';
+      mhb.style.background = hpColor;
+      const msv = $('mob-score-val'); if (msv) msv.textContent = score;
+      const mwv = $('mob-wave-val');  if (mwv) mwv.textContent = waveNum || '—';
+    }
   }
 
   updateProtocol(tactic, probs) {

@@ -73,12 +73,24 @@
       </div>
     </div>
 
+    <!-- Mobile status strip — always visible, replaces full HUD sidebar -->
+    <div id="mob-status">
+      <div id="mob-hp-track"><div id="mob-hp-bar"></div></div>
+      <span id="mob-score-val">0</span>
+      <span class="mob-sep">|</span>
+      <span class="mob-lbl">WV</span>
+      <span id="mob-wave-val">—</span>
+    </div>
+
     <!-- Mobile touch controls (hidden on desktop) -->
     <div id="mobile-controls" class="hidden">
       <div id="joy-zone">
         <div id="joy-thumb"></div>
       </div>
       <div id="cam-touch-zone"></div>
+      <!-- 2×2 button grid: top row = secondary, bottom row = fire -->
+      <div id="btn-fpv-mob">FPV</div>
+      <div id="btn-hud-mob">≡ HUD</div>
       <div id="btn-fire-cannon">CANNON</div>
       <div id="btn-fire-mg">MG</div>
     </div>

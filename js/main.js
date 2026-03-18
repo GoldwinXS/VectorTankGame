@@ -586,6 +586,30 @@ document.addEventListener('pointerlockchange', () => {
 if (isMobile) {
   document.getElementById('mobile-controls').classList.remove('hidden');
 
+  // Show mobile status strip and hide the full HUD sidebar by default
+  document.getElementById('mob-status').style.display = 'flex';
+  const _hudEl = document.getElementById('hud');
+  _hudEl.classList.add('hud-hidden');
+
+  // ── FPV toggle ────────────────────────────────────────────────────────────
+  const btnFpvMob = document.getElementById('btn-fpv-mob');
+  btnFpvMob.addEventListener('touchstart', e => {
+    e.preventDefault();
+    fpvMode = !fpvMode;
+    ui.setFpv(fpvMode);
+    btnFpvMob.classList.toggle('mob-btn-active', fpvMode);
+  }, { passive: false });
+
+  // ── HUD toggle ────────────────────────────────────────────────────────────
+  let _hudMobVis = false;
+  const btnHudMob = document.getElementById('btn-hud-mob');
+  btnHudMob.addEventListener('touchstart', e => {
+    e.preventDefault();
+    _hudMobVis = !_hudMobVis;
+    _hudEl.classList.toggle('hud-hidden', !_hudMobVis);
+    btnHudMob.classList.toggle('mob-btn-active', _hudMobVis);
+  }, { passive: false });
+
   // ── Joystick ──────────────────────────────────────────────────────────────
   let _joyId = -1, _joyOx = 0, _joyOy = 0;
   const joyZone  = document.getElementById('joy-zone');
