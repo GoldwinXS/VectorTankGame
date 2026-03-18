@@ -16,11 +16,11 @@ const AIM_LOCK_THRESH = 0.1; // rad — "on target"
 const AIM_CHARGE_RATE = 1 / 2.0;
 const AIM_DECAY_RATE = 2.0;
 const MAX_SPREAD = 0.45;
-const POST_FIRE_CHARGE = 0.15;
+const POST_FIRE_CHARGE = 0.25;
 
 const MG_CD = 0.085; // ~12 rounds/sec
 const MG_BULLET_SPEED = 26;
-const MG_DAMAGE = 3;   // nerfed — upgrades raise this
+const MG_DAMAGE = 3; // nerfed — upgrades raise this
 const MG_AMMO = 30;
 const MG_RELOAD = 2.2; // seconds
 const MG_SPREAD = 0.16; // nerfed — less accurate by default
@@ -53,9 +53,9 @@ export class Player {
     this._buffs = {};
 
     // Component damage — temporary debuffs (seconds remaining)
-    this._compDmg   = { track: 0, engine: 0, turret: 0 };
+    this._compDmg = { track: 0, engine: 0, turret: 0 };
     this.repairRate = 1; // multiplier for debuff recovery speed (upgrades raise this)
-    this._compCb    = null; // callback set by main.js to show component damage UI
+    this._compCb = null; // callback set by main.js to show component damage UI
 
     this.aimCharge = 0;
     this.barrelPitch = 0; // current barrel elevation in radians (0 = flat)
@@ -95,27 +95,54 @@ export class Player {
     hull.castShadow = true;
     this.group.add(hull);
 
-    const edgeMat = new THREE.LineBasicMaterial({ color: 0x00ffff, opacity: 0.7, transparent: true });
-    this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), edgeMat));
+    const edgeMat = new THREE.LineBasicMaterial({
+      color: 0x00ffff,
+      opacity: 0.7,
+      transparent: true,
+    });
+    this.group.add(
+      new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), edgeMat),
+    );
 
     // Track sponsons — widen the lower hull
-    const sponsonMat = new THREE.MeshStandardMaterial({ color: 0x002233, emissive: 0x00ffff, emissiveIntensity: 0.08, roughness: 0.6, metalness: 0.7 });
-    [-0.82, 0.82].forEach(xOff => {
-      const sp = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.32, 2.1), sponsonMat);
+    const sponsonMat = new THREE.MeshStandardMaterial({
+      color: 0x002233,
+      emissive: 0x00ffff,
+      emissiveIntensity: 0.08,
+      roughness: 0.6,
+      metalness: 0.7,
+    });
+    [-0.82, 0.82].forEach((xOff) => {
+      const sp = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.32, 2.1),
+        sponsonMat,
+      );
       sp.position.set(xOff, -0.29, 0);
       sp.castShadow = true;
       this.group.add(sp);
     });
 
     // Glacis plate — angled front armour
-    const glacis = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.28, 0.42), hullMat);
+    const glacis = new THREE.Mesh(
+      new THREE.BoxGeometry(1.35, 0.28, 0.42),
+      hullMat,
+    );
     glacis.position.set(0, 0.3, 1.05);
     glacis.rotation.x = 0.48;
     this.group.add(glacis);
 
     // Engine hatch — rear indicator
-    const hatchMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x88ffff, emissiveIntensity: 1.0, roughness: 0.2, metalness: 0.5 });
-    const hatch = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.12, 0.42), hatchMat);
+    const hatchMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0x88ffff,
+      emissiveIntensity: 1.0,
+      roughness: 0.2,
+      metalness: 0.5,
+    });
+    const hatch = new THREE.Mesh(
+      new THREE.BoxGeometry(0.8, 0.12, 0.42),
+      hatchMat,
+    );
     hatch.position.set(0, 0.56, -0.5);
     this.group.add(hatch);
 
@@ -130,21 +157,36 @@ export class Player {
       roughness: 0.3,
       metalness: 0.9,
     });
-    this.turret.add(new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.38, 1.05), turretMat));
+    this.turret.add(
+      new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.38, 1.05), turretMat),
+    );
 
     // Mantlet (gun shield on turret front)
-    const mantlet = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.16), turretMat);
+    const mantlet = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.3, 0.16),
+      turretMat,
+    );
     mantlet.position.set(0, 0, 0.58);
     this.turret.add(mantlet);
 
     // Commander's cupola (small hatch on turret top-left)
-    const cupola = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.19, 0.2, 8), turretMat);
+    const cupola = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.17, 0.19, 0.2, 8),
+      turretMat,
+    );
     cupola.position.set(-0.25, 0.28, -0.12);
     this.turret.add(cupola);
 
     // Stowage box on turret rear
-    const stowMat = new THREE.MeshStandardMaterial({ color: 0x002233, roughness: 0.8, metalness: 0.3 });
-    const stowBox = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.18, 0.32), stowMat);
+    const stowMat = new THREE.MeshStandardMaterial({
+      color: 0x002233,
+      roughness: 0.8,
+      metalness: 0.3,
+    });
+    const stowBox = new THREE.Mesh(
+      new THREE.BoxGeometry(0.65, 0.18, 0.32),
+      stowMat,
+    );
     stowBox.position.set(0, 0.2, -0.58);
     this.turret.add(stowBox);
 
@@ -223,12 +265,15 @@ export class Player {
     // Tick down component damage debuffs
     for (const k of Object.keys(this._compDmg)) {
       if (this._compDmg[k] > 0) {
-        this._compDmg[k] = Math.max(0, this._compDmg[k] - delta * this.repairRate);
+        this._compDmg[k] = Math.max(
+          0,
+          this._compDmg[k] - delta * this.repairRate,
+        );
       }
     }
 
-    const trackOut   = this._compDmg.track  > 0;
-    const engineOut  = this._compDmg.engine > 0;
+    const trackOut = this._compDmg.track > 0;
+    const engineOut = this._compDmg.engine > 0;
 
     // Hull rotation (A/D) — blocked if track is out
     if (!trackOut) {
@@ -239,9 +284,10 @@ export class Player {
     }
 
     // Drive (W/S) — blocked if track out; halved if engine damaged
-    const angle    = this.group.rotation.y;
-    const engMult  = engineOut ? 0.38 : 1;
-    const spd      = BASE_SPEED * this.speedMult * (this._buffs.speed?.mult ?? 1) * engMult;
+    const angle = this.group.rotation.y;
+    const engMult = engineOut ? 0.38 : 1;
+    const spd =
+      BASE_SPEED * this.speedMult * (this._buffs.speed?.mult ?? 1) * engMult;
     if (!trackOut) {
       if (keys["KeyW"] || keys["ArrowUp"]) {
         this.group.position.x += Math.sin(angle) * spd * delta;
@@ -392,15 +438,25 @@ export class Player {
     audio.playMG();
     // hasGravity=false, isMG=true — flat tracer visual
     this.projectiles.push(
-      new Projectile(this.scene, spawnPos, dir, MG_BULLET_SPEED, dmg, true, 0xffee44, false, true),
+      new Projectile(
+        this.scene,
+        spawnPos,
+        dir,
+        MG_BULLET_SPEED,
+        dmg,
+        true,
+        0xffee44,
+        false,
+        true,
+      ),
     );
   }
 
   _muzzleFlash(color = 0xffffff) {
     const barrelAngle = this.group.rotation.y + this.turret.rotation.y;
     const pitch = this.barrelPitch;
-    const dist  = 1.9;
-    const pos   = this.group.position.clone();
+    const dist = 1.9;
+    const pos = this.group.position.clone();
     pos.x += Math.sin(barrelAngle) * Math.cos(pitch) * dist;
     pos.y += 0.7 + Math.sin(pitch) * dist;
     pos.z += Math.cos(barrelAngle) * Math.cos(pitch) * dist;
@@ -421,9 +477,16 @@ export class Player {
     if (reduced >= 4 && Math.random() < 0.18) {
       const roll = Math.random();
       let comp, dur;
-      if (roll < 0.38)      { comp = 'track';  dur = 3.2; }
-      else if (roll < 0.72) { comp = 'engine'; dur = 4.8; }
-      else                  { comp = 'turret'; dur = 3.8; }
+      if (roll < 0.38) {
+        comp = "track";
+        dur = 3.2;
+      } else if (roll < 0.72) {
+        comp = "engine";
+        dur = 4.8;
+      } else {
+        comp = "turret";
+        dur = 3.8;
+      }
       // Only apply if the component isn't already damaged (avoid stacking)
       if (this._compDmg[comp] <= 0) {
         this._compDmg[comp] = dur;

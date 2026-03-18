@@ -12,6 +12,7 @@ class AudioEngine {
     this._beatCount = 0;
     this._nextBeat  = 0;
     this._BPM       = 140;
+    this._waveLayer = 0;   // 0=drums only, 1=+pad, 2=+acid, 3=+clap/crash, 4=+arp
 
     // Persisted settings
     this.masterVol = parseFloat(localStorage.getItem('vec_vol_master') ?? '0.5');
@@ -67,20 +68,32 @@ class AudioEngine {
   }
 
   _scheduleBeat(t, step) {
-    // Kick: beats 0, 4, 8, 12
+    // Layer 0+: percussion + bass (always present)
     if (step % 4 === 0)               this._kick(t);
-    // Snare: beats 4, 12
     if (step === 4 || step === 12)    this._snare(t);
-    // Open hi-hat: off-beats 2,6,10,14
     if (step % 4 === 2)               this._hihat(t, true);
-    // Closed hi-hat: every other step
     if (step % 2 === 0)               this._hihat(t, false);
-    // Bass line
     this._bass(t, step);
-    // Synth pad chord every 8 beats
-    if (step === 0 || step === 8)     this._pad(t, step);
-    // Acid lead every 4 beats (delayed)
-    if (step % 4 === 2)               this._acid(t, step);
+    // Layer 1+: pad chords (wave 3+)
+    if (this._waveLayer >= 1 && (step === 0 || step === 8)) this._pad(t, step);
+    // Layer 2+: acid 303 lead (wave 6+)
+    if (this._waveLayer >= 2 && step % 4 === 2)             this._acid(t, step);
+    // Layer 3+: clap + crash cymbal (wave 10+)
+    if (this._waveLayer >= 3) {
+      if (step === 4 || step === 12)  this._clap(t);
+      if (step === 0)                 this._crash(t);
+    }
+    // Layer 4+: high arpeggio (wave 15+)
+    if (this._waveLayer >= 4)         this._arp(t, step);
+  }
+
+  // Unlock a new music layer each time a wave threshold is crossed.
+  // Also nudges BPM upward at high waves.
+  setWave(n) {
+    this._waveLayer = n < 3 ? 0 : n < 6 ? 1 : n < 10 ? 2 : n < 15 ? 3 : 4;
+    if      (n >= 15) this._BPM = Math.min(156, 140 + (n - 14));
+    else if (n >= 10) this._BPM = 143;
+    else              this._BPM = 140;
   }
 
   // ── Drum machines ─────────────────────────────────────────────────────────
@@ -199,6 +212,56 @@ class AudioEngine {
     g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
     osc.connect(filt); filt.connect(g); g.connect(this._musicBus);
     osc.start(t); osc.stop(t + 0.2);
+  }
+
+  // Clap — tight noise burst, higher than snare (layer 3)
+  _clap(t) {
+    const dur = 0.06;
+    const buf = this._noiseBuffer(dur);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const filt = this.ctx.createBiquadFilter();
+    filt.type = 'bandpass'; filt.frequency.value = 2200; filt.Q.value = 2;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.28, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(filt); filt.connect(g); g.connect(this._musicBus);
+    src.start(t); src.stop(t + dur);
+  }
+
+  // Crash cymbal — long filtered noise on beat 1 every 16 steps (layer 3)
+  _crash(t) {
+    const dur = 0.55;
+    const buf = this._noiseBuffer(dur);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const filt = this.ctx.createBiquadFilter();
+    filt.type = 'highpass'; filt.frequency.value = 5500;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.16, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(filt); filt.connect(g); g.connect(this._musicBus);
+    src.start(t); src.stop(t + dur);
+  }
+
+  // High arpeggio melody — two 16th notes per step (layer 4)
+  _ARP_NOTES = [64, 67, 71, 74, 67, 71, 76, 74, 72, 69, 67, 64, 67, 71, 72, 74];
+
+  _arp(t, step) {
+    const beatDur = 60 / this._BPM;
+    for (let sub = 0; sub < 2; sub++) {
+      const nt   = t + sub * beatDur * 0.5;
+      const idx  = (step * 2 + sub) % this._ARP_NOTES.length;
+      const freq = 440 * Math.pow(2, (this._ARP_NOTES[idx] - 69) / 12);
+      const osc  = this.ctx.createOscillator();
+      osc.type   = 'square';
+      osc.frequency.value = freq;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.05, nt);
+      g.gain.exponentialRampToValueAtTime(0.001, nt + beatDur * 0.45);
+      osc.connect(g); g.connect(this._musicBus);
+      osc.start(nt); osc.stop(nt + beatDur * 0.5);
+    }
   }
 
   // ── SFX ───────────────────────────────────────────────────────────────────

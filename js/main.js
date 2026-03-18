@@ -114,8 +114,14 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyV') { fpvMode = !fpvMode; ui.setFpv(fpvMode); }
   if (e.code === 'KeyP' && state === STATE.PLAYING) {
     paused = !paused;
-    if (paused) { document.exitPointerLock(); ui.showPause(player, () => { paused = false; lockPointer(); }); }
-    else        { ui.hidePause(); lockPointer(); }
+    if (paused) {
+      document.exitPointerLock();
+      // Sync pause-screen audio controls to current state
+      const pv = document.getElementById('pause-vol-master');
+      if (pv) pv.value = String(audio.masterVol);
+      _syncMuteBtns();
+      ui.showPause(player, () => { paused = false; lockPointer(); });
+    } else { ui.hidePause(); lockPointer(); }
   }
 });
 window.addEventListener('keyup', e => {
@@ -373,6 +379,7 @@ async function startNextWave() {
   distanceTraveled = 0;
   _lastPlayerPos.copy(player.position);
   player.resetWaveStats();
+  audio.setWave(waveNum);
   // Pass nn.probs so each enemy draws its own tactic from the distribution
   waveManager.startWave(waveNum, gameBounds, player.hp, nn.probs);
   await ui.showWaveMessage(`WAVE  ${waveNum}`, 800);
@@ -666,21 +673,23 @@ if (isMobile) {
   btnMg.addEventListener('touchend',       () =>                      { rightMouseDown = false; }, { passive: true  });
 }
 
-// ── Audio controls ────────────────────────────────────────────────────────────
-const btnMute = document.getElementById('btn-mute');
-const volSlider = document.getElementById('vol-master');
-if (btnMute) {
-  // Reflect persisted state before first interaction
-  btnMute.textContent = audio.muted ? '🔇' : '♪';
-  if (volSlider) volSlider.value = String(audio.masterVol);
-  btnMute.addEventListener('click', () => {
-    const muted = audio.toggleMute();
-    btnMute.textContent = muted ? '🔇' : '♪';
-  });
-  volSlider?.addEventListener('input', e => {
-    audio.setMasterVol(parseFloat(e.target.value));
+// ── Audio controls (start screen + pause screen) ──────────────────────────────
+function _syncMuteBtns() {
+  document.querySelectorAll('.inline-mute').forEach(b => {
+    b.textContent = audio.muted ? '🔇' : '♪';
   });
 }
+function _wireAudio(muteId, volId) {
+  const btn = document.getElementById(muteId);
+  const vol = document.getElementById(volId);
+  if (!btn) return;
+  btn.textContent = audio.muted ? '🔇' : '♪';
+  if (vol) vol.value = String(audio.masterVol);
+  btn.addEventListener('click', () => { audio.toggleMute(); _syncMuteBtns(); });
+  vol?.addEventListener('input', e => audio.setMasterVol(parseFloat(e.target.value)));
+}
+_wireAudio('start-btn-mute', 'start-vol-master');
+_wireAudio('pause-btn-mute', 'pause-vol-master');
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.getElementById('btn-start').addEventListener('click', () => {

@@ -30,12 +30,10 @@ export class Projectile {
       this.mesh.lookAt(pos.clone().add(dir));
     }
 
-    // Enemy MG tracers carry no light — too many active at once tanks GPU.
-    // Player MG and all cannon rounds get a point light (looks great, low cost).
-    if (!isMG || isPlayer) {
-      const intensity = isMG ? 1.5 : 2;
-      const range     = isMG ? 3.5 : 4;
-      const light = new THREE.PointLight(color, intensity, range);
+    // Only cannon shells carry an in-flight point light.
+    // MG tracers (too many active at once) rely solely on impact flashes.
+    if (!isMG) {
+      const light = new THREE.PointLight(color, 2, 4);
       this.mesh.add(light);
     }
 
