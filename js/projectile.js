@@ -30,8 +30,11 @@ export class Projectile {
       this.mesh.lookAt(pos.clone().add(dir));
     }
 
-    const light = new THREE.PointLight(color, isMG ? 1.5 : 2, isMG ? 2.5 : 4);
-    this.mesh.add(light);
+    // MG tracers carry no light — too many active at once tanks GPU
+    if (!isMG) {
+      const light = new THREE.PointLight(color, 2, 4);
+      this.mesh.add(light);
+    }
 
     this.vel = dir.clone().multiplyScalar(speed);
     scene.add(this.mesh);

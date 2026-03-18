@@ -1,9 +1,18 @@
+// Shop items are incremental improvements — weaker than wave upgrades, bought with score.
+// Costs are high; benefits are small to create meaningful spend decisions.
 const ITEMS = [
-  { id: 'repair',  label: 'HULL REPAIR',    desc: 'Restore 60 HP',       cost: 150 },
-  { id: 'speed',   label: 'DRIVE SYSTEM',   desc: '+20% move speed',      cost: 300 },
-  { id: 'damage',  label: 'ORDNANCE +',     desc: '+30% bullet damage',   cost: 350 },
-  { id: 'life',    label: 'RESERVE HULL',   desc: '+1 extra life',        cost: 500 },
-  { id: 'armor',   label: 'REACTIVE ARMOR', desc: '-15% damage taken',    cost: 400 },
+  { id: 'repair',   label: 'HULL REPAIR',       desc: 'Restore 35 HP',              cost: 200  },
+  { id: 'mg_ammo',  label: 'AMMO RESUPPLY',      desc: 'Full MG reload',             cost: 120  },
+  { id: 'maxhp',    label: 'HULL REINFORCE',     desc: '+20 max hull points',        cost: 700  },
+  { id: 'speed',    label: 'DRIVE SYSTEM',       desc: '+12% move speed',            cost: 500  },
+  { id: 'damage',   label: 'ORDNANCE +',         desc: '+15% cannon damage',         cost: 550  },
+  { id: 'life',     label: 'RESERVE HULL',       desc: '+1 extra life',              cost: 950  },
+  { id: 'armor',    label: 'REACTIVE ARMOR',     desc: '-10% damage taken',          cost: 650  },
+  { id: 'reload',   label: 'QUICK LOADER',       desc: '-12% cannon reload time',    cost: 420  },
+  { id: 'barrel',   label: 'BARREL COAT',        desc: '+12% projectile speed',      cost: 380  },
+  { id: 'mg_drum',  label: 'MG DRUM MAG',        desc: '+8 MG rounds per magazine',  cost: 280  },
+  { id: 'mg_ap',    label: 'MG AP ROUNDS',       desc: '+20% MG bullet damage',      cost: 350  },
+  { id: 'traverse', label: 'TURRET SERVO',       desc: '+20% turret traverse speed', cost: 300  },
 ];
 
 export class Shop {
@@ -32,12 +41,20 @@ export class Shop {
   }
 
   _applyItem(item) {
+    const p = this._player;
     switch (item.id) {
-      case 'repair': this._player.hp = Math.min(this._player.maxHp, this._player.hp + 60); break;
-      case 'speed':  this._player.speedMult  = Math.min(2.2, this._player.speedMult  * 1.20); break;
-      case 'damage': this._player.damageMult = Math.min(3.5, this._player.damageMult * 1.30); break;
-      case 'life':   this._player.lives++; break;
-      case 'armor':  this._player.armorMult  = Math.max(0.25, this._player.armorMult * 0.85); break;
+      case 'repair':   p.hp = Math.min(p.maxHp, p.hp + 35); break;
+      case 'mg_ammo':  p.mgAmmo = p.mgMaxAmmo; p.mgReloading = false; break;
+      case 'maxhp':    p.maxHp += 20; p.hp = Math.min(p.maxHp, p.hp + 10); break;
+      case 'speed':    p.speedMult    = Math.min(2.5, p.speedMult    * 1.12); break;
+      case 'damage':   p.damageMult   = Math.min(4.0, p.damageMult   * 1.15); break;
+      case 'life':     p.lives++; break;
+      case 'armor':    p.armorMult    = Math.max(0.2, p.armorMult    * 0.90); break;
+      case 'reload':   p.reloadMult   = Math.max(0.4, p.reloadMult   * 0.88); break;
+      case 'barrel':   p.bulletSpeedMult = Math.min(2.0, p.bulletSpeedMult * 1.12); break;
+      case 'mg_drum':  p.mgMaxAmmo += 8; p.mgAmmo = Math.min(p.mgAmmo + 8, p.mgMaxAmmo); break;
+      case 'mg_ap':    p.mgDamageMult = Math.min(5.0, (p.mgDamageMult ?? 1) * 1.20); break;
+      case 'traverse': p.traverseMult = Math.min(3.0, p.traverseMult * 1.20); break;
     }
     this._scoreRef.value -= item.cost;
   }
@@ -50,7 +67,7 @@ export class Shop {
     // ── Player stats panel ─────────────────────────────────────────────────
     const hpPct = Math.round((p.hp / p.maxHp) * 100);
     document.getElementById('sstat-hp-bar').style.width     = hpPct + '%';
-    document.getElementById('sstat-hp-val').textContent     = `${p.hp} / ${p.maxHp}`;
+    document.getElementById('sstat-hp-val').textContent     = `${Math.ceil(p.hp)} / ${p.maxHp}`;
     document.getElementById('sstat-speed').textContent      = `${Math.round(p.speedMult * 100)}%`;
     document.getElementById('sstat-damage').textContent     = `${Math.round(p.damageMult * 100)}%`;
     document.getElementById('sstat-armor').textContent      = `−${Math.round((1 - p.armorMult) * 100)}%`;

@@ -30,12 +30,18 @@ export const OBSTACLES = [
   { x:  0, z:-14, w: 7, h: 2, height: 0.85 },
 ];
 
-// Cylindrical pillars — tall, line-of-sight blockers, distance-based collision
+// Cylindrical pillars and cones — line-of-sight blockers, distance-based collision
+// shape: 'cylinder' (default) | 'cone'
 const CYLINDER_OBSTACLES = [
   { x:  5, z:  5, r: 0.9, height: 3.8 },
   { x: -5, z:  5, r: 0.9, height: 3.8 },
   { x:  5, z: -5, r: 0.9, height: 3.8 },
   { x: -5, z: -5, r: 0.9, height: 3.8 },
+  // Cone spires — add visual variety; collision uses radius
+  { x: 11, z:  7, r: 1.0, height: 3.5, shape: 'cone' },
+  { x:-11, z: -7, r: 1.0, height: 3.5, shape: 'cone' },
+  { x:  7, z:-11, r: 1.0, height: 3.0, shape: 'cone' },
+  { x: -7, z: 11, r: 1.0, height: 3.0, shape: 'cone' },
 ];
 
 // Zone obstacles revealed on arena expansion — varied heights
@@ -117,10 +123,16 @@ const _edgeMat = new THREE.LineBasicMaterial({ color: 0x0088cc, opacity: 0.8, tr
 export function buildObstacleMeshes(scene, defs) {
   const out = [];
   for (const obs of defs) {
-    const meshH   = obs.height ?? OBS_H;
-    const groundY = terrainH(obs.x, obs.z);
-    const geo     = new THREE.BoxGeometry(obs.w, meshH, obs.h);
-    const mesh    = new THREE.Mesh(geo, _obsMat.clone());
+    const meshH = obs.height ?? OBS_H;
+    // Sample min terrain height across all four corners + center to avoid hovering
+    const hw = obs.w / 2, hd = obs.h / 2;
+    const groundY = Math.min(
+      terrainH(obs.x - hw, obs.z - hd), terrainH(obs.x + hw, obs.z - hd),
+      terrainH(obs.x - hw, obs.z + hd), terrainH(obs.x + hw, obs.z + hd),
+      terrainH(obs.x, obs.z)
+    );
+    const geo  = new THREE.BoxGeometry(obs.w, meshH, obs.h);
+    const mesh = new THREE.Mesh(geo, _obsMat.clone());
     mesh.position.set(obs.x, groundY + meshH / 2, obs.z);
     mesh.castShadow = true;
     scene.add(mesh);
@@ -135,11 +147,20 @@ export function buildObstacleMeshes(scene, defs) {
 
 function buildCylinderMeshes(scene, defs) {
   const cylMat  = new THREE.MeshStandardMaterial({ color: 0x001525, emissive: 0x004466, emissiveIntensity: 0.5, roughness: 0.25, metalness: 0.95 });
+  const coneMat = new THREE.MeshStandardMaterial({ color: 0x001a22, emissive: 0x003355, emissiveIntensity: 0.6, roughness: 0.2,  metalness: 0.9  });
   const cylEdge = new THREE.LineBasicMaterial({ color: 0x00aadd, opacity: 0.9, transparent: true });
   for (const cyl of defs) {
-    const groundY = terrainH(cyl.x, cyl.z);
-    const geo  = new THREE.CylinderGeometry(cyl.r, cyl.r, cyl.height, 14);
-    const mesh = new THREE.Mesh(geo, cylMat.clone());
+    // Sample min terrain under the obstacle footprint to prevent hovering
+    const groundY = Math.min(
+      terrainH(cyl.x - cyl.r, cyl.z - cyl.r), terrainH(cyl.x + cyl.r, cyl.z - cyl.r),
+      terrainH(cyl.x - cyl.r, cyl.z + cyl.r), terrainH(cyl.x + cyl.r, cyl.z + cyl.r),
+      terrainH(cyl.x, cyl.z)
+    );
+    const isCone = cyl.shape === 'cone';
+    const geo = isCone
+      ? new THREE.ConeGeometry(cyl.r * 1.5, cyl.height, 8)
+      : new THREE.CylinderGeometry(cyl.r, cyl.r, cyl.height, 14);
+    const mesh = new THREE.Mesh(geo, (isCone ? coneMat : cylMat).clone());
     mesh.position.set(cyl.x, groundY + cyl.height / 2, cyl.z);
     mesh.castShadow = true;
     scene.add(mesh);

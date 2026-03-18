@@ -118,8 +118,10 @@ export class Enemy {
     this.projectiles = projectiles;
     this.type = type;
     this.def = TYPES[type];
-    this.hp = Math.round(this.def.hp * difficulty);
-    this.alive = true;
+    this.hp     = Math.round(this.def.hp * difficulty);
+    // Damage also scales — slowly at first, meaningfully at high waves
+    this.damage = Math.round(this.def.damage * (0.7 + difficulty * 0.3));
+    this.alive  = true;
     this.shootTimer = Math.random() * this.def.shootCd;
     this.isBoss = type === "boss";
     this.radius = this.def.scale * (this.isBoss ? 1.4 : 0.9);
@@ -133,6 +135,13 @@ export class Enemy {
     this._strafeDir = Math.random() > 0.5 ? 1 : -1;
     this._jitterTimer = 0;
     this.fixedGun = (type === 'stug'); // hull-aims instead of turret
+
+    // Burst fire for MG enemies — fire N rounds then pause for reload
+    if (this.def.isMG) {
+      this._burstMax      = this.type === 'scout' ? 10 : 16;
+      this._burstLeft     = this._burstMax;
+      this._burstCooldown = 0;
+    }
 
     this._buildMesh();
     this.group.position.set(spawnPos.x, 0, spawnPos.z);
@@ -435,9 +444,22 @@ export class Enemy {
     pos.x = Math.max(bounds.minX - 4, Math.min(bounds.maxX + 4, pos.x));
     pos.z = Math.max(bounds.minZ - 4, Math.min(bounds.maxZ + 4, pos.z));
 
-    // Shoot — spread based on aim charge (inaccurate until locked on)
+    // Shoot — MG types use burst-fire with reload gap to limit projectile count
     this.shootTimer -= delta;
-    if (this.shootTimer <= 0 && dist <= this.def.shootRange) {
+    if (this.def.isMG) {
+      if (this._burstCooldown > 0) {
+        this._burstCooldown -= delta;
+      } else if (this.shootTimer <= 0 && dist <= this.def.shootRange) {
+        this._shoot();
+        this.shootTimer = this.def.shootCd * shootCdMult;
+        this._burstLeft--;
+        if (this._burstLeft <= 0) {
+          const reloadTime = this.type === 'scout' ? 2.0 : 2.5;
+          this._burstCooldown = reloadTime;
+          this._burstLeft = this._burstMax;
+        }
+      }
+    } else if (this.shootTimer <= 0 && dist <= this.def.shootRange) {
       this._shoot();
       this.shootTimer = this.def.shootCd * shootCdMult;
     }
@@ -468,7 +490,7 @@ export class Enemy {
       barrelLocal,
       dir,
       this.def.bulletSpeed,
-      this.def.damage,
+      this.damage,
       false,
       this.def.color,
       undefined,

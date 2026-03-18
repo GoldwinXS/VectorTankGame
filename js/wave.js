@@ -35,8 +35,8 @@ export class WaveManager {
     this.enemies         = [];
     this._pendingBoss    = false;
 
-    // Difficulty scales from 0.6 at wave 1 up to ~2.0+ at wave 20
-    const difficulty = 0.6 + (waveNum - 1) * 0.08;
+    // Difficulty: starts gentle, ramps hard — 0.5 at wave 1, ~2.4 at wave 20
+    const difficulty = 0.5 + (waveNum - 1) * 0.10;
     const probs      = tacticProbs || [0.7, 0.1, 0.1, 0.1];
 
     if (this.isBossWave) {

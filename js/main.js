@@ -338,7 +338,12 @@ function checkCollisions() {
       for (const e of enemies) {
         if (!e.alive) continue;
         if (proj.mesh.position.distanceTo(e.position) < proj.radius + e.radius) {
-          e.takeDamage(proj.damage);
+          // Directional armour: front 0.65x, side 1.0x, rear 1.5x
+          const projDir = proj.vel.clone().normalize();
+          const eFwd = new THREE.Vector3(Math.sin(e.group.rotation.y), 0, Math.cos(e.group.rotation.y));
+          const dot = projDir.dot(eFwd);
+          const dirMult = dot > 0.5 ? 1.5 : dot < -0.5 ? 0.65 : 1.0;
+          e.takeDamage(Math.round(proj.damage * dirMult));
           if (!e.alive) {
             const baseScore = e.isBoss ? 1000 + waveNum * 50 : 100 + waveNum * 10;
             score += Math.round(baseScore * player.scoreMult);
