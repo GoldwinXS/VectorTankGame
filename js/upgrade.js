@@ -1,35 +1,143 @@
-// tag: 'firepower' | 'defense' | 'speed' | 'utility'
-// Between-wave upgrades are FREE and powerful — they drive the roguelike progression arc.
+// Tiered upgrade system
+// Each upgrade has a maxTier (1 = single-use, 2-3 = offered again with increasing power).
+// label/desc may be functions (tier) => string or plain strings.
+// apply receives (player, tier) where tier is 1-indexed.
+// Per-tier power is computed from base + (tier-1)*step — no hardcoded value arrays.
+
+const ROMAN = ['I', 'II', 'III'];
+
 const UPGRADE_POOL = [
-  // ── Core upgrades ────────────────────────────────────────────────────────
-  { id: 'repair',    tag: 'defense',   label: 'HULL REPAIR',      desc: 'Restore 100 hull points',              apply: p => { p.hp = Math.min(p.maxHp, p.hp + 100); } },
-  { id: 'maxhp',     tag: 'defense',   label: 'REINFORCE HULL',   desc: '+40 max hull points',                  apply: p => { p.maxHp += 40; p.hp = Math.min(p.maxHp, p.hp + 40); } },
-  { id: 'speed',     tag: 'speed',     label: 'DRIVE OVERDRIVE',  desc: '+30% move speed',                      apply: p => { p.speedMult    = Math.min(2.5, p.speedMult    * 1.30); } },
-  { id: 'damage',    tag: 'firepower', label: 'ORDNANCE +',       desc: '+40% cannon damage',                   apply: p => { p.damageMult   = Math.min(5.0, p.damageMult   * 1.40); } },
-  { id: 'life',      tag: 'utility',   label: 'RESERVE HULL',     desc: '+1 extra life',                        apply: p => { p.lives++; } },
-  { id: 'armor',     tag: 'defense',   label: 'REACTIVE ARMOR',   desc: '-28% damage taken',                    apply: p => { p.armorMult   = Math.max(0.10, p.armorMult   * 0.72); } },
-  { id: 'traverse',  tag: 'firepower', label: 'TURRET DRIVE',     desc: '+50% turret traverse speed',           apply: p => { p.traverseMult = Math.min(3.0, p.traverseMult * 1.50); } },
-  { id: 'reload',    tag: 'firepower', label: 'AUTO-LOADER',      desc: '-35% cannon reload time',              apply: p => { p.reloadMult  = Math.max(0.25, p.reloadMult  * 0.65); } },
-  { id: 'burst',     tag: 'firepower', label: 'BURST FIRE',       desc: 'Fire one extra round per shot',        apply: p => { if (p.multiShot < 3) p.multiShot++; } },
-  { id: 'barrel',    tag: 'firepower', label: 'EXTENDED BARREL',  desc: '+35% projectile speed',                apply: p => { p.bulletSpeedMult = Math.min(2.5, p.bulletSpeedMult * 1.35); } },
+  // ── Core / consumable ────────────────────────────────────────────────────
+  { id: 'repair',   tag: 'defense',   maxTier: 1,
+    label: () => 'HULL REPAIR',
+    desc:  () => 'Restore 100 hull points',
+    apply: p     => { p.hp = Math.min(p.maxHp, p.hp + 100); } },
 
-  // ── Builds ────────────────────────────────────────────────────────────────
-  { id: 'regen',     tag: 'defense',   label: 'HULL REGEN',       desc: '+5 HP/sec passive regeneration',       apply: p => { p.regenRate = Math.min(20, (p.regenRate || 0) + 5); } },
-  { id: 'glass',     tag: 'firepower', label: 'GLASS CANNON',     desc: '+80% damage — +35% dmg taken',         apply: p => { p.damageMult = Math.min(6.0, p.damageMult * 1.80); p.armorMult = Math.min(2.0, p.armorMult * 1.35); } },
-  { id: 'fortress',  tag: 'defense',   label: 'FORTRESS',         desc: '-45% dmg taken, -20% move speed',      apply: p => { p.armorMult = Math.max(0.08, p.armorMult * 0.55); p.speedMult = Math.max(0.4, p.speedMult * 0.80); } },
-  { id: 'sniper',    tag: 'firepower', label: 'SNIPER PROTOCOL',  desc: '+60% proj speed, +50% traverse',       apply: p => { p.bulletSpeedMult = Math.min(2.5, p.bulletSpeedMult * 1.60); p.traverseMult = Math.min(3.0, p.traverseMult * 1.50); } },
-  { id: 'rampage',   tag: 'utility',   label: 'RAMPAGE',          desc: '+35% speed and +35% damage',           apply: p => { p.speedMult = Math.min(2.5, p.speedMult * 1.35); p.damageMult = Math.min(5.0, p.damageMult * 1.35); } },
-  { id: 'overclock', tag: 'firepower', label: 'OVERCLOCK',        desc: '+50% traverse, -30% reload time',      apply: p => { p.traverseMult = Math.min(3.0, p.traverseMult * 1.50); p.reloadMult = Math.max(0.25, p.reloadMult * 0.70); } },
-  { id: 'sprint',    tag: 'speed',     label: 'NITRO DRIVE',      desc: '+55% move speed',                      apply: p => { p.speedMult = Math.min(2.5, p.speedMult * 1.55); } },
-  { id: 'lifesteal', tag: 'utility',   label: 'VAMPIRE ROUND',    desc: '+8 HP per enemy destroyed',            apply: p => { p.hpPerKill = Math.min(40, (p.hpPerKill || 0) + 8); } },
-  { id: 'bounty',    tag: 'utility',   label: 'KILL BOUNTY',      desc: '+60% score per kill',                  apply: p => { p.scoreMult = (p.scoreMult || 1) * 1.60; } },
-  { id: 'wide',      tag: 'firepower', label: 'WIDE PATTERN',     desc: 'Minimum 2 rounds per shot',            apply: p => { if (p.multiShot < 2) p.multiShot = 2; } },
+  { id: 'maxhp',    tag: 'defense',   maxTier: 2,
+    label: t => `HULL REINFORCE ${ROMAN[t-1]}`,
+    desc:  t => `+${t === 1 ? 30 : 45} max hull points`,
+    apply: (p, t) => { const v = t === 1 ? 30 : 45; p.maxHp += v; p.hp = Math.min(p.maxHp, p.hp + v); } },
 
-  // ── MG upgrades ───────────────────────────────────────────────────────────
-  { id: 'mg_drum',      tag: 'firepower', label: 'DRUM MAGAZINE',   desc: '+20 MG rounds per magazine',           apply: p => { p.mgMaxAmmo += 20; p.mgAmmo = p.mgMaxAmmo; } },
-  { id: 'mg_reload',    tag: 'firepower', label: 'MG AUTO-LOADER',  desc: '-40% MG reload time',                  apply: p => { p.mgReloadMult = Math.max(0.25, (p.mgReloadMult ?? 1) * 0.60); } },
-  { id: 'mg_ap',        tag: 'firepower', label: 'AP ROUNDS',       desc: '+80% MG bullet damage',                apply: p => { p.mgDamageMult = Math.min(6.0, (p.mgDamageMult ?? 1) * 1.80); } },
-  { id: 'mg_precision', tag: 'firepower', label: 'MG PRECISION',    desc: '-50% MG spread — laser accurate',      apply: p => { p.mgSpreadMult = Math.max(0.08, (p.mgSpreadMult ?? 1) * 0.50); } },
+  { id: 'life',     tag: 'utility',   maxTier: 2,
+    label: () => 'RESERVE HULL',
+    desc:  () => '+1 extra life',
+    apply: p     => { p.lives++; } },
+
+  // ── Firepower (tiered — each tier gives a larger individual boost) ────────
+  { id: 'damage',   tag: 'firepower', maxTier: 3,
+    label: t => `ORDNANCE ${ROMAN[t-1]}`,
+    desc:  t => `+${Math.round((0.20 + (t-1)*0.08)*100)}% cannon damage`,
+    apply: (p, t) => { p.damageMult = Math.min(5.0, p.damageMult * (1.20 + (t-1)*0.08)); } },
+
+  { id: 'reload',   tag: 'firepower', maxTier: 3,
+    label: t => `AUTO-LOADER ${ROMAN[t-1]}`,
+    desc:  t => `-${Math.round((0.18 + (t-1)*0.08)*100)}% cannon reload`,
+    apply: (p, t) => { p.reloadMult = Math.max(0.25, p.reloadMult * (1 - (0.18 + (t-1)*0.08))); } },
+
+  { id: 'traverse', tag: 'firepower', maxTier: 2,
+    label: t => `TURRET DRIVE ${ROMAN[t-1]}`,
+    desc:  t => `+${Math.round((0.35 + (t-1)*0.20)*100)}% turret traverse`,
+    apply: (p, t) => { p.traverseMult = Math.min(3.0, p.traverseMult * (1.35 + (t-1)*0.20)); } },
+
+  { id: 'barrel',   tag: 'firepower', maxTier: 2,
+    label: t => `EXTENDED BARREL ${ROMAN[t-1]}`,
+    desc:  t => `+${Math.round((0.25 + (t-1)*0.15)*100)}% projectile speed`,
+    apply: (p, t) => { p.bulletSpeedMult = Math.min(2.5, p.bulletSpeedMult * (1.25 + (t-1)*0.15)); } },
+
+  { id: 'burst',    tag: 'firepower', maxTier: 2,
+    label: t => `BURST FIRE ${ROMAN[t-1]}`,
+    desc:  t => `Fire ${t + 1} rounds per shot (total)`,
+    apply: (p, t) => { if (p.multiShot < t + 1) p.multiShot = t + 1; } },
+
+  // ── Defense (tiered) ─────────────────────────────────────────────────────
+  { id: 'armor',    tag: 'defense',   maxTier: 3,
+    label: t => `REACTIVE ARMOR ${ROMAN[t-1]}`,
+    desc:  t => `-${Math.round((0.14 + (t-1)*0.08)*100)}% damage taken`,
+    apply: (p, t) => { p.armorMult = Math.max(0.10, p.armorMult * (1 - (0.14 + (t-1)*0.08))); } },
+
+  { id: 'regen',    tag: 'defense',   maxTier: 2,
+    label: t => `HULL REGEN ${ROMAN[t-1]}`,
+    desc:  t => `+${t === 1 ? 3 : 5} HP/sec passive regen`,
+    apply: (p, t) => { p.regenRate = Math.min(20, (p.regenRate || 0) + (t === 1 ? 3 : 5)); } },
+
+  // ── Speed (tiered) ───────────────────────────────────────────────────────
+  { id: 'speed',    tag: 'speed',     maxTier: 3,
+    label: t => `DRIVE OVERDRIVE ${ROMAN[t-1]}`,
+    desc:  t => `+${Math.round((0.16 + (t-1)*0.08)*100)}% move speed`,
+    apply: (p, t) => { p.speedMult = Math.min(2.5, p.speedMult * (1.16 + (t-1)*0.08)); } },
+
+  // ── Utility (tiered) ─────────────────────────────────────────────────────
+  { id: 'lifesteal', tag: 'utility',  maxTier: 3,
+    label: t => `VAMPIRE ROUND ${ROMAN[t-1]}`,
+    desc:  t => `+${[4, 7, 11][t-1]} HP per enemy destroyed`,
+    apply: (p, t) => { p.hpPerKill = Math.min(40, (p.hpPerKill || 0) + [4, 7, 11][t-1]); } },
+
+  { id: 'bounty',   tag: 'utility',   maxTier: 2,
+    label: t => `KILL BOUNTY ${ROMAN[t-1]}`,
+    desc:  t => `+${t === 1 ? 40 : 60}% score per kill`,
+    apply: (p, t) => { p.scoreMult = (p.scoreMult || 1) * (t === 1 ? 1.40 : 1.60); } },
+
+  { id: 'field_repair', tag: 'utility', maxTier: 2,
+    label: t => `FIELD REPAIR ${ROMAN[t-1]}`,
+    desc:  t => `Component damage clears ${t === 1 ? '60' : '120'}% faster`,
+    apply: (p, t) => { p.repairRate = Math.min(5, (p.repairRate || 1) * (t === 1 ? 1.6 : 2.0)); } },
+
+  // ── Build archetypes (single-use — strong by design) ─────────────────────
+  { id: 'glass',    tag: 'firepower', maxTier: 1,
+    label: () => 'GLASS CANNON',
+    desc:  () => '+60% damage — +22% damage taken',
+    apply: p => { p.damageMult = Math.min(6.0, p.damageMult * 1.60); p.armorMult = Math.min(2.0, p.armorMult * 1.22); } },
+
+  { id: 'fortress', tag: 'defense',   maxTier: 1,
+    label: () => 'FORTRESS',
+    desc:  () => '-35% dmg taken, -18% move speed',
+    apply: p => { p.armorMult = Math.max(0.08, p.armorMult * 0.65); p.speedMult = Math.max(0.4, p.speedMult * 0.82); } },
+
+  { id: 'sniper',   tag: 'firepower', maxTier: 1,
+    label: () => 'SNIPER PROTOCOL',
+    desc:  () => '+50% proj speed, +40% traverse',
+    apply: p => { p.bulletSpeedMult = Math.min(2.5, p.bulletSpeedMult * 1.50); p.traverseMult = Math.min(3.0, p.traverseMult * 1.40); } },
+
+  { id: 'rampage',  tag: 'utility',   maxTier: 1,
+    label: () => 'RAMPAGE',
+    desc:  () => '+25% speed and +25% damage',
+    apply: p => { p.speedMult = Math.min(2.5, p.speedMult * 1.25); p.damageMult = Math.min(5.0, p.damageMult * 1.25); } },
+
+  { id: 'overclock', tag: 'firepower', maxTier: 1,
+    label: () => 'OVERCLOCK',
+    desc:  () => '+45% traverse, -25% reload time',
+    apply: p => { p.traverseMult = Math.min(3.0, p.traverseMult * 1.45); p.reloadMult = Math.max(0.25, p.reloadMult * 0.75); } },
+
+  { id: 'sprint',   tag: 'speed',     maxTier: 1,
+    label: () => 'NITRO DRIVE',
+    desc:  () => '+40% move speed',
+    apply: p => { p.speedMult = Math.min(2.5, p.speedMult * 1.40); } },
+
+  { id: 'wide',     tag: 'firepower', maxTier: 1,
+    label: () => 'WIDE PATTERN',
+    desc:  () => 'Minimum 2 rounds per shot',
+    apply: p => { if (p.multiShot < 2) p.multiShot = 2; } },
+
+  // ── MG upgrades (tiered) ─────────────────────────────────────────────────
+  { id: 'mg_drum',     tag: 'firepower', maxTier: 3,
+    label: t => `EXTENDED FEED ${ROMAN[t-1]}`,
+    desc:  t => `+${[10, 16, 22][t-1]} MG rounds per magazine`,
+    apply: (p, t) => { const v = [10, 16, 22][t-1]; p.mgMaxAmmo += v; p.mgAmmo = Math.min(p.mgAmmo + v, p.mgMaxAmmo); } },
+
+  { id: 'mg_reload',   tag: 'firepower', maxTier: 2,
+    label: t => `MG RAPID CYCLE ${ROMAN[t-1]}`,
+    desc:  t => `-${t === 1 ? 30 : 45}% MG reload time`,
+    apply: (p, t) => { p.mgReloadMult = Math.max(0.25, (p.mgReloadMult ?? 1) * (t === 1 ? 0.70 : 0.55)); } },
+
+  { id: 'mg_ap',       tag: 'firepower', maxTier: 3,
+    label: t => `ARMOUR-PIERCING ${ROMAN[t-1]}`,
+    desc:  t => `+${Math.round((0.50 + (t-1)*0.30)*100)}% MG bullet damage`,
+    apply: (p, t) => { p.mgDamageMult = Math.min(6.0, (p.mgDamageMult ?? 1) * (1.50 + (t-1)*0.30)); } },
+
+  { id: 'mg_precision', tag: 'firepower', maxTier: 2,
+    label: t => `RANGEFINDER ${ROMAN[t-1]}`,
+    desc:  t => `-${t === 1 ? 35 : 55}% MG spread`,
+    apply: (p, t) => { p.mgSpreadMult = Math.max(0.08, (p.mgSpreadMult ?? 1) * (t === 1 ? 0.65 : 0.45)); } },
 ];
 
 const TAG_COLORS = {
@@ -39,15 +147,17 @@ const TAG_COLORS = {
   utility:   '#00ff88',
 };
 
+const resolveStr = (v, tier) => typeof v === 'function' ? v(tier) : v;
+
 export class UpgradePicker {
   constructor() {
     this._el        = document.getElementById('upgrade-screen');
     this._choicesEl = document.getElementById('upgrade-choices');
     this._resolve   = null;
-    this._offered   = new Set(); // IDs already offered this run
+    this._taken     = new Map(); // id → tier count taken this run
   }
 
-  resetRun() { this._offered.clear(); }
+  resetRun() { this._taken.clear(); }
 
   open(player, waveNum, stats) {
     this._player = player;
@@ -59,8 +169,9 @@ export class UpgradePicker {
 
   _close(upgrade) {
     if (upgrade) {
-      upgrade.apply(this._player);
-      this._offered.add(upgrade.id);
+      const tier = (this._taken.get(upgrade.id) ?? 0) + 1;
+      upgrade.apply(this._player, tier);
+      this._taken.set(upgrade.id, tier);
     }
     this._el.classList.add('hidden');
     if (this._resolve) { this._resolve(upgrade); this._resolve = null; }
@@ -76,9 +187,9 @@ export class UpgradePicker {
   }
 
   _renderChoices() {
-    // Prefer upgrades not yet offered; fall back to full pool if exhausted
-    const available = UPGRADE_POOL.filter(u => !this._offered.has(u.id));
-    const pool = available.length >= 3 ? available : [...UPGRADE_POOL];
+    // Available = not yet at max tier
+    const available = UPGRADE_POOL.filter(u => (this._taken.get(u.id) ?? 0) < u.maxTier);
+    const pool = available.length >= 3 ? available : UPGRADE_POOL.filter(u => (this._taken.get(u.id) ?? 0) < u.maxTier || u.maxTier === 1);
 
     // Shuffle
     for (let i = pool.length - 1; i > 0; i--) {
@@ -88,13 +199,21 @@ export class UpgradePicker {
 
     this._choicesEl.innerHTML = '';
     for (const upg of pool.slice(0, 3)) {
+      const tier     = (this._taken.get(upg.id) ?? 0) + 1; // tier if picked now
       const tagColor = TAG_COLORS[upg.tag] || '#336677';
+      const label    = resolveStr(upg.label, tier);
+      const desc     = resolveStr(upg.desc,  tier);
+      // Show tier progress for multi-tier upgrades
+      const tierBadge = upg.maxTier > 1
+        ? `<div class="upg-tier">${tier} / ${upg.maxTier}</div>`
+        : '';
       const card = document.createElement('div');
       card.className = 'upg-card';
       card.innerHTML = `
         <div class="upg-tag" style="color:${tagColor};border-color:${tagColor}">${upg.tag.toUpperCase()}</div>
-        <div class="upg-name">${upg.label}</div>
-        <div class="upg-desc">${upg.desc}</div>`;
+        <div class="upg-name">${label}</div>
+        ${tierBadge}
+        <div class="upg-desc">${desc}</div>`;
       card.addEventListener('click', () => this._close(upg));
       this._choicesEl.appendChild(card);
     }

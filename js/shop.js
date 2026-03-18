@@ -36,7 +36,7 @@ export class Shop {
 
   _close() {
     this._el.classList.add('hidden');
-    document.getElementById('canvas').requestPointerLock();
+    if (!('ontouchstart' in window)) document.getElementById('canvas').requestPointerLock();
     if (this._resolve) { this._resolve(); this._resolve = null; }
   }
 

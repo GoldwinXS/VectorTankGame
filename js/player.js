@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { Projectile } from "./projectile.js";
+import { audio } from "./audio.js";
 
 const BASE_SPEED = 2;
 const TURN_SPEED = 1.3;
@@ -50,6 +51,11 @@ export class Player {
 
     // Temporary buffs (from map pickups) — key: { mult, timer }
     this._buffs = {};
+
+    // Component damage — temporary debuffs (seconds remaining)
+    this._compDmg   = { track: 0, engine: 0, turret: 0 };
+    this.repairRate = 1; // multiplier for debuff recovery speed (upgrades raise this)
+    this._compCb    = null; // callback set by main.js to show component damage UI
 
     this.aimCharge = 0;
     this.barrelPitch = 0; // current barrel elevation in radians (0 = flat)
@@ -214,22 +220,37 @@ export class Player {
       }
     }
 
-    // Hull rotation (A/D)
-    if (keys["KeyA"] || keys["ArrowLeft"])
-      this.group.rotation.y += TURN_SPEED * delta;
-    if (keys["KeyD"] || keys["ArrowRight"])
-      this.group.rotation.y -= TURN_SPEED * delta;
-
-    // Drive (W/S) — applies speed buff if active
-    const angle = this.group.rotation.y;
-    const spd = BASE_SPEED * this.speedMult * (this._buffs.speed?.mult ?? 1);
-    if (keys["KeyW"] || keys["ArrowUp"]) {
-      this.group.position.x += Math.sin(angle) * spd * delta;
-      this.group.position.z += Math.cos(angle) * spd * delta;
+    // Tick down component damage debuffs
+    for (const k of Object.keys(this._compDmg)) {
+      if (this._compDmg[k] > 0) {
+        this._compDmg[k] = Math.max(0, this._compDmg[k] - delta * this.repairRate);
+      }
     }
-    if (keys["KeyS"] || keys["ArrowDown"]) {
-      this.group.position.x -= Math.sin(angle) * spd * 0.55 * delta;
-      this.group.position.z -= Math.cos(angle) * spd * 0.55 * delta;
+
+    const trackOut   = this._compDmg.track  > 0;
+    const engineOut  = this._compDmg.engine > 0;
+
+    // Hull rotation (A/D) — blocked if track is out
+    if (!trackOut) {
+      if (keys["KeyA"] || keys["ArrowLeft"])
+        this.group.rotation.y += TURN_SPEED * delta;
+      if (keys["KeyD"] || keys["ArrowRight"])
+        this.group.rotation.y -= TURN_SPEED * delta;
+    }
+
+    // Drive (W/S) — blocked if track out; halved if engine damaged
+    const angle    = this.group.rotation.y;
+    const engMult  = engineOut ? 0.38 : 1;
+    const spd      = BASE_SPEED * this.speedMult * (this._buffs.speed?.mult ?? 1) * engMult;
+    if (!trackOut) {
+      if (keys["KeyW"] || keys["ArrowUp"]) {
+        this.group.position.x += Math.sin(angle) * spd * delta;
+        this.group.position.z += Math.cos(angle) * spd * delta;
+      }
+      if (keys["KeyS"] || keys["ArrowDown"]) {
+        this.group.position.x -= Math.sin(angle) * spd * 0.55 * delta;
+        this.group.position.z -= Math.cos(angle) * spd * 0.55 * delta;
+      }
     }
 
     // Clamp to arena
@@ -247,9 +268,10 @@ export class Player {
       this.barrelPivot.rotation.x = -this.barrelPitch; // negative = barrel goes up
     }
 
-    // Turret horizontal traverse toward aimTarget
+    // Turret horizontal traverse toward aimTarget — locked if turret is damaged
+    const turretOut = this._compDmg.turret > 0;
     let aimDelta = Math.PI;
-    if (!freeLook && aimTarget) {
+    if (!turretOut && !freeLook && aimTarget) {
       const dir = new THREE.Vector3().subVectors(
         aimTarget,
         this.group.position,
@@ -275,18 +297,18 @@ export class Player {
       this.aimCharge = Math.max(0, this.aimCharge - delta * AIM_DECAY_RATE);
     }
 
-    // Cannon — right click, arcing, high damage
+    // Cannon — left click, arcing, high damage
     this.shootCd -= delta;
-    if (!freeLook && rightMouseDown && this.shootCd <= 0) {
+    if (!freeLook && mouseDown && this.shootCd <= 0) {
       this._shoot();
       this.shootCd = SHOOT_CD * this.reloadMult;
     }
 
-    // Machine gun — left click, flat, low damage, limited ammo
+    // Machine gun — right click, flat, low damage, limited ammo
     this.mgCd -= delta;
     if (
       !freeLook &&
-      mouseDown &&
+      rightMouseDown &&
       !this.mgReloading &&
       this.mgAmmo > 0 &&
       this.mgCd <= 0
@@ -338,6 +360,7 @@ export class Player {
     }
 
     this._muzzleFlash(0xffffff);
+    audio.playCannon();
     this.shotsFired++;
     this._totalAimChargeOnFire += this.aimCharge;
     this.aimCharge *= POST_FIRE_CHARGE;
@@ -366,6 +389,7 @@ export class Player {
 
     const dmg = Math.round(MG_DAMAGE * (this.mgDamageMult ?? 1));
     this._muzzleFlash(0xffee44);
+    audio.playMG();
     // hasGravity=false, isMG=true — flat tracer visual
     this.projectiles.push(
       new Projectile(this.scene, spawnPos, dir, MG_BULLET_SPEED, dmg, true, 0xffee44, false, true),
@@ -380,7 +404,7 @@ export class Player {
     pos.x += Math.sin(barrelAngle) * Math.cos(pitch) * dist;
     pos.y += 0.7 + Math.sin(pitch) * dist;
     pos.z += Math.cos(barrelAngle) * Math.cos(pitch) * dist;
-    const flash = new THREE.PointLight(color, color === 0xffffff ? 18 : 10, color === 0xffffff ? 7 : 4);
+    const flash = new THREE.PointLight(color, 18, 7);
     flash.position.copy(pos);
     this.scene.add(flash);
     setTimeout(() => this.scene.remove(flash), 55);
@@ -392,6 +416,21 @@ export class Player {
       Math.round(amount * this.armorMult * (this._buffs.armor?.mult ?? 1)),
     );
     this.hp = Math.max(0, this.hp - reduced);
+
+    // 18% chance of component damage per hit (harder hits slightly more likely)
+    if (reduced >= 4 && Math.random() < 0.18) {
+      const roll = Math.random();
+      let comp, dur;
+      if (roll < 0.38)      { comp = 'track';  dur = 3.2; }
+      else if (roll < 0.72) { comp = 'engine'; dur = 4.8; }
+      else                  { comp = 'turret'; dur = 3.8; }
+      // Only apply if the component isn't already damaged (avoid stacking)
+      if (this._compDmg[comp] <= 0) {
+        this._compDmg[comp] = dur;
+        audio.playComponentHit();
+        this._compCb?.(comp, dur);
+      }
+    }
     if (this.hp <= 0) {
       if (this.lives > 0) {
         this.lives--;

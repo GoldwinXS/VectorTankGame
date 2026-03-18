@@ -1,5 +1,11 @@
 const $ = id => document.getElementById(id);
 
+const COMP_LABELS = {
+  track:  'TRACK DAMAGED — IMMOBILISED',
+  engine: 'ENGINE HIT — SPEED -62%',
+  turret: 'TURRET LOCKED — TRAVERSE BLOCKED',
+};
+
 const TACTIC_COLORS = {
   RUSH:     '#ff3300',
   FLANK:    '#ff8800',
@@ -111,6 +117,45 @@ export class UI {
       <div class="sstat-row"><span class="sstat-label">MG DMG</span><span class="sstat-val">${Math.round((p.mgDamageMult ?? 1) * 100)}%</span></div>
       <div class="sstat-row"><span class="sstat-label">MG SPD</span><span class="sstat-val">${Math.round((1 / (p.mgSpreadMult ?? 1)) * 100)}%</span></div>
     `;
+  }
+
+  // Show brief directional-hit text (e.g. "REAR HIT ×1.5")
+  showHitFeedback(text, color = '#ff8800') {
+    const el = $('hit-feedback');
+    if (!el) return;
+    el.textContent  = text;
+    el.style.color  = color;
+    el.style.opacity = '1';
+    clearTimeout(this._hitFbTimeout);
+    this._hitFbTimeout = setTimeout(() => { el.style.opacity = '0'; }, 900);
+  }
+
+  // Called when a component gets damaged; updates the component panel
+  showComponentDamage(comp) {
+    const el = $('component-panel');
+    if (!el) return;
+    el.style.display = '';
+    const label = COMP_LABELS[comp] ?? comp.toUpperCase();
+    const row = document.createElement('div');
+    row.id        = `comp-${comp}`;
+    row.className = 'comp-row';
+    row.textContent = label;
+    // Replace existing row for same component (no duplicates)
+    const existing = $(`comp-${comp}`);
+    if (existing) existing.replaceWith(row);
+    else el.appendChild(row);
+  }
+
+  // Tick component UI — remove cleared rows, hide panel when empty
+  updateComponentPanel(compDmg) {
+    const el = $('component-panel');
+    if (!el) return;
+    for (const comp of ['track', 'engine', 'turret']) {
+      const row = $(`comp-${comp}`);
+      if (row && compDmg[comp] <= 0) row.remove();
+    }
+    const hasActive = Object.values(compDmg).some(v => v > 0);
+    el.style.display = hasActive ? '' : 'none';
   }
 
   showStartScreen()  { this.startScreen.classList.remove('hidden'); }

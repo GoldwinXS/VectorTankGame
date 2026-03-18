@@ -105,6 +105,22 @@ export const TYPES = {
     turnSpeed: 0.65,
     baseSpread: 0.04,
   },
+  // Alien hovercraft — floats above terrain, fast, erratic flanker
+  hover: {
+    color: 0xcc33ff,
+    emissive: 0xaa22dd,
+    scale: 0.9,
+    speed: 2.2,
+    hp: 80,
+    damage: 22,
+    shootRange: 34,
+    shootCd: 1.5,
+    bulletSpeed: 22,
+    preferDist: 14,
+    traverseSpeed: 4.0,
+    baseSpread: 0.17,
+    isHover: true,
+  },
 };
 
 const PLAYER_RADIUS = 1.0;
@@ -136,6 +152,11 @@ export class Enemy {
     this._jitterTimer = 0;
     this.fixedGun = (type === 'stug'); // hull-aims instead of turret
 
+    // Hover state — animated vertical offset above terrain
+    this.isHover   = !!this.def.isHover;
+    this.hoverOffset = 0;
+    if (this.isHover) this._hoverTime = Math.random() * Math.PI * 2;
+
     // Burst fire for MG enemies — fire N rounds then pause for reload
     if (this.def.isMG) {
       this._burstMax      = this.type === 'scout' ? 10 : 16;
@@ -155,7 +176,8 @@ export class Enemy {
   }
 
   _buildMesh() {
-    if (this.type === 'stug') { this._buildStugMesh(); return; }
+    if (this.type === 'stug')  { this._buildStugMesh();  return; }
+    if (this.type === 'hover') { this._buildHoverMesh(); return; }
     this.group = new THREE.Group();
     this.group.scale.setScalar(this.def.scale);
 
@@ -259,6 +281,62 @@ export class Enemy {
     const glow = new THREE.PointLight(this.def.color, 2.5, 4);
     glow.position.y = 0.5;
     this.group.add(glow);
+  }
+
+  _buildHoverMesh() {
+    this.group = new THREE.Group();
+    this.group.scale.setScalar(this.def.scale);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.3, roughness: 0.15, metalness: 0.95,
+    });
+    const edgeMat = new THREE.LineBasicMaterial({ color: this.def.color, opacity: 0.75, transparent: true });
+
+    // Main disc hull
+    const discGeo = new THREE.CylinderGeometry(1.0, 1.25, 0.28, 10);
+    const disc = new THREE.Mesh(discGeo, mat);
+    this.group.add(disc);
+    this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(discGeo), edgeMat));
+
+    // Top dome (translucent canopy)
+    const domeMat = new THREE.MeshStandardMaterial({
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.55, roughness: 0.05, metalness: 1.0,
+      transparent: true, opacity: 0.75,
+    });
+    const domeGeo = new THREE.SphereGeometry(0.52, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+    const dome = new THREE.Mesh(domeGeo, domeMat);
+    dome.position.y = 0.14;
+    this.group.add(dome);
+
+    // Emitter ring — glows like an engine
+    const ringMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, emissive: this.def.color,
+      emissiveIntensity: 2.0, roughness: 0, metalness: 1,
+    });
+    const ringGeo = new THREE.TorusGeometry(0.62, 0.07, 5, 16);
+    ringGeo.rotateX(Math.PI / 2);
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.y = -0.06;
+    this.group.add(ring);
+
+    // Three engine pods below the disc
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2;
+      const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.16, 0.38, 6), mat.clone());
+      pod.position.set(Math.cos(a) * 0.78, -0.28, Math.sin(a) * 0.78);
+      this.group.add(pod);
+    }
+
+    // Underside glow
+    const glow = new THREE.PointLight(this.def.color, 3.5, 7);
+    glow.position.y = -0.5;
+    this.group.add(glow);
+
+    // Invisible turret group — used by standard aim/shoot logic
+    this.turretGroup = new THREE.Group();
+    this.group.add(this.turretGroup);
   }
 
   _buildBossExtras() {
@@ -412,6 +490,16 @@ export class Enemy {
       const pref = this.def.preferDist;
       if (dist > pref + 2)      this.group.position.addScaledVector(dir, this.def.speed * delta);
       else if (dist < pref - 2) this.group.position.addScaledVector(dir, -this.def.speed * 0.6 * delta);
+    }
+
+    // Hover craft floats and bobs — hoverOffset is read by main.js for y positioning
+    if (this.isHover) {
+      this._hoverTime += delta;
+      this.hoverOffset = 1.8 + Math.sin(this._hoverTime * 1.6) * 0.22;
+      // Gently tilt the disc in movement direction for a banking effect
+      const bank = moved.lengthSq() > 0.0001 ? 0.18 : 0;
+      this.group.rotation.x = Math.cos(this.group.rotation.y) * bank * -moved.z;
+      this.group.rotation.z = Math.sin(this.group.rotation.y) * bank * moved.x;
     }
 
     // Hard min separation from player

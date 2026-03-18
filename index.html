@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VECTOR</title>
   <link rel="stylesheet" href="style.css">
-  <script type="importmap">
+  <!-- es-module-shims: polyfills importmap for Safari < 16.4, Chrome on iOS -->
+  <script async src="https://ga.jspm.io/npm:es-module-shims@1.10.1/dist/es-module-shims.js"></script>
+  <script type="importmap-shim">
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
@@ -22,6 +24,9 @@
 
   <!-- Hit marker — flashes white on enemy hit -->
   <div id="hit-marker"></div>
+
+  <!-- Directional-hit feedback (rear/front armor text) -->
+  <div id="hit-feedback"></div>
 
   <div id="ui">
 
@@ -49,11 +54,21 @@
       </div>
       <div class="hud-block" id="heading-block">
         <div class="hud-label">HEADING</div>
-        <div id="heading-arrow">▲</div>
+        <canvas id="mini-tank-canvas" width="64" height="64"></canvas>
       </div>
       <div class="hud-block" id="buff-panel" style="display:none">
         <div class="hud-label">ACTIVE BUFFS</div>
         <div id="buff-list"></div>
+      </div>
+      <div class="hud-block" id="component-panel" style="display:none">
+        <div class="hud-label">DAMAGE REPORT</div>
+      </div>
+      <div class="hud-block" id="audio-block">
+        <div class="hud-label">AUDIO</div>
+        <div id="audio-controls">
+          <button id="btn-mute">♪</button>
+          <input type="range" id="vol-master" min="0" max="1" step="0.05" value="0.5">
+        </div>
       </div>
       <div class="hud-block" id="nn-panel">
         <div class="hud-label">AI PROTOCOL</div>
@@ -63,6 +78,16 @@
         <div class="nn-row"><span>SUPR</span>  <div class="nn-track"><div class="nn-bar" id="bar-suppress"></div></div></div>
         <div class="nn-row"><span>ENCR</span>  <div class="nn-track"><div class="nn-bar" id="bar-encircle"></div></div></div>
       </div>
+    </div>
+
+    <!-- Mobile touch controls (hidden on desktop) -->
+    <div id="mobile-controls" class="hidden">
+      <div id="joy-zone">
+        <div id="joy-thumb"></div>
+      </div>
+      <div id="cam-touch-zone"></div>
+      <div id="btn-fire-cannon">CANNON</div>
+      <div id="btn-fire-mg">MG</div>
     </div>
 
     <!-- Wave message -->
@@ -87,8 +112,8 @@
           <span class="ctrl-key">C (HOLD)</span>   <span class="ctrl-desc">Free-look — camera orbits, gun stays locked</span>
           <span class="ctrl-key">V</span>          <span class="ctrl-desc">Toggle first-person view</span>
           <span class="ctrl-key">P</span>          <span class="ctrl-desc">Pause — show vehicle stats</span>
-          <span class="ctrl-key">L-CLICK</span>   <span class="ctrl-desc">Coax MG — rapid fire, 30 rounds, auto-reload</span>
-          <span class="ctrl-key">R-CLICK</span>   <span class="ctrl-desc">Main cannon — high damage, arcing shell</span>
+          <span class="ctrl-key">L-CLICK</span>   <span class="ctrl-desc">Main cannon — high damage, arcing shell</span>
+          <span class="ctrl-key">R-CLICK</span>   <span class="ctrl-desc">Coax MG — rapid fire, 30 rounds, auto-reload</span>
           <span class="ctrl-key">AIM CIRCLE</span> <span class="ctrl-desc">Hold still to lock on — cannon shoots when small</span>
         </div>
         <button id="btn-start">ENGAGE</button>
@@ -171,6 +196,6 @@
     </div>
 
   </div>
-  <script type="module" src="js/main.js"></script>
+  <script type="module-shim" src="js/main.js"></script>
 </body>
 </html>

@@ -54,7 +54,7 @@ export class WaveManager {
       }, delay);
     } else {
       // Slower ramp: wave 1=2, 2=2, 3=3, 4=4, 6=5 ... capped at 14
-      const count = Math.min(2 + Math.floor((waveNum - 1) * 0.65), 14);
+      const count = Math.min(2 + Math.floor((waveNum - 1) * 0.65), 18);
       const composition = this._buildComposition(count, waveNum);
       this._spawnWave(composition, probs, bounds, difficulty);
     }
@@ -82,6 +82,7 @@ export class WaveManager {
     const hasSwarm  = waveNum >= 5;
     const hasGunner = waveNum >= 6;
     const hasStug   = waveNum >= 8;
+    const hasHover  = waveNum >= 10;
 
     const p   = Math.min((waveNum - 1) / 10, 1);
     const wF  = 1 - p * 0.25;
@@ -90,14 +91,16 @@ export class WaveManager {
     const wSw = hasSwarm  ? (0.2 + p * 0.25)  : 0;
     const wG  = hasGunner ? (0.1 + p * 0.2)   : 0;
     const wSt = hasStug   ? (0.08 + p * 0.12) : 0;
-    const sum = wF + wT + wSc + wSw + wG + wSt;
+    const wHv = hasHover  ? (0.12 + p * 0.1)  : 0;
+    const sum = wF + wT + wSc + wSw + wG + wSt + wHv;
 
     const nFast   = Math.max(1, Math.round((wF / sum) * total));
     const nScout  = hasScout  ? Math.max(0, Math.round((wSc / sum) * total)) : 0;
     const nGunner = hasGunner ? Math.max(0, Math.round((wG / sum) * total)) : 0;
     const nSwarm  = hasSwarm  ? Math.max(0, Math.round((wSw * 1.2 / sum) * total)) : 0;
     const nStug   = hasStug   ? Math.max(0, Math.min(2, Math.round((wSt / sum) * total))) : 0;
-    const nTanky  = hasTanky  ? Math.max(0, total - nFast - nScout - nSwarm - nGunner - nStug) : 0;
+    const nHover  = hasHover  ? Math.max(0, Math.min(3, Math.round((wHv / sum) * total))) : 0;
+    const nTanky  = hasTanky  ? Math.max(0, total - nFast - nScout - nSwarm - nGunner - nStug - nHover) : 0;
 
     const types = [
       ...Array(nFast).fill('fast'),
@@ -106,6 +109,7 @@ export class WaveManager {
       ...Array(nSwarm).fill('swarm'),
       ...Array(nGunner).fill('gunner'),
       ...Array(nStug).fill('stug'),
+      ...Array(nHover).fill('hover'),
     ];
     // Shuffle
     for (let i = types.length - 1; i > 0; i--) {
