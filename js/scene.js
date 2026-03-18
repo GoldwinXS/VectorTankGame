@@ -214,7 +214,8 @@ export function createScene(canvas) {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x020b18);
-  scene.fog = new THREE.FogExp2(0x020b18, 0.008);
+  const fog = new THREE.FogExp2(0x020b18, 0.04);
+  scene.fog = fog;
 
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 300);
   camera.position.set(0, 12, -10);
@@ -255,5 +256,5 @@ export function createScene(canvas) {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  return { scene, camera, renderer, boundaryGeo };
+  return { scene, camera, renderer, boundaryGeo, fog };
 }

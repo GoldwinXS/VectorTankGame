@@ -23,6 +23,12 @@ const UPGRADE_POOL = [
   { id: 'lifesteal', tag: 'utility',   label: 'VAMPIRE ROUND',    desc: '+5 HP per enemy destroyed',            apply: p => { p.hpPerKill = Math.min(30, (p.hpPerKill || 0) + 5); } },
   { id: 'bounty',    tag: 'utility',   label: 'KILL BOUNTY',      desc: '+50% score per kill',                  apply: p => { p.scoreMult = (p.scoreMult || 1) * 1.50; } },
   { id: 'wide',      tag: 'firepower', label: 'WIDE PATTERN',     desc: 'Minimum 2 rounds per shot',            apply: p => { if (p.multiShot < 2) p.multiShot = 2; } },
+
+  // ── MG upgrades ───────────────────────────────────────────────────────────
+  { id: 'mg_drum',      tag: 'firepower', label: 'DRUM MAGAZINE',   desc: '+15 MG rounds per magazine',           apply: p => { p.mgMaxAmmo += 15; p.mgAmmo = p.mgMaxAmmo; } },
+  { id: 'mg_reload',    tag: 'firepower', label: 'MG AUTO-LOADER',  desc: '-30% MG reload time',                  apply: p => { p.mgReloadMult = Math.max(0.3, (p.mgReloadMult ?? 1) * 0.70); } },
+  { id: 'mg_ap',        tag: 'firepower', label: 'AP ROUNDS',       desc: '+60% MG bullet damage',                apply: p => { p.mgDamageMult = Math.min(5.0, (p.mgDamageMult ?? 1) * 1.60); } },
+  { id: 'mg_precision', tag: 'firepower', label: 'MG PRECISION',    desc: '-40% MG spread — tighter burst',       apply: p => { p.mgSpreadMult = Math.max(0.1, (p.mgSpreadMult ?? 1) * 0.60); } },
 ];
 
 const TAG_COLORS = {

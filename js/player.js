@@ -7,7 +7,7 @@ const SHOOT_CD = 0.5;
 const BULLET_SPEED = 22;
 const BASE_DAMAGE = 25;
 const MAX_HP = 100;
-const MAX_PITCH = 0.7; // ~31° max barrel elevation
+const MAX_PITCH = 0.5; // ~31° max barrel elevation
 const MIN_PITCH = 0.4;
 
 const TURRET_TRAVERSE = 0.6; // rad/s horizontal
@@ -19,10 +19,10 @@ const POST_FIRE_CHARGE = 0.15;
 
 const MG_CD = 0.085; // ~12 rounds/sec
 const MG_BULLET_SPEED = 26;
-const MG_DAMAGE = 6;
+const MG_DAMAGE = 3;   // nerfed — upgrades raise this
 const MG_AMMO = 30;
 const MG_RELOAD = 2.2; // seconds
-const MG_SPREAD = 0.09;
+const MG_SPREAD = 0.16; // nerfed — less accurate by default
 
 export class Player {
   constructor(scene, projectiles) {
@@ -65,6 +65,10 @@ export class Player {
     this.mgCd = 0;
     this.mgReloading = false;
     this.mgReloadTimer = 0;
+    // MG upgrade multipliers
+    this.mgDamageMult = 1;
+    this.mgSpreadMult = 1;
+    this.mgReloadMult = 1;
 
     this._buildMesh();
     scene.add(this.group);
@@ -80,35 +84,34 @@ export class Player {
       roughness: 0.4,
       metalness: 0.8,
     });
-    const hull = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 2.0), hullMat);
+    const hullGeo = new THREE.BoxGeometry(1.4, 0.9, 2.0);
+    const hull = new THREE.Mesh(hullGeo, hullMat);
     hull.castShadow = true;
     this.group.add(hull);
 
-    this.group.add(
-      new THREE.LineSegments(
-        new THREE.EdgesGeometry(new THREE.BoxGeometry(1.4, 0.9, 2.0)),
-        new THREE.LineBasicMaterial({
-          color: 0x00ffff,
-          opacity: 0.7,
-          transparent: true,
-        }),
-      ),
-    );
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0x00ffff, opacity: 0.7, transparent: true });
+    this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), edgeMat));
 
-    // Engine Compartment Hatch - to show where the back of the tank is
-    const noseMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: 0x88ffff,
-      emissiveIntensity: 1.0,
-      roughness: 0.2,
-      metalness: 0.5,
+    // Track sponsons — widen the lower hull
+    const sponsonMat = new THREE.MeshStandardMaterial({ color: 0x002233, emissive: 0x00ffff, emissiveIntensity: 0.08, roughness: 0.6, metalness: 0.7 });
+    [-0.82, 0.82].forEach(xOff => {
+      const sp = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.32, 2.1), sponsonMat);
+      sp.position.set(xOff, -0.29, 0);
+      sp.castShadow = true;
+      this.group.add(sp);
     });
-    const nose = new THREE.Mesh(
-      new THREE.BoxGeometry(0.8, 0.12, 0.42),
-      noseMat,
-    );
-    nose.position.set(0, 0.56, -0.5);
-    this.group.add(nose);
+
+    // Glacis plate — angled front armour
+    const glacis = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.28, 0.42), hullMat);
+    glacis.position.set(0, 0.3, 1.05);
+    glacis.rotation.x = 0.48;
+    this.group.add(glacis);
+
+    // Engine hatch — rear indicator
+    const hatchMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x88ffff, emissiveIntensity: 1.0, roughness: 0.2, metalness: 0.5 });
+    const hatch = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.12, 0.42), hatchMat);
+    hatch.position.set(0, 0.56, -0.5);
+    this.group.add(hatch);
 
     this.turret = new THREE.Group();
     this.turret.position.y = 0.75;
@@ -121,9 +124,23 @@ export class Player {
       roughness: 0.3,
       metalness: 0.9,
     });
-    this.turret.add(
-      new THREE.Mesh(new THREE.BoxGeometry(1, 0.35, 1.1), turretMat),
-    );
+    this.turret.add(new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.38, 1.05), turretMat));
+
+    // Mantlet (gun shield on turret front)
+    const mantlet = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.16), turretMat);
+    mantlet.position.set(0, 0, 0.58);
+    this.turret.add(mantlet);
+
+    // Commander's cupola (small hatch on turret top-left)
+    const cupola = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.19, 0.2, 8), turretMat);
+    cupola.position.set(-0.25, 0.28, -0.12);
+    this.turret.add(cupola);
+
+    // Stowage box on turret rear
+    const stowMat = new THREE.MeshStandardMaterial({ color: 0x002233, roughness: 0.8, metalness: 0.3 });
+    const stowBox = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.18, 0.32), stowMat);
+    stowBox.position.set(0, 0.2, -0.58);
+    this.turret.add(stowBox);
 
     // Barrel pivot — child of turret, rotates on X for elevation
     this.barrelPivot = new THREE.Group();
@@ -193,7 +210,7 @@ export class Player {
       this.mgReloadTimer -= delta;
       if (this.mgReloadTimer <= 0) {
         this.mgReloading = false;
-        this.mgAmmo = MG_AMMO;
+        this.mgAmmo = this.mgMaxAmmo;
       }
     }
 
@@ -279,7 +296,7 @@ export class Player {
       this.mgCd = MG_CD;
       if (this.mgAmmo <= 0) {
         this.mgReloading = true;
-        this.mgReloadTimer = MG_RELOAD;
+        this.mgReloadTimer = MG_RELOAD * (this.mgReloadMult ?? 1);
       }
     }
   }
@@ -320,6 +337,7 @@ export class Player {
       );
     }
 
+    this._muzzleFlash(0xffffff);
     this.shotsFired++;
     this._totalAimChargeOnFire += this.aimCharge;
     this.aimCharge *= POST_FIRE_CHARGE;
@@ -335,8 +353,9 @@ export class Player {
       sp,
       Math.cos(barrelAngle) * cp,
     );
-    dir.x += (Math.random() - 0.5) * MG_SPREAD;
-    dir.z += (Math.random() - 0.5) * MG_SPREAD;
+    const spread = MG_SPREAD * (this.mgSpreadMult ?? 1);
+    dir.x += (Math.random() - 0.5) * spread;
+    dir.z += (Math.random() - 0.5) * spread;
     dir.normalize();
 
     // Spawn at MG barrel tip (offset right of main barrel)
@@ -345,19 +364,26 @@ export class Player {
     spawnPos.x += Math.sin(barrelAngle) * 1.2 + Math.cos(barrelAngle) * 0.22;
     spawnPos.z += Math.cos(barrelAngle) * 1.2 - Math.sin(barrelAngle) * 0.22;
 
-    // hasGravity = false — MG rounds fly flat
+    const dmg = Math.round(MG_DAMAGE * (this.mgDamageMult ?? 1));
+    this._muzzleFlash(0xffee44);
+    // hasGravity=false, isMG=true — flat tracer visual
     this.projectiles.push(
-      new Projectile(
-        this.scene,
-        spawnPos,
-        dir,
-        MG_BULLET_SPEED,
-        MG_DAMAGE,
-        true,
-        0xffee44,
-        false,
-      ),
+      new Projectile(this.scene, spawnPos, dir, MG_BULLET_SPEED, dmg, true, 0xffee44, false, true),
     );
+  }
+
+  _muzzleFlash(color = 0xffffff) {
+    const barrelAngle = this.group.rotation.y + this.turret.rotation.y;
+    const pitch = this.barrelPitch;
+    const dist  = 1.9;
+    const pos   = this.group.position.clone();
+    pos.x += Math.sin(barrelAngle) * Math.cos(pitch) * dist;
+    pos.y += 0.7 + Math.sin(pitch) * dist;
+    pos.z += Math.cos(barrelAngle) * Math.cos(pitch) * dist;
+    const flash = new THREE.PointLight(color, color === 0xffffff ? 18 : 10, color === 0xffffff ? 7 : 4);
+    flash.position.copy(pos);
+    this.scene.add(flash);
+    setTimeout(() => this.scene.remove(flash), 55);
   }
 
   takeDamage(amount) {
@@ -371,7 +397,7 @@ export class Player {
         this.lives--;
         this.hp = Math.ceil(this.maxHp * 0.4);
         this._justRespawned = true;
-        this.mgAmmo = MG_AMMO;
+        this.mgAmmo = this.mgMaxAmmo;
         this.mgReloading = false;
       } else {
         this.alive = false;

@@ -16,7 +16,7 @@ let state = STATE.IDLE;
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('canvas');
-const { scene, camera, renderer, boundaryGeo } = createScene(canvas);
+const { scene, camera, renderer, boundaryGeo, fog } = createScene(canvas);
 const ui      = new UI();
 const nn      = new TacticSelector();
 const shop    = new Shop();
@@ -74,6 +74,8 @@ function startZoneReveal(direction) {
   meshes.forEach(m => {
     if (m.isMesh && m.material) { m.material.color.setHex(0xaaffff); m.material.emissiveIntensity = 1.0; }
   });
+  // Lift fog as arena grows
+  fog.density = Math.max(0.008, fog.density - 0.007);
   revealAnim = { progress: 0, dur: 2.2, from: { ...gameBounds }, to, meshes };
 }
 
@@ -95,6 +97,7 @@ let mouseDown      = false;
 let rightMouseDown = false;
 let freeLook       = false;
 let fpvMode        = false;
+let paused         = false;
 let pitchDelta     = 0;
 
 const aimTarget   = new THREE.Vector3();
@@ -105,6 +108,11 @@ window.addEventListener('keydown', e => {
   keys[e.code] = true;
   if (e.code === 'KeyC') freeLook = true;
   if (e.code === 'KeyV') { fpvMode = !fpvMode; ui.setFpv(fpvMode); }
+  if (e.code === 'KeyP' && state === STATE.PLAYING) {
+    paused = !paused;
+    if (paused) { document.exitPointerLock(); ui.showPause(player, () => { paused = false; lockPointer(); }); }
+    else        { ui.hidePause(); lockPointer(); }
+  }
 });
 window.addEventListener('keyup', e => {
   keys[e.code] = false;
@@ -445,7 +453,7 @@ function loop(ts) {
     }
   }
 
-  if (state === STATE.PLAYING) {
+  if (state === STATE.PLAYING && !paused) {
     player.update(delta, keys, aimTarget, mouseDown, rightMouseDown, gameBounds, freeLook, pitchDelta);
     pitchDelta = 0;
     player.group.position.y = terrainH(player.group.position.x, player.group.position.z);

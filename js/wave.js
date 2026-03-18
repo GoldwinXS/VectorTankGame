@@ -78,26 +78,34 @@ export class WaveManager {
   _buildComposition(total, waveNum) {
     // Gate enemy types by wave — introduce gradually
     const hasTanky  = waveNum >= 3;
+    const hasScout  = waveNum >= 4;
     const hasSwarm  = waveNum >= 5;
     const hasGunner = waveNum >= 6;
+    const hasStug   = waveNum >= 8;
 
-    const p  = Math.min((waveNum - 1) / 8, 1);
-    const wF = 1 - p * 0.3;
-    const wT = hasTanky  ? (0.2 + p * 0.4) : 0;
-    const wS = hasSwarm  ? (0.2 + p * 0.3) : 0;
-    const wG = hasGunner ? (0.1 + p * 0.2) : 0;
-    const sum = wF + wT + wS + wG;
+    const p   = Math.min((waveNum - 1) / 10, 1);
+    const wF  = 1 - p * 0.25;
+    const wT  = hasTanky  ? (0.2 + p * 0.35) : 0;
+    const wSc = hasScout  ? (0.15 + p * 0.1)  : 0;
+    const wSw = hasSwarm  ? (0.2 + p * 0.25)  : 0;
+    const wG  = hasGunner ? (0.1 + p * 0.2)   : 0;
+    const wSt = hasStug   ? (0.08 + p * 0.12) : 0;
+    const sum = wF + wT + wSc + wSw + wG + wSt;
 
     const nFast   = Math.max(1, Math.round((wF / sum) * total));
+    const nScout  = hasScout  ? Math.max(0, Math.round((wSc / sum) * total)) : 0;
     const nGunner = hasGunner ? Math.max(0, Math.round((wG / sum) * total)) : 0;
-    const nSwarm  = hasSwarm  ? Math.max(0, Math.round((wS * 1.3 / sum) * total)) : 0;
-    const nTanky  = hasTanky  ? Math.max(0, total - nFast - nSwarm - nGunner) : 0;
+    const nSwarm  = hasSwarm  ? Math.max(0, Math.round((wSw * 1.2 / sum) * total)) : 0;
+    const nStug   = hasStug   ? Math.max(0, Math.min(2, Math.round((wSt / sum) * total))) : 0;
+    const nTanky  = hasTanky  ? Math.max(0, total - nFast - nScout - nSwarm - nGunner - nStug) : 0;
 
     const types = [
       ...Array(nFast).fill('fast'),
       ...Array(nTanky).fill('tanky'),
+      ...Array(nScout).fill('scout'),
       ...Array(nSwarm).fill('swarm'),
       ...Array(nGunner).fill('gunner'),
+      ...Array(nStug).fill('stug'),
     ];
     // Shuffle
     for (let i = types.length - 1; i > 0; i--) {

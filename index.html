@@ -86,6 +86,7 @@
           <span class="ctrl-key">MOUSE Y</span>    <span class="ctrl-desc">Barrel elevation — aim high to shoot over low walls</span>
           <span class="ctrl-key">C (HOLD)</span>   <span class="ctrl-desc">Free-look — camera orbits, gun stays locked</span>
           <span class="ctrl-key">V</span>          <span class="ctrl-desc">Toggle first-person view</span>
+          <span class="ctrl-key">P</span>          <span class="ctrl-desc">Pause — show vehicle stats</span>
           <span class="ctrl-key">L-CLICK</span>   <span class="ctrl-desc">Coax MG — rapid fire, 30 rounds, auto-reload</span>
           <span class="ctrl-key">R-CLICK</span>   <span class="ctrl-desc">Main cannon — high damage, arcing shell</span>
           <span class="ctrl-key">AIM CIRCLE</span> <span class="ctrl-desc">Hold still to lock on — cannon shoots when small</span>
@@ -140,6 +141,16 @@
 
         <div id="shop-items" class="shop-grid"></div>
         <button id="btn-shop-skip">DEPLOY</button>
+      </div>
+    </div>
+
+    <!-- Pause screen -->
+    <div id="pause-screen" class="screen hidden">
+      <div class="screen-content">
+        <h1 style="font-size:48px;letter-spacing:14px">PAUSED</h1>
+        <p class="subtitle">VEHICLE STATUS</p>
+        <div id="pause-stats" class="shop-stats" style="width:320px"></div>
+        <button id="btn-resume">RESUME</button>
       </div>
     </div>
 

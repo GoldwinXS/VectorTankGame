@@ -350,6 +350,10 @@ button:hover {
 .upg-name { font-size: 12px; letter-spacing: 3px; color: var(--cyan); }
 .upg-desc { font-size: 11px; letter-spacing: 1px; color: var(--text); line-height: 1.6; }
 
+/* ── Pause screen ── */
+#pause-screen .shop-stats { gap: 10px; }
+#pause-screen .sstat-row  { font-size: 12px; letter-spacing: 2px; }
+
 /* ── Shop ── */
 .shop-stats {
   background: var(--panel);

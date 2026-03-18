@@ -86,6 +86,33 @@ export class UI {
     }, ms));
   }
 
+  showPause(player, onResume) {
+    const screen = $('pause-screen');
+    if (!screen) return;
+    this._renderPauseStats(player);
+    screen.classList.remove('hidden');
+    $('btn-resume').onclick = () => { screen.classList.add('hidden'); onResume?.(); };
+  }
+
+  hidePause() { $('pause-screen')?.classList.add('hidden'); }
+
+  _renderPauseStats(p) {
+    const el = $('pause-stats');
+    if (!el) return;
+    const armorPct = Math.round((1 - p.armorMult) * 100);
+    const hpCol    = p.hp > p.maxHp * 0.5 ? 'var(--cyan)' : p.hp > p.maxHp * 0.25 ? '#ffaa00' : '#ff5555';
+    el.innerHTML = `
+      <div class="sstat-row"><span class="sstat-label">HULL</span><span class="sstat-val" style="color:${hpCol}">${Math.ceil(p.hp)} / ${p.maxHp}</span></div>
+      <div class="sstat-row"><span class="sstat-label">LIVES</span><span class="sstat-val">${p.lives}</span></div>
+      <div class="sstat-row"><span class="sstat-label">SPEED</span><span class="sstat-val">${Math.round(p.speedMult * 100)}%</span></div>
+      <div class="sstat-row"><span class="sstat-label">DAMAGE</span><span class="sstat-val">${Math.round(p.damageMult * 100)}%</span></div>
+      <div class="sstat-row"><span class="sstat-label">ARMOR</span><span class="sstat-val">${armorPct > 0 ? '-' : '+'}${Math.abs(armorPct)}%</span></div>
+      <div class="sstat-row"><span class="sstat-label">MG AMMO</span><span class="sstat-val">${p.mgAmmo} / ${p.mgMaxAmmo}</span></div>
+      <div class="sstat-row"><span class="sstat-label">MG DMG</span><span class="sstat-val">${Math.round((p.mgDamageMult ?? 1) * 100)}%</span></div>
+      <div class="sstat-row"><span class="sstat-label">MG SPD</span><span class="sstat-val">${Math.round((1 / (p.mgSpreadMult ?? 1)) * 100)}%</span></div>
+    `;
+  }
+
   showStartScreen()  { this.startScreen.classList.remove('hidden'); }
   hideStartScreen()  { this.startScreen.classList.add('hidden'); }
 

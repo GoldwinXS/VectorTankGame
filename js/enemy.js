@@ -71,6 +71,39 @@ export const TYPES = {
     preferDist: 16,
     traverseSpeed: 2.2,
     baseSpread: 0.12,
+    isMG: true,
+  },
+  // Light scout — MG only, very fast, fragile
+  scout: {
+    color: 0x44ffaa,
+    emissive: 0x22cc77,
+    scale: 0.6,
+    speed: 2.5,
+    hp: 22,
+    damage: 3,
+    shootRange: 22,
+    shootCd: 0.12,
+    bulletSpeed: 26,
+    preferDist: 10,
+    traverseSpeed: 3.5,
+    baseSpread: 0.20,
+    isMG: true,
+  },
+  // Tank destroyer — hull-aims, fixed gun, high damage, long range
+  stug: {
+    color: 0xaa8855,
+    emissive: 0x775533,
+    scale: 1.1,
+    speed: 1.0,
+    hp: 130,
+    damage: 45,
+    shootRange: 45,
+    shootCd: 3.2,
+    bulletSpeed: 28,
+    preferDist: 28,
+    traverseSpeed: 0,
+    turnSpeed: 0.65,
+    baseSpread: 0.04,
   },
 };
 
@@ -99,6 +132,7 @@ export class Enemy {
     this._encircleElapsed = 0;
     this._strafeDir = Math.random() > 0.5 ? 1 : -1;
     this._jitterTimer = 0;
+    this.fixedGun = (type === 'stug'); // hull-aims instead of turret
 
     this._buildMesh();
     this.group.position.set(spawnPos.x, 0, spawnPos.z);
@@ -112,6 +146,7 @@ export class Enemy {
   }
 
   _buildMesh() {
+    if (this.type === 'stug') { this._buildStugMesh(); return; }
     this.group = new THREE.Group();
     this.group.scale.setScalar(this.def.scale);
 
@@ -168,6 +203,56 @@ export class Enemy {
     glow.position.y = 0.5;
     this.group.add(glow);
 
+    if (this.isBoss) this._buildBossExtras();
+  }
+
+  _buildStugMesh() {
+    this.group = new THREE.Group();
+    this.group.scale.setScalar(this.def.scale);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.15, roughness: 0.5, metalness: 0.65,
+    });
+    const edgeMat = new THREE.LineBasicMaterial({ color: this.def.color, opacity: 0.6, transparent: true });
+
+    // Wide low hull
+    const hullGeo = new THREE.BoxGeometry(1.6, 0.65, 2.4);
+    this.group.add(new THREE.Mesh(hullGeo, mat));
+    this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), edgeMat));
+
+    // Casemate / superstructure
+    const caseGeo = new THREE.BoxGeometry(1.35, 0.55, 1.9);
+    const caseM = new THREE.Mesh(caseGeo, mat);
+    caseM.position.set(0, 0.6, 0.15);
+    this.group.add(caseM);
+    const caseEdge = new THREE.LineSegments(new THREE.EdgesGeometry(caseGeo), edgeMat.clone());
+    caseEdge.position.copy(caseM.position);
+    this.group.add(caseEdge);
+
+    // Long fixed barrel from casemate front
+    const barrelMat = new THREE.MeshStandardMaterial({ color: this.def.color, emissive: this.def.emissive, emissiveIntensity: 0.55 });
+    const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 2.1), barrelMat);
+    barrel.position.set(0, 0.6, 1.5);
+    this.group.add(barrel);
+
+    // Track sponsons
+    [-0.9, 0.9].forEach(xOff => {
+      const sp = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.28, 2.5), mat);
+      sp.position.set(xOff, -0.26, 0);
+      this.group.add(sp);
+    });
+
+    // Fixed turret group — rotation always stays 0, hull aims instead
+    this.turretGroup = new THREE.Group();
+    this.group.add(this.turretGroup);
+
+    const glow = new THREE.PointLight(this.def.color, 2.5, 4);
+    glow.position.y = 0.5;
+    this.group.add(glow);
+  }
+
+  _buildBossExtras() {
     // Boss gets a distinctive ground ring indicator and extra glow
     if (this.isBoss) {
       const ringPts = [];
@@ -207,8 +292,8 @@ export class Enemy {
     const dir =
       dist > 0.01 ? toPlayer.clone().normalize() : new THREE.Vector3(1, 0, 0);
 
-    // Turret traverses toward player at limited speed (mirrors player system)
-    if (dist > 0.1) {
+    // Turret traverses toward player (skipped for stug — hull aims instead)
+    if (!this.fixedGun && dist > 0.1) {
       const worldToPlayer = Math.atan2(toPlayer.x, toPlayer.z);
       const desiredLocal = worldToPlayer - this.group.rotation.y;
       let diff = desiredLocal - this.turretGroup.rotation.y;
@@ -218,6 +303,18 @@ export class Enemy {
       const maxStep = this.def.traverseSpeed * delta;
       this.turretGroup.rotation.y +=
         Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
+      this._aimDelta = Math.abs(diff);
+    }
+
+    // Stug: rotate entire hull toward player for aiming
+    if (this.fixedGun && dist > 0.1) {
+      const desired = Math.atan2(toPlayer.x, toPlayer.z);
+      let diff = desired - this.group.rotation.y;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      const turnRate = this.def.turnSpeed ?? 0.65;
+      this.group.rotation.y += Math.sign(diff) * Math.min(Math.abs(diff), turnRate * delta);
+      this.turretGroup.rotation.y = 0;
       this._aimDelta = Math.abs(diff);
     }
 
@@ -294,11 +391,18 @@ export class Enemy {
       }
     }
 
-    // Hull faces movement direction
+    // Hull faces movement direction (stug hull is controlled by aim logic above)
     const moved = this.group.position.clone().sub(prevPos);
     moved.y = 0;
-    if (moved.lengthSq() > 0.0001) {
+    if (!this.fixedGun && moved.lengthSq() > 0.0001) {
       this.group.rotation.y = Math.atan2(moved.x, moved.z);
+    }
+
+    // Stug: maintain standoff distance while hull-facing player
+    if (this.fixedGun) {
+      const pref = this.def.preferDist;
+      if (dist > pref + 2)      this.group.position.addScaledVector(dir, this.def.speed * delta);
+      else if (dist < pref - 2) this.group.position.addScaledVector(dir, -this.def.speed * 0.6 * delta);
     }
 
     // Hard min separation from player
@@ -354,9 +458,10 @@ export class Enemy {
     dir.z += (Math.random() - 0.5) * spread;
     dir.normalize();
 
-    const barrelLocal = new THREE.Vector3(0, 0.65, 1.5);
+    const barrelZ = this.type === 'stug' ? 2.4 : 1.5;
+    const barrelLocal = new THREE.Vector3(0, 0.65, barrelZ);
     this.group.localToWorld(barrelLocal);
-    barrelLocal.y = this.group.position.y + 0.45;
+    barrelLocal.y = this.group.position.y + (this.type === 'stug' ? 0.6 * this.def.scale : 0.45);
 
     const proj = new Projectile(
       this.scene,
@@ -366,6 +471,8 @@ export class Enemy {
       this.def.damage,
       false,
       this.def.color,
+      undefined,
+      this.def.isMG ?? false,
     );
     proj._enemyType = this.type;
     this.projectiles.push(proj);
