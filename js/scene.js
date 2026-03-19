@@ -225,21 +225,104 @@ export function updateBoundary(geo, bounds) {
   geo.computeBoundingSphere();
 }
 
+// ── Decorative environment ────────────────────────────────────────────────────
+
+function buildStarField(scene) {
+  const count = 1000;
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi   = Math.random() * Math.PI * 0.55; // upper hemisphere only
+    const r     = 150 + Math.random() * 30;
+    positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = r * Math.cos(phi);
+    positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  _starMat = new THREE.PointsMaterial({ color: 0x88bbff, size: 0.9, sizeAttenuation: true, fog: false });
+  scene.add(new THREE.Points(geo, _starMat));
+}
+
+function buildDecorScatter(scene) {
+  // Low-poly rock clusters — non-collidable, purely visual
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x1a2233, roughness: 0.95, metalness: 0.15 });
+  const ROCK_CLUSTERS = [
+    [-12, 12], [12, -12], [-2, 8], [2, -8],
+    [8, -2], [-8, 2], [-6, -12], [6, 12],
+    [-13, -3], [13, 3], [3, 13], [-3, -13],
+  ];
+  for (const [cx, cz] of ROCK_CLUSTERS) {
+    const cnt = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < cnt; i++) {
+      const r  = 0.25 + Math.random() * 0.45;
+      const ox = (Math.random() - 0.5) * 1.6;
+      const oz = (Math.random() - 0.5) * 1.6;
+      const px = cx + ox, pz = cz + oz;
+      const geo  = new THREE.IcosahedronGeometry(r, 0);
+      const mesh = new THREE.Mesh(geo, rockMat);
+      mesh.position.set(px, terrainH(px, pz) + r * 0.55, pz);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      mesh.castShadow = true;
+      scene.add(mesh);
+    }
+  }
+
+  // Glowing crystal formations — emissive material updated per stage vibe
+  _crystalMat = new THREE.MeshStandardMaterial({
+    color: 0x001122, emissive: 0x00aadd, emissiveIntensity: 0.9,
+    roughness: 0.15, metalness: 0.9,
+  });
+  const CRYSTAL_CLUSTERS = [
+    [0, 7], [-8, -5], [7, 8], [-3, -11], [10, -5], [-10, 4],
+  ];
+  for (const [cx, cz] of CRYSTAL_CLUSTERS) {
+    const cnt = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < cnt; i++) {
+      const h  = 0.6 + Math.random() * 1.4;
+      const r  = 0.06 + Math.random() * 0.08;
+      const ox = (Math.random() - 0.5) * 1.2;
+      const oz = (Math.random() - 0.5) * 1.2;
+      const px = cx + ox, pz = cz + oz;
+      const geo  = new THREE.ConeGeometry(r, h, 5);
+      const mesh = new THREE.Mesh(geo, _crystalMat);
+      mesh.position.set(px, terrainH(px, pz) + h * 0.5, pz);
+      mesh.rotation.y = Math.random() * Math.PI * 2;
+      mesh.rotation.z = (Math.random() - 0.5) * 0.25; // slight lean
+      scene.add(mesh);
+    }
+  }
+}
+
 // ── Terrain mesh ──────────────────────────────────────────────────────────────
 
 let _terrainMat = null;
-let _wireMat = null;
+let _wireMat    = null;
+let _starMat    = null;
+let _crystalMat = null;
 
 function buildTerrainMesh(scene) {
   const geo = new THREE.PlaneGeometry(250, 250, 120, 120);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position;
+  // Height-based vertex colours: dark in valleys, bright on ridges.
+  // The vertex colour multiplies the material base colour in Three.js,
+  // so the base colour controls hue while luminance encodes elevation.
+  const H_MIN = -1.6, H_RANGE = 3.2;
+  const cols  = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
-    pos.setY(i, terrainH(pos.getX(i), pos.getZ(i)));
+    const h = terrainH(pos.getX(i), pos.getZ(i));
+    pos.setY(i, h);
+    const t   = Math.max(0, Math.min(1, (h - H_MIN) / H_RANGE));
+    const lum = 0.12 + t * 0.70; // 0.12 (valley) → 0.82 (ridge)
+    cols[i * 3] = lum; cols[i * 3 + 1] = lum; cols[i * 3 + 2] = lum;
   }
+  geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
   pos.needsUpdate = true;
   geo.computeVertexNormals();
-  _terrainMat = new THREE.MeshStandardMaterial({ color: 0x010a16, roughness: 1, metalness: 0 });
+  _terrainMat = new THREE.MeshStandardMaterial({
+    color: 0x004466, vertexColors: true, roughness: 1, metalness: 0,
+  });
   const mesh = new THREE.Mesh(geo, _terrainMat);
   mesh.receiveShadow = true;
   scene.add(mesh);
@@ -299,6 +382,8 @@ export function createScene(canvas) {
   // Terrain mesh + displaced grid lines (replaces flat floor + GridHelpers)
   buildTerrainMesh(scene);
   buildTerrainGrid(scene);
+  buildStarField(scene);
+  buildDecorScatter(scene);
 
   // Dynamic boundary fence — LineSegments with 3 rails + vertical posts
   const boundaryGeo  = new THREE.BufferGeometry();
@@ -325,4 +410,12 @@ export function createScene(canvas) {
 export function setTerrainColors(terrainHex, wireHex) {
   if (_terrainMat) _terrainMat.color.setHex(terrainHex);
   if (_wireMat) _wireMat.color.setHex(wireHex);
+}
+
+export function setStarColor(hex) {
+  if (_starMat) _starMat.color.setHex(hex);
+}
+
+export function setCrystalEmissive(hex) {
+  if (_crystalMat) _crystalMat.emissive.setHex(hex);
 }

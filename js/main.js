@@ -10,6 +10,8 @@ import {
   terrainH,
   terrainSlope,
   setTerrainColors,
+  setStarColor,
+  setCrystalEmissive,
 } from "./scene.js";
 import { GRAVITY } from "./projectile.js";
 import { Player } from "./player.js";
@@ -140,31 +142,36 @@ const STAGE_VIBES = [
     // Stage 0 — standard ops (waves 1-4)
     fogColor: 0x020b18, clearColor: 0x010810,
     ambientHex: 0x112244, ambientInt: 6, dirHex: 0x4488ff, dirInt: 3,
-    fogDensity: 0.040, terrainHex: 0x010a16, wireHex: 0x005577,
+    fogDensity: 0.040, terrainHex: 0x004466, wireHex: 0x005577,
+    starHex: 0x88bbff, crystalHex: 0x00aadd,
   },
   {
     // Stage 1 — deep navy (boss wave 5)
     fogColor: 0x020e22, clearColor: 0x010a1c,
     ambientHex: 0x0a1840, ambientInt: 5, dirHex: 0x1166cc, dirInt: 2.5,
-    fogDensity: 0.046, terrainHex: 0x010c18, wireHex: 0x003388,
+    fogDensity: 0.046, terrainHex: 0x002255, wireHex: 0x003388,
+    starHex: 0x5588cc, crystalHex: 0x0066ff,
   },
   {
     // Stage 2 — purple void (boss wave 10)
     fogColor: 0x0d0230, clearColor: 0x080120,
     ambientHex: 0x1e0850, ambientInt: 4.5, dirHex: 0x9933cc, dirInt: 2.2,
-    fogDensity: 0.054, terrainHex: 0x060018, wireHex: 0x660099,
+    fogDensity: 0.054, terrainHex: 0x1a0055, wireHex: 0x660099,
+    starHex: 0xaa44ff, crystalHex: 0x8833ff,
   },
   {
     // Stage 3 — blood ember (boss wave 15)
     fogColor: 0x300808, clearColor: 0x1e0404,
     ambientHex: 0x420c0c, ambientInt: 4, dirHex: 0xdd3322, dirInt: 2.0,
-    fogDensity: 0.062, terrainHex: 0x170202, wireHex: 0x991100,
+    fogDensity: 0.062, terrainHex: 0x440800, wireHex: 0x991100,
+    starHex: 0xff7733, crystalHex: 0xff4400,
   },
   {
     // Stage 4 — crimson endgame (boss wave 20+)
     fogColor: 0x3d0404, clearColor: 0x220101,
     ambientHex: 0x440606, ambientInt: 3.5, dirHex: 0xff2200, dirInt: 1.8,
-    fogDensity: 0.072, terrainHex: 0x1e0000, wireHex: 0xbb1100,
+    fogDensity: 0.072, terrainHex: 0x5c0500, wireHex: 0xbb1100,
+    starHex: 0xff2200, crystalHex: 0xff1100,
   },
 ];
 let _currentStage = 0;
@@ -179,6 +186,8 @@ function applyStageVibe(stage, showFlash = true) {
   dirLight.color.setHex(v.dirHex);
   dirLight.intensity = v.dirInt;
   setTerrainColors(v.terrainHex, v.wireHex);
+  setStarColor(v.starHex);
+  setCrystalEmissive(v.crystalHex);
   if (showFlash) {
     const el = document.getElementById("damage-flash");
     if (el) {
