@@ -419,3 +419,53 @@ export function setStarColor(hex) {
 export function setCrystalEmissive(hex) {
   if (_crystalMat) _crystalMat.emissive.setHex(hex);
 }
+
+// ── Per-zone decorative scatter (called when a zone is unlocked) ──────────────
+// Reuses the shared _crystalMat so crystal colour updates with stage vibes.
+export function buildDecorForZone(scene, direction) {
+  const ROCK_CLUSTERS = {
+    east:  [[22, -8], [26,  3], [30, -5], [24, 12], [28, -13]],
+    south: [[-8, 22], [ 3, 26], [-5, 30], [12, 24], [-13, 28]],
+    west:  [[-22, 8], [-26, -3], [-30,  5], [-24, -12], [-28, 13]],
+    north: [[ 8, -22], [-3, -26], [ 5, -30], [-12, -24], [13, -28]],
+  };
+  const CRYSTAL_CLUSTERS = {
+    east:  [[25, 0], [21, -10], [29, 8]],
+    south: [[ 0, 25], [-10, 21], [ 8, 29]],
+    west:  [[-25, 0], [-21, 10], [-29, -8]],
+    north: [[ 0, -25], [10, -21], [-8, -29]],
+  };
+
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x1a2233, roughness: 0.95, metalness: 0.15 });
+
+  for (const [cx, cz] of (ROCK_CLUSTERS[direction] ?? [])) {
+    const cnt = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < cnt; i++) {
+      const r  = 0.25 + Math.random() * 0.45;
+      const ox = (Math.random() - 0.5) * 1.6;
+      const oz = (Math.random() - 0.5) * 1.6;
+      const px = cx + ox, pz = cz + oz;
+      const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), rockMat);
+      mesh.position.set(px, terrainH(px, pz) + r * 0.55, pz);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      mesh.castShadow = true;
+      scene.add(mesh);
+    }
+  }
+
+  for (const [cx, cz] of (CRYSTAL_CLUSTERS[direction] ?? [])) {
+    const cnt = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < cnt; i++) {
+      const h  = 0.6 + Math.random() * 1.4;
+      const r  = 0.06 + Math.random() * 0.08;
+      const ox = (Math.random() - 0.5) * 1.2;
+      const oz = (Math.random() - 0.5) * 1.2;
+      const px = cx + ox, pz = cz + oz;
+      const mesh = new THREE.Mesh(new THREE.ConeGeometry(r, h, 5), _crystalMat);
+      mesh.position.set(px, terrainH(px, pz) + h * 0.5, pz);
+      mesh.rotation.y = Math.random() * Math.PI * 2;
+      mesh.rotation.z = (Math.random() - 0.5) * 0.25;
+      scene.add(mesh);
+    }
+  }
+}

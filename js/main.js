@@ -12,6 +12,7 @@ import {
   setTerrainColors,
   setStarColor,
   setCrystalEmissive,
+  buildDecorForZone,
 } from "./scene.js";
 import { GRAVITY } from "./projectile.js";
 import { Player } from "./player.js";
@@ -287,6 +288,7 @@ function startZoneReveal(direction) {
   if (direction === "west") to.minX -= ZONE_SIZE;
   if (direction === "north") to.minZ -= ZONE_SIZE;
   const meshes = activateZone(direction, scene);
+  buildDecorForZone(scene, direction);
   meshes.forEach((m) => {
     if (m.isMesh && m.material) {
       m.material.color.setHex(0xaaffff);

@@ -130,7 +130,7 @@ export class WaveManager {
     const wSt = hasStug ? 0.08 + p * 0.12 : 0;
     const wHv = hasHover  ? 0.10 + p * 0.3 : 0;
     const wDr = hasDrone  ? 0.12 + p * 0.2 : 0;
-    const wMo = hasMortar ? 0.06 + p * 0.1 : 0;
+    const wMo = hasMortar ? 0.22 + p * 0.25 : 0;
     const sum = wF + wT + wSc + wSw + wG + wL + wSt + wHv + wDr + wMo;
 
     const nFast = Math.max(1, Math.round((wF / sum) * total));
@@ -152,7 +152,7 @@ export class WaveManager {
       ? Math.max(0, Math.min(4, Math.round((wDr / sum) * total)))
       : 0;
     const nMortar = hasMortar
-      ? Math.max(0, Math.min(2, Math.round((wMo / sum) * total)))
+      ? Math.max(1, Math.min(2, Math.round((wMo / sum) * total)))
       : 0;
     const nTanky = hasTanky
       ? Math.max(

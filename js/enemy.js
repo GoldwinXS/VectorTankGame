@@ -869,7 +869,7 @@ export class Enemy {
           this._burstLeft = this._burstMax;
         }
       }
-    } else if (this.shootTimer <= 0 && dist <= this.def.shootRange && !this._losBlocked) {
+    } else if (this.shootTimer <= 0 && dist <= this.def.shootRange && (!this._losBlocked || this.def.hasSplash)) {
       if (this.def.hasSplash) this._shootMortar(aimTarget);
       else this._shoot();
       this.shootTimer = this.def.shootCd * shootCdMult;
@@ -896,7 +896,7 @@ export class Enemy {
     const barrelZ    = this.type === 'stug' ? 2.4 : 1.5;
     const barrelLocal = new THREE.Vector3(0, 0.65, barrelZ);
     this.group.localToWorld(barrelLocal);
-    barrelLocal.y = this.group.position.y + (this.type === 'stug' ? 0.6 * this.def.scale : 0.45);
+    // barrelLocal.y is now correct world-space height (terrain + scale + slope).
 
     const proj = new Projectile(
       this.scene, barrelLocal, dir,

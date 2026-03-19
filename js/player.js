@@ -60,6 +60,8 @@ export class Player {
 
     this._invincTimer = 0; // seconds of post-respawn invincibility remaining
     this._recoilT = 0; // barrel recoil animation (0–1, decays to 0)
+    this._velMag = 0;   // movement speed this frame (units/sec), for spread penalty
+    this.movementSpreadMult = 1.0; // 0 = no penalty, 1 = full penalty (upgrade reduces)
 
     this.aimCharge = 0;
     this.barrelPitch = 0; // current barrel elevation in radians (0 = flat)
@@ -313,6 +315,7 @@ export class Player {
     const engMult = engineOut ? 0.38 : 1;
     const spd =
       BASE_SPEED * this.speedMult * (this._buffs.speed?.mult ?? 1) * engMult;
+    const _px0 = this.group.position.x, _pz0 = this.group.position.z;
     if (!trackOut) {
       if (keys["KeyW"] || keys["ArrowUp"]) {
         this.group.position.x += Math.sin(angle) * spd * delta;
@@ -323,6 +326,9 @@ export class Player {
         this.group.position.z -= Math.cos(angle) * spd * 0.55 * delta;
       }
     }
+    // Velocity magnitude (units/sec) used for movement-spread penalty
+    const _dx = this.group.position.x - _px0, _dz = this.group.position.z - _pz0;
+    this._velMag = Math.sqrt(_dx * _dx + _dz * _dz) / Math.max(delta, 0.001);
 
     // Clamp to arena
     const p = this.group.position;
@@ -421,7 +427,11 @@ export class Player {
       Math.cos(barrelAngle) * cp,
     );
 
-    const spread = MAX_SPREAD * (1 - this.aimCharge);
+    // Movement accuracy penalty: moving at full speed adds up to 0.28 extra spread.
+    // Upgrade (movementSpreadMult) scales this down toward 0.
+    const moveNorm = Math.min(1, this._velMag / (BASE_SPEED * 2.5));
+    const movePenalty = 0.28 * moveNorm * this.movementSpreadMult;
+    const spread = MAX_SPREAD * (1 - this.aimCharge) + movePenalty;
     const speed = BULLET_SPEED * this.bulletSpeedMult;
     const totalDmgMult = this.damageMult * (this._buffs.damage?.mult ?? 1);
     const dmg = Math.round(BASE_DAMAGE * totalDmgMult);
@@ -487,7 +497,8 @@ export class Player {
       sp,
       Math.cos(barrelAngle) * cp,
     );
-    const spread = MG_SPREAD * (this.mgSpreadMult ?? 1);
+    const moveNorm = Math.min(1, this._velMag / (BASE_SPEED * 2.5));
+    const spread = MG_SPREAD * (this.mgSpreadMult ?? 1) + 0.14 * moveNorm * this.movementSpreadMult;
     dir.x += (Math.random() - 0.5) * spread;
     dir.z += (Math.random() - 0.5) * spread;
     dir.normalize();

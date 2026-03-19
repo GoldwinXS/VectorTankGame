@@ -132,6 +132,17 @@ const UPGRADE_POOL = [
     },
   },
 
+  {
+    id: "stabilizer",
+    tag: "firepower",
+    maxTier: 3,
+    label: (t) => `GYRO-STABILIZER ${ROMAN[t - 1]}`,
+    desc: (t) => [`-40% accuracy penalty while moving`, `-70% penalty while moving`, `No accuracy penalty while moving`][t - 1],
+    apply: (p, t) => {
+      p.movementSpreadMult = [0.60, 0.30, 0.0][t - 1];
+    },
+  },
+
   // ── Speed (tiered) ───────────────────────────────────────────────────────
   {
     id: "speed",
