@@ -3,7 +3,7 @@ import { Projectile } from "./projectile.js";
 import { audio } from "./audio.js";
 
 const BASE_SPEED = 2;
-const TURN_SPEED = 0.75;
+const TURN_SPEED = 1.0;
 const SHOOT_CD = 1.8;
 const BULLET_SPEED = 32;
 const BASE_DAMAGE = 25;

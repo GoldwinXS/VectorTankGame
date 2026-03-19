@@ -66,6 +66,8 @@
       <div class="hud-block" id="nn-panel">
         <div class="hud-label">AI PROTOCOL</div>
         <div id="active-tactic">—</div>
+        <div id="tactic-desc" class="tactic-desc"></div>
+        <div class="hud-label" style="margin-top:8px">TENDENCIES</div>
         <div class="nn-row"><span>RUSH</span>  <div class="nn-track"><div class="nn-bar" id="bar-rush"></div></div></div>
         <div class="nn-row"><span>FLANK</span> <div class="nn-track"><div class="nn-bar" id="bar-flank"></div></div></div>
         <div class="nn-row"><span>SUPR</span>  <div class="nn-track"><div class="nn-bar" id="bar-suppress"></div></div></div>
@@ -268,8 +270,16 @@
             <span id="sstat-damage" class="sstat-val">100%</span>
           </div>
           <div class="sstat-row">
+            <span class="sstat-label">RELOAD</span>
+            <span id="sstat-reload" class="sstat-val">100%</span>
+          </div>
+          <div class="sstat-row">
             <span class="sstat-label">ARMOR</span>
             <span id="sstat-armor" class="sstat-val">−0%</span>
+          </div>
+          <div class="sstat-row">
+            <span class="sstat-label">TRV SPD</span>
+            <span id="sstat-traverse" class="sstat-val">100%</span>
           </div>
         </div>
 
@@ -283,7 +293,7 @@
       <div class="screen-content">
         <h1 style="font-size:48px;letter-spacing:14px">PAUSED</h1>
         <p class="subtitle">VEHICLE STATUS</p>
-        <div id="pause-stats" class="shop-stats" style="width:320px"></div>
+        <div id="pause-stats" class="shop-stats" style="width:400px"></div>
         <div class="audio-row">
           <button class="inline-mute" id="pause-btn-mute">♪</button>
           <span class="audio-label">VOL</span>
@@ -296,6 +306,17 @@
         <div class="audio-row">
           <span class="audio-label">SFX</span>
           <input type="range" class="inline-vol" id="pause-vol-sfx" min="0" max="1" step="0.05" value="0.65">
+        </div>
+        <div class="controls-grid" style="margin-top:4px">
+          <span class="ctrl-key">W / S</span>      <span class="ctrl-desc">Drive forward / reverse</span>
+          <span class="ctrl-key">A / D</span>      <span class="ctrl-desc">Rotate hull</span>
+          <span class="ctrl-key">MOUSE X</span>    <span class="ctrl-desc">Orbit camera</span>
+          <span class="ctrl-key">MOUSE Y</span>    <span class="ctrl-desc">Barrel elevation</span>
+          <span class="ctrl-key">L-CLICK</span>   <span class="ctrl-desc">Main cannon</span>
+          <span class="ctrl-key">R-CLICK</span>   <span class="ctrl-desc">Coax MG (30 rounds)</span>
+          <span class="ctrl-key">V</span>          <span class="ctrl-desc">Toggle commander / FPV view</span>
+          <span class="ctrl-key">C (HOLD)</span>   <span class="ctrl-desc">Free-look — gun stays locked</span>
+          <span class="ctrl-key">P</span>          <span class="ctrl-desc">Pause</span>
         </div>
         <button id="btn-resume">RESUME</button>
         <button id="btn-pause-menu" class="btn-secondary" style="margin-top:4px">MAIN MENU</button>
@@ -314,9 +335,20 @@
           <div class="hud-label">AI ANALYSIS</div>
           <div id="ai-insight-text"></div>
         </div>
-        <button id="btn-restart">TRY AGAIN</button>
-        <button id="btn-gameover-menu" class="btn-secondary" style="margin-top:4px">MAIN MENU</button>
+        <button id="btn-restart">MAIN MENU</button>
       </div>
+    </div>
+
+    <!-- In-game controls hint (shown at wave 1, dismissible) -->
+    <div id="controls-hint" class="hidden">
+      <div class="hint-header">CONTROLS <span class="hint-close" id="btn-hint-close">✕</span></div>
+      <div class="hint-row"><span class="hint-key">WASD</span><span>Drive / Rotate</span></div>
+      <div class="hint-row"><span class="hint-key">MOUSE</span><span>Aim camera / elevation</span></div>
+      <div class="hint-row"><span class="hint-key">L-CLICK</span><span>Main cannon</span></div>
+      <div class="hint-row"><span class="hint-key">R-CLICK</span><span>Coax MG</span></div>
+      <div class="hint-row"><span class="hint-key">V</span><span>Commander view (FPV)</span></div>
+      <div class="hint-row"><span class="hint-key">P</span><span>Pause / full controls</span></div>
+      <div class="hint-row"><span class="hint-key">C hold</span><span>Free-look</span></div>
     </div>
 
   </div>

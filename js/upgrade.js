@@ -20,8 +20,8 @@ const UPGRADE_POOL = [
 
   { id: 'life',     tag: 'utility',   maxTier: 2,
     label: () => 'RESERVE HULL',
-    desc:  () => '+1 extra life',
-    apply: p     => { p.lives++; } },
+    desc:  () => '+1 extra life — −15 max hull',
+    apply: p     => { p.lives++; p.maxHp = Math.max(30, p.maxHp - 15); p.hp = Math.min(p.hp, p.maxHp); } },
 
   // ── Firepower (tiered — each tier gives a larger individual boost) ────────
   { id: 'damage',   tag: 'firepower', maxTier: 3,
@@ -57,8 +57,8 @@ const UPGRADE_POOL = [
 
   { id: 'regen',    tag: 'defense',   maxTier: 2,
     label: t => `HULL REGEN ${ROMAN[t-1]}`,
-    desc:  t => `+${t === 1 ? 1 : 2.5} HP/sec passive regen`,
-    apply: (p, t) => { p.regenRate = Math.min(5, (p.regenRate || 0) + (t === 1 ? 1 : 2.5)); } },
+    desc:  t => `+${t === 1 ? 2 : 4} HP/sec passive regen`,
+    apply: (p, t) => { p.regenRate = Math.min(8, (p.regenRate || 0) + (t === 1 ? 2 : 4)); } },
 
   // ── Speed (tiered) ───────────────────────────────────────────────────────
   { id: 'speed',    tag: 'speed',     maxTier: 3,
@@ -69,18 +69,18 @@ const UPGRADE_POOL = [
   // ── Utility (tiered) ─────────────────────────────────────────────────────
   { id: 'lifesteal', tag: 'utility',  maxTier: 3,
     label: t => `VAMPIRE ROUND ${ROMAN[t-1]}`,
-    desc:  t => `+${[3, 6, 9][t-1]} HP per enemy destroyed`,
-    apply: (p, t) => { p.hpPerKill = Math.min(40, (p.hpPerKill || 0) + [3, 6, 9][t-1]); } },
+    desc:  t => `+${[4, 8, 12][t-1]} HP per enemy destroyed`,
+    apply: (p, t) => { p.hpPerKill = Math.min(40, (p.hpPerKill || 0) + [4, 8, 12][t-1]); } },
 
   { id: 'bounty',   tag: 'utility',   maxTier: 2,
     label: t => `KILL BOUNTY ${ROMAN[t-1]}`,
-    desc:  t => `+${t === 1 ? 40 : 60}% score per kill`,
-    apply: (p, t) => { p.scoreMult = (p.scoreMult || 1) * (t === 1 ? 1.40 : 1.60); } },
+    desc:  t => `+${t === 1 ? 50 : 90}% score per kill`,
+    apply: (p, t) => { p.scoreMult = (p.scoreMult || 1) * (t === 1 ? 1.50 : 1.90); } },
 
   { id: 'field_repair', tag: 'utility', maxTier: 2,
     label: t => `FIELD REPAIR ${ROMAN[t-1]}`,
-    desc:  t => `Component damage clears ${t === 1 ? '60' : '120'}% faster`,
-    apply: (p, t) => { p.repairRate = Math.min(5, (p.repairRate || 1) * (t === 1 ? 1.6 : 2.0)); } },
+    desc:  t => `Component damage clears ${t === 1 ? '3×' : '8×'} faster`,
+    apply: (p, t) => { p.repairRate = Math.min(10, (p.repairRate || 1) * (t === 1 ? 3.0 : 8.0)); } },
 
   // ── Build archetypes (single-use — strong by design) ─────────────────────
   { id: 'glass',    tag: 'firepower', maxTier: 1,
@@ -100,8 +100,8 @@ const UPGRADE_POOL = [
 
   { id: 'rampage',  tag: 'utility',   maxTier: 1,
     label: () => 'RAMPAGE',
-    desc:  () => '+18% speed and +18% damage',
-    apply: p => { p.speedMult = Math.min(2.5, p.speedMult * 1.18); p.damageMult = Math.min(5.0, p.damageMult * 1.18); } },
+    desc:  () => '+25% speed and +25% damage',
+    apply: p => { p.speedMult = Math.min(2.5, p.speedMult * 1.25); p.damageMult = Math.min(5.0, p.damageMult * 1.25); } },
 
   { id: 'overclock', tag: 'firepower', maxTier: 1,
     label: () => 'OVERCLOCK',
@@ -115,8 +115,8 @@ const UPGRADE_POOL = [
 
   { id: 'wide',     tag: 'firepower', maxTier: 1,
     label: () => 'WIDE PATTERN',
-    desc:  () => 'Minimum 2 rounds per shot',
-    apply: p => { if (p.multiShot < 2) p.multiShot = 2; } },
+    desc:  () => 'Always 3 rounds per shot — −15% damage per shell',
+    apply: p => { p.multiShot = Math.max(p.multiShot, 3); p.damageMult = Math.max(0.3, p.damageMult * 0.85); } },
 
   // ── MG upgrades (tiered) ─────────────────────────────────────────────────
   { id: 'mg_drum',     tag: 'firepower', maxTier: 3,

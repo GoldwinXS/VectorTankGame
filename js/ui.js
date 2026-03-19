@@ -13,6 +13,13 @@ const TACTIC_COLORS = {
   ENCIRCLE: '#cc44ff',
   '—':      '#336677',
 };
+const TACTIC_DESCS = {
+  RUSH:     'Units converge directly on your position',
+  FLANK:    'Units split to attack from multiple angles',
+  SUPPRESS: 'Long-range fire to pin you in place',
+  ENCIRCLE: 'Units spread to surround you',
+  '—':      'Threat assessment in progress',
+};
 
 export class UI {
   constructor() {
@@ -57,6 +64,8 @@ export class UI {
     const color = TACTIC_COLORS[tactic] || '#336677';
     this.activeTactic.textContent  = tactic;
     this.activeTactic.style.color  = color;
+    const descEl = $('tactic-desc');
+    if (descEl) descEl.textContent = TACTIC_DESCS[tactic] ?? '';
 
     const ids = ['rush', 'flank', 'suppress', 'encircle'];
     ids.forEach((id, i) => {
@@ -114,18 +123,23 @@ export class UI {
   _renderPauseStats(p) {
     const el = $('pause-stats');
     if (!el) return;
+    const hpPct    = Math.round((p.hp / p.maxHp) * 100);
     const armorPct = Math.round((1 - p.armorMult) * 100);
     const hpCol    = p.hp > p.maxHp * 0.5 ? 'var(--cyan)' : p.hp > p.maxHp * 0.25 ? '#ffaa00' : '#ff5555';
     el.innerHTML = `
-      <div class="sstat-row"><span class="sstat-label">HULL</span><span class="sstat-val" style="color:${hpCol}">${Math.ceil(p.hp)} / ${p.maxHp}</span></div>
+      <div class="sstat-row">
+        <span class="sstat-label">HULL</span>
+        <div class="sstat-bar-track"><div class="sstat-bar" style="width:${hpPct}%;background:${hpCol};box-shadow:0 0 6px ${hpCol}"></div></div>
+        <span class="sstat-val" style="color:${hpCol}">${Math.ceil(p.hp)} / ${p.maxHp}</span>
+      </div>
       <div class="sstat-row"><span class="sstat-label">LIVES</span><span class="sstat-val">${p.lives}</span></div>
       <div class="sstat-row"><span class="sstat-label">SPEED</span><span class="sstat-val">${Math.round(p.speedMult * 100)}%</span></div>
       <div class="sstat-row"><span class="sstat-label">DAMAGE</span><span class="sstat-val">${Math.round(p.damageMult * 100)}%</span></div>
-      <div class="sstat-row"><span class="sstat-label">ARMOR</span><span class="sstat-val">${armorPct > 0 ? '-' : '+'}${Math.abs(armorPct)}%</span></div>
+      <div class="sstat-row"><span class="sstat-label">RELOAD</span><span class="sstat-val">${Math.round((1 / p.reloadMult) * 100)}%</span></div>
+      <div class="sstat-row"><span class="sstat-label">ARMOR</span><span class="sstat-val">${armorPct > 0 ? '−' : '+'}${Math.abs(armorPct)}%</span></div>
+      <div class="sstat-row"><span class="sstat-label">TRV SPD</span><span class="sstat-val">${Math.round((p.traverseMult ?? 1) * 100)}%</span></div>
       <div class="sstat-row"><span class="sstat-label">MG AMMO</span><span class="sstat-val">${p.mgAmmo} / ${p.mgMaxAmmo}</span></div>
       <div class="sstat-row"><span class="sstat-label">MG DMG</span><span class="sstat-val">${Math.round((p.mgDamageMult ?? 1) * 100)}%</span></div>
-      <div class="sstat-row"><span class="sstat-label">MG SPD</span><span class="sstat-val">${Math.round((1 / (p.mgSpreadMult ?? 1)) * 100)}%</span></div>
-      <div class="sstat-row"><span class="sstat-label">TRV SPD</span><span class="sstat-val">${Math.round((p.traverseMult ?? 1) * 100)}%</span></div>
     `;
   }
 

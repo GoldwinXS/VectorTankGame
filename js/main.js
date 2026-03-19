@@ -68,6 +68,7 @@ function showMainMenu() {
   document.querySelector('.hull-choice[data-hull="vanguard"]')?.classList.add('selected');
   ui.hidePause();
   document.getElementById('game-over-screen')?.classList.add('hidden');
+  document.getElementById('controls-hint')?.classList.add('hidden');
   document.getElementById('hull-select-screen').classList.add('hidden');
   document.getElementById('start-screen').classList.add('hidden');
   document.getElementById('main-menu-screen').classList.remove('hidden');
@@ -471,7 +472,6 @@ async function startNextWave() {
       await ui.showWaveMessage('SECTOR ONLINE', 2300);
     }
 
-    await ui.showWaveMessage(`PROTOCOL: ${waveManager.currentTactic}`, 1100);
   }
 
   // Warn before boss waves
@@ -488,6 +488,7 @@ async function startNextWave() {
   waveManager.startWave(waveNum, gameBounds, player.hp, nn.probs);
   await ui.showWaveMessage(`WAVE  ${waveNum}`, 800);
   state = STATE.PLAYING;
+  if (waveNum === 1) document.getElementById('controls-hint')?.classList.remove('hidden');
 }
 
 // ── Collision ─────────────────────────────────────────────────────────────────
@@ -715,12 +716,9 @@ function loop(ts) {
       state = STATE.GAME_OVER;
       safeExitPointerLock();
       saveScore(score, waveNum - 1, chosenHull);
+      document.getElementById('controls-hint')?.classList.add('hidden');
       setTimeout(() => {
-        ui.showGameOver(score, waveNum - 1, nn.summary(waveNum - 1), () => {
-          lockPointer();
-          init();
-          startNextWave();
-        });
+        ui.showGameOver(score, waveNum - 1, nn.summary(waveNum - 1), showMainMenu);
       }, 600);
     }
   }
@@ -963,10 +961,9 @@ document.getElementById('btn-pause-menu')?.addEventListener('click', () => {
   showMainMenu();
 });
 
-// Game over → main menu
-document.getElementById('btn-gameover-menu')?.addEventListener('click', () => {
-  document.getElementById('game-over-screen')?.classList.add('hidden');
-  showMainMenu();
+// Controls hint close button
+document.getElementById('btn-hint-close')?.addEventListener('click', () => {
+  document.getElementById('controls-hint')?.classList.add('hidden');
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

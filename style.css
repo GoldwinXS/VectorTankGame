@@ -108,8 +108,15 @@ html, body {
 #active-tactic {
   font-size: 18px;
   letter-spacing: 3px;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
   transition: color 0.4s;
+}
+.tactic-desc {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #557788;
+  line-height: 1.5;
+  margin-bottom: 4px;
 }
 
 .nn-row {
@@ -803,6 +810,46 @@ button:hover {
 .hull-choice[data-hull="bastion"].selected  { border-color: #ff5500; box-shadow: 0 0 22px rgba(255,85,0,0.3);  background: rgba(30,10,0,0.95); }
 .hull-choice[data-hull="blitzer"]:hover     { border-color: rgba(136,255,0,0.6); background: rgba(5,20,0,0.9); }
 .hull-choice[data-hull="bastion"]:hover     { border-color: rgba(255,85,0,0.6);  background: rgba(20,5,0,0.9); }
+
+/* ── In-game controls hint ── */
+#controls-hint {
+  position: absolute;
+  bottom: 20px; right: 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  pointer-events: all;
+  z-index: 15;
+  min-width: 220px;
+}
+#controls-hint.hidden { display: none; }
+.hint-header {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--label);
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.hint-close {
+  cursor: pointer;
+  color: rgba(0,255,255,0.5);
+  font-size: 12px;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+.hint-close:hover { color: var(--cyan); }
+.hint-row {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin-bottom: 3px;
+}
+.hint-key { color: var(--cyan); }
+.hint-row span:last-child { color: var(--text); }
 
 /* ── Mobile pause button ── */
 #btn-pause-mob {

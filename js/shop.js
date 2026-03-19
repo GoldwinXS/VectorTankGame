@@ -8,7 +8,7 @@ const ITEMS = [
   { id: 'life',     label: 'RESERVE HULL',       desc: '+1 extra life',              cost: 950  },
   { id: 'armor',    label: 'REACTIVE ARMOR',     desc: '-10% damage taken',          cost: 650  },
   { id: 'reload',   label: 'QUICK LOADER',       desc: '-12% cannon reload time',    cost: 420  },
-  { id: 'barrel',   label: 'BARREL COAT',        desc: '+12% projectile speed',      cost: 380  },
+  { id: 'barrel',   label: 'BARREL COAT',        desc: '+12% projectile speed',      cost: 280  },
   { id: 'mg_drum',  label: 'MG DRUM MAG',        desc: '+8 MG rounds per magazine',  cost: 280  },
   { id: 'mg_ap',    label: 'MG AP ROUNDS',       desc: '+20% MG bullet damage',      cost: 350  },
   { id: 'traverse', label: 'TURRET SERVO',       desc: '+20% turret traverse speed', cost: 300  },
@@ -64,11 +64,13 @@ export class Shop {
 
     // ── Player stats panel ─────────────────────────────────────────────────
     const hpPct = Math.round((p.hp / p.maxHp) * 100);
-    document.getElementById('sstat-hp-bar').style.width     = hpPct + '%';
-    document.getElementById('sstat-hp-val').textContent     = `${Math.ceil(p.hp)} / ${p.maxHp}`;
-    document.getElementById('sstat-speed').textContent      = `${Math.round(p.speedMult * 100)}%`;
-    document.getElementById('sstat-damage').textContent     = `${Math.round(p.damageMult * 100)}%`;
-    document.getElementById('sstat-armor').textContent      = `−${Math.round((1 - p.armorMult) * 100)}%`;
+    document.getElementById('sstat-hp-bar').style.width      = hpPct + '%';
+    document.getElementById('sstat-hp-val').textContent      = `${Math.ceil(p.hp)} / ${p.maxHp}`;
+    document.getElementById('sstat-speed').textContent       = `${Math.round(p.speedMult * 100)}%`;
+    document.getElementById('sstat-damage').textContent      = `${Math.round(p.damageMult * 100)}%`;
+    document.getElementById('sstat-reload').textContent      = `${Math.round((1 / p.reloadMult) * 100)}%`;
+    document.getElementById('sstat-armor').textContent       = `−${Math.round((1 - p.armorMult) * 100)}%`;
+    document.getElementById('sstat-traverse').textContent    = `${Math.round((p.traverseMult ?? 1) * 100)}%`;
 
     // ── Shop items ─────────────────────────────────────────────────────────
     this._itemsEl.innerHTML = '';
