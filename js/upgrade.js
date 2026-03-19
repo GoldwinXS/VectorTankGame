@@ -374,7 +374,7 @@ export class UpgradePicker {
     document.getElementById("upg-score").textContent = stats.score;
     document.getElementById("upg-accuracy").textContent = acc + "%";
     document.getElementById("upg-hp").textContent =
-      `${stats.hpRemaining} / ${stats.maxHp}`;
+      `${Math.ceil(stats.hpRemaining)} / ${stats.maxHp}`;
   }
 
   _renderChoices() {

@@ -52,10 +52,7 @@
         <div class="hud-label">COAX MG</div>
         <div id="mg-ammo-val">30 / 30</div>
       </div>
-      <div class="hud-block" id="heading-block">
-        <div class="hud-label">HEADING</div>
-        <canvas id="mini-tank-canvas" width="64" height="64"></canvas>
-      </div>
+
       <div class="hud-block" id="buff-panel" style="display:none">
         <div class="hud-label">ACTIVE BUFFS</div>
         <div id="buff-list"></div>
@@ -112,6 +109,9 @@
     <!-- Low-HP danger vignette — pulsing red edge when hull < 25% -->
     <div id="low-hp-vignette"></div>
 
+    <!-- Wave standby — blinking during wave transitions -->
+    <div id="wave-standby" class="hidden">STANDBY</div>
+
     <!-- FPV indicator -->
     <div id="fpv-indicator" class="hidden">[ FPV ]</div>
 
@@ -132,19 +132,46 @@
 
         <!-- Settings sub-panel -->
         <div id="menu-settings-panel" class="hidden menu-sub-panel">
-          <h2 class="panel-title">AUDIO SETTINGS</h2>
-          <div class="audio-row">
-            <button class="inline-mute" id="menu-btn-mute">♪</button>
-            <span class="audio-label">MASTER</span>
-            <input type="range" class="inline-vol" id="menu-vol-master" min="0" max="1" step="0.05" value="0.5">
+          <h2 class="panel-title">SETTINGS</h2>
+          <div class="settings-section">
+            <div class="settings-section-title">GRAPHICS</div>
+            <div class="settings-row">
+              <span class="settings-label">QUALITY</span>
+              <button class="preset-btn" id="btn-gfx-low">LOW</button>
+              <button class="preset-btn" id="btn-gfx-med">MED</button>
+              <button class="preset-btn" id="btn-gfx-high">HIGH</button>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">SCREEN SHAKE</span>
+              <button class="preset-btn" id="btn-settings-shake">ON</button>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">DISPLAY</span>
+              <button class="preset-btn" id="btn-settings-fullscreen">FULLSCREEN</button>
+            </div>
           </div>
-          <div class="audio-row">
-            <span class="audio-label" style="margin-left:44px">MUSIC</span>
-            <input type="range" class="inline-vol" id="menu-vol-music" min="0" max="1" step="0.05" value="0.35">
+          <div class="settings-section">
+            <div class="settings-section-title">AUDIO</div>
+            <div class="audio-row">
+              <button class="inline-mute" id="menu-btn-mute">♪</button>
+              <span class="audio-label">MASTER</span>
+              <input type="range" class="inline-vol" id="menu-vol-master" min="0" max="1" step="0.05" value="0.5">
+            </div>
+            <div class="audio-row">
+              <span class="audio-label" style="margin-left:44px">MUSIC</span>
+              <input type="range" class="inline-vol" id="menu-vol-music" min="0" max="1" step="0.05" value="0.35">
+            </div>
+            <div class="audio-row">
+              <span class="audio-label" style="margin-left:44px">SFX</span>
+              <input type="range" class="inline-vol" id="menu-vol-sfx" min="0" max="1" step="0.05" value="0.65">
+            </div>
           </div>
-          <div class="audio-row">
-            <span class="audio-label" style="margin-left:44px">SFX</span>
-            <input type="range" class="inline-vol" id="menu-vol-sfx" min="0" max="1" step="0.05" value="0.65">
+          <div class="settings-section">
+            <div class="settings-section-title">DEVICE</div>
+            <div class="settings-row">
+              <span class="settings-label">UI MODE</span>
+              <button class="preset-btn" id="btn-settings-mobile">AUTO</button>
+            </div>
           </div>
           <button id="btn-menu-settings-back" class="btn-back">← BACK</button>
         </div>
@@ -347,10 +374,10 @@
       </div>
     </div>
 
-    <!-- FPV mini-tank overlay — shown bottom-center when in FPV mode -->
-    <div id="fpv-tank-overlay" class="hidden">
+    <!-- Heading indicator — always visible at bottom-right -->
+    <div id="heading-overlay">
       <div class="hud-label">HEADING</div>
-      <canvas id="fpv-mini-canvas" width="64" height="64"></canvas>
+      <canvas id="heading-canvas" width="64" height="64"></canvas>
     </div>
 
     <!-- Boss health bar — appears during boss waves -->

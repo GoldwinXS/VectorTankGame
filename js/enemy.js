@@ -224,6 +224,7 @@ export class Enemy {
     // LOS state
     this._losBlocked    = false;
     this._losCheckTimer = 0;
+    this._hitFlash      = 0; // seconds of red hit-flash remaining
 
     this._buildMesh();
     this.group.rotation.order = 'YXZ'; // YXZ = yaw first, then local pitch/roll
@@ -516,25 +517,26 @@ export class Enemy {
 
   // ── Visual damage state — update material appearance based on HP ──────────
   _updateDamageVisuals() {
-    const ratio = this.hp / this._maxHp;
-    const mats  = this.group.children
-      .filter(c => c.isMesh && c.material?.emissive)
-      .map(c => c.material);
+    const ratio   = this.hp / this._maxHp;
+    const isFlash = this._hitFlash > 0;
+    if (ratio > 0.6 && !isFlash) return; // healthy, no flash — nothing to do
 
-    for (const m of mats) {
-      if (ratio > 0.6) {
-        // Healthy — normal emissive
-        m.emissiveIntensity = 0.22;
+    this.group.traverse(obj => {
+      if (!obj.isMesh || !obj.material?.emissive) return;
+      const m = obj.material;
+      if (isFlash) {
+        m.emissive.setHex(0xff2200);
+        m.emissiveIntensity = 0.85;
       } else if (ratio > 0.3) {
         // Damaged — yellowish tint
         m.emissive.setHex(0xffaa00);
         m.emissiveIntensity = 0.35;
       } else {
-        // Critical — red flash
+        // Critical — pulsing red
         m.emissive.setHex(0xff2200);
         m.emissiveIntensity = 0.55 + Math.sin(Date.now() * 0.01) * 0.2;
       }
-    }
+    });
   }
 
   // ── LOS check ────────────────────────────────────────────────────────────
@@ -769,6 +771,7 @@ export class Enemy {
     }
 
     // ── Visual damage update ──────────────────────────────────────────────
+    if (this._hitFlash > 0) this._hitFlash -= delta;
     this._updateDamageVisuals();
   }
 
@@ -801,6 +804,7 @@ export class Enemy {
 
   takeDamage(amount) {
     this.hp -= amount;
+    this._hitFlash = 0.14; // brief whole-tank red flash on every hit
     if (this.hp <= 0) { this.alive = false; this._die(); }
     return this.hp <= 0;
   }

@@ -59,6 +59,7 @@ export class Player {
     this._compCb = null; // callback set by main.js to show component damage UI
 
     this._invincTimer = 0; // seconds of post-respawn invincibility remaining
+    this._recoilT = 0; // barrel recoil animation (0–1, decays to 0)
 
     this.aimCharge = 0;
     this.barrelPitch = 0; // current barrel elevation in radians (0 = flat)
@@ -393,6 +394,16 @@ export class Player {
       this.shootCd = SHOOT_CD * this.reloadMult;
     }
 
+    // Barrel recoil decay
+    this._recoilT = Math.max(0, this._recoilT - delta * 7);
+    this.barrelPivot.position.z = -0.35 * this._recoilT;
+
+    // R key — manual MG reload
+    if (keys["KeyR"] && !this.mgReloading && this.mgAmmo < this.mgMaxAmmo) {
+      this.mgReloading = true;
+      this.mgReloadTimer = MG_RELOAD * (this.mgReloadMult ?? 1);
+    }
+
     // Machine gun — right click, flat, low damage, limited ammo
     this.mgCd -= delta;
     if (
@@ -473,6 +484,7 @@ export class Player {
       );
     }
 
+    this._recoilT = 1.0;
     this._muzzleFlash(shellColor);
     audio.playCannon();
     this.shotsFired++;

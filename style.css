@@ -298,12 +298,22 @@ button:hover {
   line-height: 1.7;
 }
 
-/* ── Mini-tank indicator ── */
-#heading-block { min-width: 80px; text-align: center; }
-#mini-tank-canvas {
+/* ── Heading indicator — always visible at bottom-right ── */
+#heading-overlay {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  background: rgba(0,15,35,0.78);
+  border: 1px solid rgba(0,255,255,0.3);
+  padding: 6px 12px 8px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 20;
+}
+#heading-canvas {
   display: block;
-  margin: 0 auto;
-  opacity: 0.9;
+  margin: 4px auto 0;
+  width: 80px; height: 80px;
+  opacity: 0.92;
 }
 
 /* ── Hit feedback (directional damage text) ── */
@@ -821,10 +831,76 @@ button:hover {
 .hull-choice[data-hull="blitzer"]:hover     { border-color: rgba(136,255,0,0.6); background: rgba(5,20,0,0.9); }
 .hull-choice[data-hull="bastion"]:hover     { border-color: rgba(255,85,0,0.6);  background: rgba(20,5,0,0.9); }
 
+/* ── Wave standby indicator ── */
+#wave-standby {
+  position: fixed;
+  bottom: 75px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: var(--label);
+  pointer-events: none;
+  z-index: 15;
+  animation: standby-blink 1.2s ease-in-out infinite;
+  white-space: nowrap;
+}
+#wave-standby.hidden { display: none; }
+@keyframes standby-blink {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 0.15; }
+}
+
+/* ── Settings panel sections ── */
+.settings-section {
+  width: 100%;
+  margin-top: 4px;
+}
+.settings-section-title {
+  font-size: 8px;
+  letter-spacing: 3px;
+  color: var(--label);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+  margin-top: 4px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.settings-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text);
+  min-width: 110px;
+}
+.preset-btn {
+  font-size: 9px;
+  letter-spacing: 3px;
+  padding: 4px 12px;
+  margin-top: 0;
+  border-color: rgba(0,255,255,0.3);
+  color: rgba(0,255,255,0.55);
+}
+.preset-btn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0,255,255,0.08);
+  box-shadow: 0 0 10px rgba(0,255,255,0.15);
+}
+.preset-btn.active {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0,255,255,0.10);
+  box-shadow: 0 0 10px rgba(0,255,255,0.2);
+}
+
 /* ── In-game controls hint ── */
 #controls-hint {
   position: absolute;
-  bottom: 20px; right: 20px;
+  bottom: 140px; right: 20px;
   background: var(--panel);
   border: 1px solid var(--border);
   padding: 10px 14px;
@@ -905,26 +981,6 @@ button:hover {
   z-index: 30;
 }
 
-/* ── FPV tank overlay — bottom-center, shown when in FPV mode ── */
-#fpv-tank-overlay {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,15,35,0.78);
-  border: 1px solid rgba(0,255,255,0.3);
-  padding: 6px 12px 8px;
-  text-align: center;
-  pointer-events: none;
-  z-index: 20;
-}
-#fpv-tank-overlay.hidden { display: none; }
-#fpv-mini-canvas {
-  display: block;
-  margin: 4px auto 0;
-  width: 96px; height: 96px; /* CSS upscale of 64×64 canvas */
-  opacity: 0.92;
-}
 
 /* ── Low-HP danger vignette ── */
 #low-hp-vignette {
@@ -1030,4 +1086,6 @@ button:hover {
   .shop-grid { max-height: 45vh; }
   /* Push boss bar below mobile status strip; narrower on small screens */
   #boss-bar-container { top: 38px; width: min(300px, 58vw); }
+  /* Heading overlay too cluttered on mobile */
+  #heading-overlay { display: none; }
 }

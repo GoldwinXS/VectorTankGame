@@ -64,6 +64,8 @@ export class Pickup {
         emissiveIntensity: 0.9,
         roughness: 0.2,
         metalness: 0.8,
+        transparent: true,
+        opacity: 0.55,
       }),
     );
     this._baseY = terrainH(x, z);
