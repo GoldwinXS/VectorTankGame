@@ -26,7 +26,7 @@ const MG_RELOAD = 2.2; // seconds
 const MG_SPREAD = 0.16; // nerfed — less accurate by default
 
 export class Player {
-  constructor(scene, projectiles, hullType = 'vanguard') {
+  constructor(scene, projectiles, hullType = "vanguard") {
     this.scene = scene;
     this.projectiles = projectiles;
     this.hullType = hullType;
@@ -83,13 +83,34 @@ export class Player {
 
   _buildMesh() {
     this.group = new THREE.Group();
-    this.group.rotation.order = 'YXZ'; // YXZ = yaw first, then local pitch/roll
+    this.group.rotation.order = "YXZ"; // YXZ = yaw first, then local pitch/roll
 
     // Hull-type colour palette
     const PALETTES = {
-      vanguard: { body: 0x003344, body2: 0x002233, emissive: 0x00ffff, edge: 0x00ffff, barrel: 0x00ffff, glow: 0x00ffff },
-      blitzer:  { body: 0x1a3300, body2: 0x0d1a00, emissive: 0x88ff00, edge: 0x88ff00, barrel: 0x88ff00, glow: 0x88ff00 },
-      bastion:  { body: 0x331100, body2: 0x1a0a00, emissive: 0xff5500, edge: 0xff6600, barrel: 0xff5500, glow: 0xff4400 },
+      vanguard: {
+        body: 0x003344,
+        body2: 0x002233,
+        emissive: 0x00ffff,
+        edge: 0x00ffff,
+        barrel: 0x00ffff,
+        glow: 0x00ffff,
+      },
+      blitzer: {
+        body: 0x1a3300,
+        body2: 0x0d1a00,
+        emissive: 0x88ff00,
+        edge: 0x88ff00,
+        barrel: 0x88ff00,
+        glow: 0x88ff00,
+      },
+      bastion: {
+        body: 0x331100,
+        body2: 0x1a0a00,
+        emissive: 0xff5500,
+        edge: 0xff6600,
+        barrel: 0xff5500,
+        glow: 0xff4400,
+      },
     };
     const c = PALETTES[this.hullType] ?? PALETTES.vanguard;
 
@@ -293,7 +314,7 @@ export class Player {
         this.group.rotation.y += TURN_SPEED * delta;
       if (keys["KeyD"] || keys["ArrowRight"])
         this.group.rotation.y -= TURN_SPEED * delta;
-      this.turret.rotation.y -= (this.group.rotation.y - prevYaw);
+      this.turret.rotation.y -= this.group.rotation.y - prevYaw;
     }
 
     // Drive (W/S) — blocked if track out; halved if engine damaged
@@ -342,7 +363,11 @@ export class Player {
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
 
-        const maxStep = TURRET_TRAVERSE * this.traverseMult * (this._buffs.traverse?.mult ?? 1) * delta;
+        const maxStep =
+          TURRET_TRAVERSE *
+          this.traverseMult *
+          (this._buffs.traverse?.mult ?? 1) *
+          delta;
         this.turret.rotation.y +=
           Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
         aimDelta = Math.abs(diff);
@@ -405,10 +430,14 @@ export class Player {
     let shellR, shellG, shellB;
     if (ct < 0.5) {
       const tt = ct * 2;
-      shellR = 255; shellG = Math.round(120 + 135 * tt); shellB = Math.round(30 + 225 * tt);
+      shellR = 255;
+      shellG = Math.round(120 + 135 * tt);
+      shellB = Math.round(30 + 225 * tt);
     } else {
       const tt = (ct - 0.5) * 2;
-      shellR = Math.round(255 - 155 * tt); shellG = Math.round(255 - 75 * tt); shellB = 255;
+      shellR = Math.round(255 - 155 * tt);
+      shellG = Math.round(255 - 75 * tt);
+      shellB = 255;
     }
     const shellColor = (shellR << 16) | (shellG << 8) | shellB;
 
@@ -424,7 +453,18 @@ export class Player {
       const spawnPos = this.group.position.clone().addScaledVector(dir, 1.5);
       spawnPos.y = this.group.position.y + 0.75; // barrel height above terrain
       this.projectiles.push(
-        new Projectile(this.scene, spawnPos, dir, speed, dmg, true, shellColor, undefined, false, visualScale),
+        new Projectile(
+          this.scene,
+          spawnPos,
+          dir,
+          speed,
+          dmg,
+          true,
+          shellColor,
+          undefined,
+          false,
+          visualScale,
+        ),
       );
     }
 
@@ -502,10 +542,10 @@ export class Player {
       let comp, dur;
       if (roll < 0.38) {
         comp = "track";
-        dur = 3.2;
+        dur = 4.2;
       } else if (roll < 0.72) {
         comp = "engine";
-        dur = 4.8;
+        dur = 5.8 + Math.random() * 3;
       } else {
         comp = "turret";
         dur = 3.8;
