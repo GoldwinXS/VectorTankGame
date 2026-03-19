@@ -87,6 +87,29 @@ const isMobile = 'ontouchstart' in window;
 // ── Scene ─────────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('canvas');
 const { scene, camera, renderer, boundaryGeo, fog } = createScene(canvas);
+
+// ── Stage vibe system (advances with each boss kill) ──────────────────────────
+const STAGE_VIBES = [
+  { fogColor: 0x020b18, clearColor: 0x010810 }, // Stage 0 — run start
+  { fogColor: 0x031220, clearColor: 0x020e18 }, // Stage 1 — first blood
+  { fogColor: 0x080520, clearColor: 0x050318 }, // Stage 2 — purple edge
+  { fogColor: 0x180508, clearColor: 0x100304 }, // Stage 3 — red menace
+  { fogColor: 0x1e0303, clearColor: 0x160202 }, // Stage 4 — full danger
+];
+let _currentStage = 0;
+
+function applyStageVibe(stage, showFlash = true) {
+  const v = STAGE_VIBES[Math.min(stage, STAGE_VIBES.length - 1)];
+  fog.color.setHex(v.fogColor);
+  renderer.setClearColor(v.clearColor);
+  if (showFlash) {
+    const el = document.getElementById('damage-flash');
+    if (el) {
+      el.style.background = 'rgba(255,200,0,0.30)';
+      setTimeout(() => { el.style.background = ''; }, 650);
+    }
+  }
+}
 const ui      = new UI();
 const nn      = new TacticSelector();
 const shop    = new Shop();
@@ -236,65 +259,67 @@ window.addEventListener('contextmenu', e => e.preventDefault());
 
 // ── Crosshair / Heading / Buffs ───────────────────────────────────────────────
 const crosshairEl  = document.getElementById('crosshair');
-const miniCanvas   = document.getElementById('mini-tank-canvas');
-const miniCtx      = miniCanvas.getContext('2d');
+const miniCanvas     = document.getElementById('mini-tank-canvas');
+const miniCtx        = miniCanvas.getContext('2d');
+const fpvMiniCanvas  = document.getElementById('fpv-mini-canvas');
+const fpvMiniCtx     = fpvMiniCanvas?.getContext('2d') ?? null;
 const buffPanelEl  = document.getElementById('buff-panel');
 const buffListEl   = document.getElementById('buff-list');
 
-function updateHeadingArrow() {
-  const W = miniCanvas.width, H = miniCanvas.height;
-  miniCtx.clearRect(0, 0, W, H);
+function _drawMiniTank(ctx, W, H) {
+  ctx.clearRect(0, 0, W, H);
   if (!player || state !== STATE.PLAYING) return;
 
   const cx = W / 2, cy = H / 2;
   const hullAngle   = player.group.rotation.y - camYaw;
   const turretTotal = hullAngle + player.turret.rotation.y;
 
-  // Compass ring
-  miniCtx.strokeStyle = 'rgba(0,120,140,0.5)';
-  miniCtx.lineWidth = 1;
-  miniCtx.beginPath();
-  miniCtx.arc(cx, cy, 30, 0, Math.PI * 2);
-  miniCtx.stroke();
+  ctx.strokeStyle = 'rgba(0,120,140,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 30, 0, Math.PI * 2);
+  ctx.stroke();
 
-  // Camera-forward tick (top of ring)
-  miniCtx.strokeStyle = 'rgba(0,200,200,0.5)';
-  miniCtx.beginPath();
-  miniCtx.moveTo(cx, cy - 30);
-  miniCtx.lineTo(cx, cy - 24);
-  miniCtx.stroke();
+  ctx.strokeStyle = 'rgba(0,200,200,0.5)';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 30);
+  ctx.lineTo(cx, cy - 24);
+  ctx.stroke();
 
-  // Hull
-  miniCtx.save();
-  miniCtx.translate(cx, cy);
-  miniCtx.rotate(-hullAngle);
-  miniCtx.fillStyle = 'rgba(0,180,200,0.22)';
-  miniCtx.strokeStyle = '#00ccee';
-  miniCtx.lineWidth = 1;
-  miniCtx.fillRect(-6, -11, 12, 22);
-  miniCtx.strokeRect(-6, -11, 12, 22);
-  // Front nub (bright) — indicates forward direction
-  miniCtx.fillStyle = '#00ffff';
-  miniCtx.fillRect(-3, -15, 6, 5);
-  miniCtx.restore();
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-hullAngle);
+  ctx.fillStyle = 'rgba(0,180,200,0.22)';
+  ctx.strokeStyle = '#00ccee';
+  ctx.lineWidth = 1;
+  ctx.fillRect(-6, -11, 12, 22);
+  ctx.strokeRect(-6, -11, 12, 22);
+  ctx.fillStyle = '#00ffff';
+  ctx.fillRect(-3, -15, 6, 5);
+  ctx.restore();
 
-  // Turret + barrel
-  miniCtx.save();
-  miniCtx.translate(cx, cy);
-  miniCtx.rotate(-turretTotal);
-  miniCtx.fillStyle = 'rgba(0,220,255,0.5)';
-  miniCtx.strokeStyle = '#00ffff';
-  miniCtx.lineWidth = 1;
-  miniCtx.fillRect(-4, -3, 8, 7);
-  miniCtx.strokeRect(-4, -3, 8, 7);
-  // Barrel
-  miniCtx.strokeStyle = '#00ffff';
-  miniCtx.lineWidth = 2;
-  miniCtx.beginPath();
-  miniCtx.moveTo(0, -3);
-  miniCtx.lineTo(0, -15);
-  miniCtx.stroke();
-  miniCtx.restore();
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-turretTotal);
+  ctx.fillStyle = 'rgba(0,220,255,0.5)';
+  ctx.strokeStyle = '#00ffff';
+  ctx.lineWidth = 1;
+  ctx.fillRect(-4, -3, 8, 7);
+  ctx.strokeRect(-4, -3, 8, 7);
+  ctx.strokeStyle = '#00ffff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, -3);
+  ctx.lineTo(0, -15);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function updateHeadingArrow() {
+  _drawMiniTank(miniCtx, miniCanvas.width, miniCanvas.height);
+  if (fpvMode && fpvMiniCtx && fpvMiniCanvas) {
+    _drawMiniTank(fpvMiniCtx, fpvMiniCanvas.width, fpvMiniCanvas.height);
+  }
 }
 
 const BUFF_NAMES = { speed: 'SPD', damage: 'DMG', armor: 'ARM', traverse: 'TRV' };
@@ -416,6 +441,8 @@ function init() {
   expansionStep    = 0;
   camYaw           = 0;
   camMouseDelta    = 0;
+  _currentStage    = 0;
+  applyStageVibe(0, false);
 
   gameBounds = { minX: -INITIAL_HALF, maxX: INITIAL_HALF, minZ: -INITIAL_HALF, maxZ: INITIAL_HALF };
   updateBoundary(boundaryGeo, gameBounds);
@@ -523,6 +550,9 @@ function checkCollisions() {
             player.hp = Math.min(player.maxHp, player.hp + player.hpPerKill);
             if (e.isBoss) {
               shakeIntensity = 1.8;
+              audio.nextTrack();
+              _currentStage = Math.min(_currentStage + 1, STAGE_VIBES.length - 1);
+              applyStageVibe(_currentStage);
               const drops = spawnPickupsAt(scene, ['health', 'damage', 'speed', 'armor'], e.position.x, e.position.z);
               pickups.push(...drops);
             }
@@ -815,43 +845,62 @@ if (isMobile) {
     }, { passive: true });
   });
 
-  // ── Camera pan zone ────────────────────────────────────────────────────────
-  let _camId = -1, _camLx = 0, _camLy = 0;
-  const camZone = document.getElementById('cam-touch-zone');
+  // ── Right-side unified touch zone: first touch = cam pan, extra touches = fire ─
+  // Left portion of right zone (< 75% of screen width) = cannon, right = MG.
+  const _rTouches = new Map(); // identifier → 'cam' | 'cannon' | 'mg'
+  let _rCamLx = 0, _rCamLy = 0;
+  const rightZone = document.getElementById('right-touch-zone');
 
-  camZone.addEventListener('touchstart', e => {
-    const t = e.changedTouches[0];
-    _camId  = t.identifier;
-    _camLx  = t.clientX;
-    _camLy  = t.clientY;
-  }, { passive: true });
-
-  camZone.addEventListener('touchmove', e => {
+  rightZone.addEventListener('touchstart', e => {
     e.preventDefault();
     for (const t of e.changedTouches) {
-      if (t.identifier !== _camId) continue;
-      const dx = t.clientX - _camLx;
-      const dy = t.clientY - _camLy;
-      camMouseDelta -= dx * 0.005;
-      if (!freeLook) pitchDelta -= dy * 0.002;
-      _camLx = t.clientX;
-      _camLy = t.clientY;
+      const hasCam = [..._rTouches.values()].includes('cam');
+      if (!hasCam) {
+        _rTouches.set(t.identifier, 'cam');
+        _rCamLx = t.clientX;
+        _rCamLy = t.clientY;
+      } else {
+        const role = t.clientX < window.innerWidth * 0.75 ? 'cannon' : 'mg';
+        _rTouches.set(t.identifier, role);
+        if (role === 'cannon') mouseDown = true;
+        else rightMouseDown = true;
+      }
+    }
+  }, { passive: false });
+
+  rightZone.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (_rTouches.get(t.identifier) !== 'cam') continue;
+      camMouseDelta -= (t.clientX - _rCamLx) * 0.005;
+      if (!freeLook) pitchDelta -= (t.clientY - _rCamLy) * 0.002;
+      _rCamLx = t.clientX;
+      _rCamLy = t.clientY;
     }
   }, { passive: false });
 
   ['touchend', 'touchcancel'].forEach(ev => {
-    camZone.addEventListener(ev, () => { _camId = -1; }, { passive: true });
+    rightZone.addEventListener(ev, e => {
+      for (const t of e.changedTouches) {
+        const role = _rTouches.get(t.identifier);
+        if (role === 'cannon') mouseDown = false;
+        else if (role === 'mg') rightMouseDown = false;
+        _rTouches.delete(t.identifier);
+      }
+    }, { passive: true });
   });
 
-  // ── Fire buttons ──────────────────────────────────────────────────────────
-  // mouseDown = cannon (left), rightMouseDown = MG (right) — matches swapped mouse buttons
-  const btnCannon = document.getElementById('btn-fire-cannon');
-  const btnMg     = document.getElementById('btn-fire-mg');
-
-  btnCannon.addEventListener('touchstart', e => { e.preventDefault(); mouseDown = true;       }, { passive: false });
-  btnCannon.addEventListener('touchend',   () =>                      { mouseDown = false;      }, { passive: true  });
-  btnMg.addEventListener('touchstart',     e => { e.preventDefault(); rightMouseDown = true;  }, { passive: false });
-  btnMg.addEventListener('touchend',       () =>                      { rightMouseDown = false; }, { passive: true  });
+  // ── Left-side fire buttons (above joystick — left-thumb firing) ───────────
+  const btnCannonL = document.getElementById('btn-fire-cannon-l');
+  const btnMgL     = document.getElementById('btn-fire-mg-l');
+  if (btnCannonL) {
+    btnCannonL.addEventListener('touchstart', e => { e.preventDefault(); mouseDown = true; }, { passive: false });
+    ['touchend', 'touchcancel'].forEach(ev => btnCannonL.addEventListener(ev, () => { mouseDown = false; }, { passive: true }));
+  }
+  if (btnMgL) {
+    btnMgL.addEventListener('touchstart', e => { e.preventDefault(); rightMouseDown = true; }, { passive: false });
+    ['touchend', 'touchcancel'].forEach(ev => btnMgL.addEventListener(ev, () => { rightMouseDown = false; }, { passive: true }));
+  }
 
   const btnPauseMob = document.getElementById('btn-pause-mob');
   if (btnPauseMob) {

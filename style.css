@@ -576,17 +576,18 @@ button:hover {
   pointer-events: none;
   box-shadow: 0 0 12px rgba(0,255,255,0.3);
 }
-#cam-touch-zone {
+#right-touch-zone {
   position: absolute;
   left: 50%;
   top: 0;
   right: 0;
-  bottom: 178px; /* clears 2-row button grid */
+  bottom: 0;
   pointer-events: all;
   touch-action: none;
+  z-index: 8;
 }
 
-/* Bottom-right 2×2 button grid */
+/* Shared base for all bottom-right mobile buttons */
 #btn-fire-cannon, #btn-fire-mg,
 #btn-fpv-mob, #btn-hud-mob {
   position: absolute;
@@ -599,10 +600,19 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: all;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+}
+/* Fire button visuals only — interaction handled by right-touch-zone */
+#btn-fire-cannon, #btn-fire-mg {
+  pointer-events: none;
+  z-index: 7;
+}
+/* Secondary buttons sit above right-touch-zone */
+#btn-fpv-mob, #btn-hud-mob {
+  pointer-events: all;
+  z-index: 15;
 }
 /* Bottom row — fire buttons */
 #btn-fire-cannon, #btn-fire-mg {
@@ -851,13 +861,38 @@ button:hover {
 .hint-key { color: var(--cyan); }
 .hint-row span:last-child { color: var(--text); }
 
-/* ── Mobile pause button ── */
+/* ── Left-side fire buttons (above joystick for left-thumb firing) ── */
+#btn-fire-cannon-l, #btn-fire-mg-l {
+  position: absolute;
+  width: 62px;
+  height: 52px;
+  bottom: 170px;
+  background: rgba(0,10,30,0.72);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: 0 0 8px rgba(0,255,255,0.12);
+  z-index: 15;
+}
+#btn-fire-cannon-l { left: 20px; }
+#btn-fire-mg-l     { left: 88px; }
+
+/* ── Mobile pause button — top-right ── */
 #btn-pause-mob {
   position: fixed;
-  bottom: 112px;
-  right: 252px;
-  width: 56px;
-  height: 40px;
+  top: 8px;
+  right: 8px;
+  width: 48px;
+  height: 36px;
   background: rgba(0,15,35,0.75);
   border: 1px solid rgba(0,255,255,0.3);
   color: var(--cyan);
@@ -868,6 +903,27 @@ button:hover {
   pointer-events: all;
   touch-action: manipulation;
   z-index: 30;
+}
+
+/* ── FPV tank overlay — bottom-center, shown when in FPV mode ── */
+#fpv-tank-overlay {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,15,35,0.78);
+  border: 1px solid rgba(0,255,255,0.3);
+  padding: 6px 12px 8px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 20;
+}
+#fpv-tank-overlay.hidden { display: none; }
+#fpv-mini-canvas {
+  display: block;
+  margin: 4px auto 0;
+  width: 96px; height: 96px; /* CSS upscale of 64×64 canvas */
+  opacity: 0.92;
 }
 
 @media (max-width: 600px) {

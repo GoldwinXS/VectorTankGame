@@ -89,13 +89,18 @@
       <div id="joy-zone">
         <div id="joy-thumb"></div>
       </div>
-      <div id="cam-touch-zone"></div>
-      <!-- 2×2 button grid: top row = secondary, bottom row = fire -->
+      <!-- Left-side fire buttons above joystick for left-thumb firing -->
+      <div id="btn-fire-cannon-l">CANNON</div>
+      <div id="btn-fire-mg-l">MG</div>
+      <!-- Right-side unified touch zone: first finger = cam pan, second = fire -->
+      <div id="right-touch-zone"></div>
+      <!-- Fire button visuals (pointer-events:none — captured by right-touch-zone) -->
+      <div id="btn-fire-cannon">CANNON</div>
+      <div id="btn-fire-mg">MG</div>
+      <!-- Secondary controls — above right-touch-zone in z-order -->
       <div id="btn-fpv-mob">FPV</div>
       <div id="btn-hud-mob">≡ HUD</div>
       <div id="btn-pause-mob">II</div>
-      <div id="btn-fire-cannon">CANNON</div>
-      <div id="btn-fire-mg">MG</div>
     </div>
 
     <!-- Wave message -->
@@ -337,6 +342,12 @@
         </div>
         <button id="btn-restart">MAIN MENU</button>
       </div>
+    </div>
+
+    <!-- FPV mini-tank overlay — shown bottom-center when in FPV mode -->
+    <div id="fpv-tank-overlay" class="hidden">
+      <div class="hud-label">HEADING</div>
+      <canvas id="fpv-mini-canvas" width="64" height="64"></canvas>
     </div>
 
     <!-- In-game controls hint (shown at wave 1, dismissible) -->

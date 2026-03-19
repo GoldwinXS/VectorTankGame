@@ -99,6 +99,7 @@ export class UI {
   setFpv(active) {
     if (!this.fpvEl) return;
     this.fpvEl.classList.toggle('hidden', !active);
+    document.getElementById('fpv-tank-overlay')?.classList.toggle('hidden', !active);
   }
 
   showWaveMessage(text, ms = 1200) {

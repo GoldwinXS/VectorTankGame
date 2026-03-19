@@ -162,30 +162,46 @@ class AudioEngine {
   // Track 0: E minor (waves 1-5) — current default
   // Track 1: D minor (waves 6-11) — down a tone, more ominous
   // Track 2: F minor (waves 12+)  — up a semitone from E, most intense
+  // 5 tracks — one per boss kill. Boss 1 → track 1, boss 2 → track 2, etc.
+  // Each is a distinct musical key so the run feels fresh throughout.
   _TRACKS = [
-    {
+    { // Track 0 — E minor (start of run)
       bass:      [40, 40, 43, 47, 40, 38, 40, 43, 40, 40, 45, 47, 38, 38, 43, 45],
       chords:    [[220, 262, 330], [196, 233, 294], [175, 220, 277], [208, 247, 311]],
       gentleArp: [60, 64, 67, 71, 69, 65, 62, 60],
       acid:      [52, 55, 52, 57, 50, 52, 55, 50],
       arp:       [64, 67, 71, 74, 67, 71, 76, 74, 72, 69, 67, 64, 67, 71, 72, 74],
     },
-    {
+    { // Track 1 — D minor (boss 1 killed, down a tone — darker)
       bass:      [38, 38, 41, 45, 38, 36, 38, 41, 38, 38, 43, 45, 36, 36, 41, 43],
       chords:    [[196, 233, 294], [175, 208, 262], [156, 185, 233], [185, 220, 277]],
       gentleArp: [58, 62, 65, 69, 67, 63, 60, 58],
       acid:      [50, 53, 50, 55, 48, 50, 53, 48],
       arp:       [62, 65, 69, 72, 65, 69, 74, 72, 70, 67, 65, 62, 65, 69, 70, 72],
     },
-    {
+    { // Track 2 — F minor (boss 2 killed, up a semitone from E — tenser)
       bass:      [41, 41, 44, 48, 41, 39, 41, 44, 41, 41, 46, 48, 39, 39, 44, 46],
       chords:    [[233, 277, 349], [208, 247, 311], [185, 220, 277], [220, 262, 330]],
       gentleArp: [61, 65, 68, 72, 70, 66, 63, 61],
       acid:      [53, 56, 53, 58, 51, 53, 56, 51],
       arp:       [65, 68, 72, 75, 68, 72, 77, 75, 73, 70, 68, 65, 68, 72, 73, 75],
     },
+    { // Track 3 — G minor (boss 3 killed, +3 from E — higher, more urgent)
+      bass:      [43, 43, 46, 50, 43, 41, 43, 46, 43, 43, 48, 50, 41, 41, 46, 48],
+      chords:    [[262, 311, 392], [233, 277, 349], [208, 262, 330], [247, 294, 370]],
+      gentleArp: [63, 67, 70, 74, 72, 68, 65, 63],
+      acid:      [55, 58, 55, 60, 53, 55, 58, 53],
+      arp:       [67, 70, 74, 77, 70, 74, 79, 77, 75, 72, 70, 67, 70, 74, 75, 77],
+    },
+    { // Track 4 — Bb minor (boss 4+ killed, +6 from E — full danger zone)
+      bass:      [46, 46, 49, 53, 46, 44, 46, 49, 46, 46, 51, 53, 44, 44, 49, 51],
+      chords:    [[311, 370, 466], [277, 330, 416], [247, 311, 392], [294, 349, 440]],
+      gentleArp: [66, 70, 73, 77, 75, 71, 68, 66],
+      acid:      [58, 61, 58, 63, 56, 58, 61, 56],
+      arp:       [70, 73, 77, 80, 73, 77, 82, 80, 78, 75, 73, 70, 73, 77, 78, 80],
+    },
   ];
-  _runIndex  = -1; // incremented each new run, cycles through tracks
+  _trackIdx = 0; // current track within a run (advances on each boss kill)
 
   _applyTrack(idx) {
     const t = this._TRACKS[idx];
@@ -196,12 +212,18 @@ class AudioEngine {
     this._ARP_NOTES   = t.arp;
   }
 
-  // Call once at the start of each new run (from main.js init())
+  // Reset to track 0 at the start of each new run
   startRun() {
-    this._runIndex = (this._runIndex + 1) % this._TRACKS.length;
-    this._applyTrack(this._runIndex);
+    this._trackIdx = 0;
+    this._applyTrack(0);
     this._waveLayer = 0;
     this._BPM       = 140;
+  }
+
+  // Advance to the next track — called on each boss kill
+  nextTrack() {
+    this._trackIdx = Math.min(this._trackIdx + 1, this._TRACKS.length - 1);
+    this._applyTrack(this._trackIdx);
   }
 
   // ── Drum machines ─────────────────────────────────────────────────────────
