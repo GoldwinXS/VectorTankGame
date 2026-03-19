@@ -85,7 +85,7 @@
       <span class="mob-sep desk-only">|</span>
       <span class="mob-lbl desk-only">MG</span>
       <span id="mob-mg-disp" class="desk-only">30/30</span>
-      <button id="btn-hud-toggle" class="hidden">≡ HUD</button>
+      <span id="hud-key-hint" class="hud-key-hint hidden">H: HUD</span>
     </div>
 
     <!-- Mobile touch controls (hidden on desktop) -->
@@ -119,8 +119,6 @@
     <!-- Wave standby — blinking during wave transitions -->
     <div id="wave-standby" class="hidden">STANDBY</div>
 
-    <!-- FPV indicator -->
-    <div id="fpv-indicator" class="hidden">[ FPV ]</div>
 
     <!-- ── Main menu screen ──────────────────────────────────────────── -->
     <div id="main-menu-screen" class="screen">
@@ -251,9 +249,11 @@
           <span class="ctrl-key">MOUSE Y</span>    <span class="ctrl-desc">Barrel elevation — aim high to shoot over low walls</span>
           <span class="ctrl-key">C (HOLD)</span>   <span class="ctrl-desc">Free-look — camera orbits, gun stays locked</span>
           <span class="ctrl-key">V</span>          <span class="ctrl-desc">Toggle first-person view</span>
+          <span class="ctrl-key">H</span>          <span class="ctrl-desc">Show / hide HUD sidebar</span>
           <span class="ctrl-key">P</span>          <span class="ctrl-desc">Pause — show vehicle stats</span>
           <span class="ctrl-key">L-CLICK</span>   <span class="ctrl-desc">Main cannon — high damage, arcing shell</span>
           <span class="ctrl-key">R-CLICK</span>   <span class="ctrl-desc">Coax MG — rapid fire, 30 rounds, auto-reload</span>
+          <span class="ctrl-key">R</span>          <span class="ctrl-desc">Manual MG reload</span>
           <span class="ctrl-key">AIM CIRCLE</span> <span class="ctrl-desc">Hold still to lock on — cannon shoots when small</span>
         </div>
         <div class="audio-row">
@@ -356,7 +356,9 @@
           <span class="ctrl-key">MOUSE Y</span>    <span class="ctrl-desc">Barrel elevation</span>
           <span class="ctrl-key">L-CLICK</span>   <span class="ctrl-desc">Main cannon</span>
           <span class="ctrl-key">R-CLICK</span>   <span class="ctrl-desc">Coax MG (30 rounds)</span>
+          <span class="ctrl-key">R</span>          <span class="ctrl-desc">Manual MG reload</span>
           <span class="ctrl-key">V</span>          <span class="ctrl-desc">Toggle commander / FPV view</span>
+          <span class="ctrl-key">H</span>          <span class="ctrl-desc">Show / hide HUD sidebar</span>
           <span class="ctrl-key">C (HOLD)</span>   <span class="ctrl-desc">Free-look — gun stays locked</span>
           <span class="ctrl-key">P</span>          <span class="ctrl-desc">Pause</span>
         </div>
@@ -401,7 +403,9 @@
       <div class="hint-row"><span class="hint-key">MOUSE</span><span>Aim camera / elevation</span></div>
       <div class="hint-row"><span class="hint-key">L-CLICK</span><span>Main cannon</span></div>
       <div class="hint-row"><span class="hint-key">R-CLICK</span><span>Coax MG</span></div>
+      <div class="hint-row"><span class="hint-key">R</span><span>Manual MG reload</span></div>
       <div class="hint-row"><span class="hint-key">V</span><span>Commander view (FPV)</span></div>
+      <div class="hint-row"><span class="hint-key">H</span><span>Toggle HUD sidebar</span></div>
       <div class="hint-row"><span class="hint-key">P</span><span>Pause / full controls</span></div>
       <div class="hint-row"><span class="hint-key">C hold</span><span>Free-look</span></div>
     </div>

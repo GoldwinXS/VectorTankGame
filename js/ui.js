@@ -37,7 +37,6 @@ export class UI {
     this.activeTactic   = $('active-tactic');
     this.hitMarker      = $('hit-marker');
     this.mgAmmoEl       = $('mg-ammo-val');
-    this.fpvEl          = $('fpv-indicator');
     this._flashTimeout  = null;
     this._hitTimeout    = null;
   }
@@ -102,9 +101,8 @@ export class UI {
     if (mgd) { mgd.textContent = txt; mgd.style.color = col; }
   }
 
-  setFpv(active) {
-    if (!this.fpvEl) return;
-    this.fpvEl.classList.toggle('hidden', !active);
+  setFpv(_active) {
+    // FPV indicator removed — no-op kept for call-site compatibility
   }
 
   showWaveMessage(text, ms = 1200) {

@@ -352,6 +352,9 @@ window.addEventListener("keydown", (e) => {
     fpvMode = !fpvMode;
     ui.setFpv(fpvMode);
   }
+  if (e.code === "KeyH" && !isMobile) {
+    document.getElementById("hud")?.classList.toggle("hud-hidden");
+  }
   if (e.code === "KeyP" && state === STATE.PLAYING) {
     paused = !paused;
     if (paused) {
@@ -1103,19 +1106,9 @@ document.addEventListener("pointerlockchange", () => {
 // ── Desktop HUD toggle ────────────────────────────────────────────────────────
 const _hudEl = document.getElementById("hud");
 if (!isMobile) {
-  // On desktop: hide heading overlay (it's always bottom-right but we only show on desktop)
-  // Hide sidebar HUD by default — top status bar provides essential info
+  // Hide sidebar HUD by default — press H to toggle
   _hudEl.classList.add("hud-hidden");
-  const btnHudDesktop = document.getElementById("btn-hud-toggle");
-  if (btnHudDesktop) {
-    btnHudDesktop.classList.remove("hidden");
-    let _hudDesktopVis = false;
-    btnHudDesktop.addEventListener("click", () => {
-      _hudDesktopVis = !_hudDesktopVis;
-      _hudEl.classList.toggle("hud-hidden", !_hudDesktopVis);
-      btnHudDesktop.classList.toggle("hud-toggle-active", _hudDesktopVis);
-    });
-  }
+  document.getElementById("hud-key-hint")?.classList.remove("hidden");
 } else {
   // On mobile: hide heading overlay (buttons overlap it) and hide HUD sidebar by default
   document.getElementById("heading-overlay")?.style.setProperty("display", "none");
