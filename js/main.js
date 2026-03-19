@@ -435,7 +435,7 @@ function _drawMiniTank(ctx, W, H) {
   ctx.fillRect(-6, -11, 12, 22);
   ctx.strokeRect(-6, -11, 12, 22);
   ctx.fillStyle = "#00ffff";
-  ctx.fillRect(-3, -15, 6, 5);
+  ctx.fillRect(3, 10, -6, -5);
   ctx.restore();
 
   ctx.save();
