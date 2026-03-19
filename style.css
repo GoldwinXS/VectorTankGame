@@ -629,8 +629,8 @@ button:hover {
   -webkit-user-select: none;
   pointer-events: all;
   z-index: 15;
-  bottom: 28px;
-  height: 62px;
+  bottom: 0;
+  height: 48px;
   font-size: 10px;
   opacity: 0.85;
 }
