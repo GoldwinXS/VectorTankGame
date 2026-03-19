@@ -550,6 +550,21 @@ button:hover {
 }
 .mob-sep { color: var(--border); font-size: 14px; }
 .mob-lbl { font-size: 9px; letter-spacing: 2px; color: var(--label); }
+.mob-buff-chip {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #00ccff;
+  background: rgba(0,180,255,0.12);
+  border: 1px solid rgba(0,180,255,0.35);
+  padding: 1px 6px;
+  white-space: nowrap;
+  animation: buff-pulse 1.8s ease-in-out infinite;
+}
+.mob-buff-chip.hidden { display: none; }
+@keyframes buff-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
 
 /* ── Mobile touch controls ── */
 #mobile-controls {

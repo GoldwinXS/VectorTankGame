@@ -193,34 +193,42 @@ export function activateZone(direction, scene) {
 
 export function updateBoundary(geo, bounds) {
   const { minX, maxX, minZ, maxZ } = bounds;
-  const yAt = (x, z) => terrainH(x, z) + 0.55;
-  const N = 20;
-  const pts = [];
-  // South edge (minZ), West→East
-  for (let i = 0; i <= N; i++) {
-    const x = minX + (maxX - minX) * i / N;
-    pts.push(new THREE.Vector3(x, yAt(x, minZ), minZ));
+  const N = 20; // samples per edge
+
+  // Build ordered perimeter points (terrain height at each sample)
+  const perim = [];
+  const push = (x, z) => perim.push({ x, y: terrainH(x, z), z });
+  for (let i = 0; i <= N; i++) push(minX + (maxX - minX) * i / N, minZ);
+  for (let i = 1; i <= N; i++) push(maxX, minZ + (maxZ - minZ) * i / N);
+  for (let i = N - 1; i >= 0; i--) push(minX + (maxX - minX) * i / N, maxZ);
+  for (let i = N - 1; i >= 0; i--) push(minX, minZ + (maxZ - minZ) * i / N);
+  perim.push({ ...perim[0] }); // close
+
+  // Fence rail heights above local terrain
+  const RAILS = [0.15, 1.0, 1.85];
+  const POST_TOP = 2.1;
+
+  const segs = []; // flat list of Vector3 pairs for LineSegments
+  for (let i = 0; i < perim.length - 1; i++) {
+    const a = perim[i], b = perim[i + 1];
+    // Horizontal rails connecting adjacent points
+    for (const r of RAILS) {
+      segs.push(new THREE.Vector3(a.x, a.y + r, a.z));
+      segs.push(new THREE.Vector3(b.x, b.y + r, b.z));
+    }
+    // Vertical post at point A
+    segs.push(new THREE.Vector3(a.x, a.y + 0.0,   a.z));
+    segs.push(new THREE.Vector3(a.x, a.y + POST_TOP, a.z));
   }
-  // East edge (maxX), South→North
-  for (let i = 1; i <= N; i++) {
-    const z = minZ + (maxZ - minZ) * i / N;
-    pts.push(new THREE.Vector3(maxX, yAt(maxX, z), z));
-  }
-  // North edge (maxZ), East→West
-  for (let i = N - 1; i >= 0; i--) {
-    const x = minX + (maxX - minX) * i / N;
-    pts.push(new THREE.Vector3(x, yAt(x, maxZ), maxZ));
-  }
-  // West edge (minX), North→South
-  for (let i = N - 1; i >= 0; i--) {
-    const z = minZ + (maxZ - minZ) * i / N;
-    pts.push(new THREE.Vector3(minX, yAt(minX, z), z));
-  }
-  pts.push(pts[0].clone()); // close the loop
-  geo.setFromPoints(pts);
+
+  geo.setFromPoints(segs);
+  geo.computeBoundingSphere();
 }
 
 // ── Terrain mesh ──────────────────────────────────────────────────────────────
+
+let _terrainMat = null;
+let _wireMat = null;
 
 function buildTerrainMesh(scene) {
   const geo = new THREE.PlaneGeometry(250, 250, 120, 120);
@@ -231,9 +239,8 @@ function buildTerrainMesh(scene) {
   }
   pos.needsUpdate = true;
   geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-    color: 0x010a16, roughness: 1, metalness: 0,
-  }));
+  _terrainMat = new THREE.MeshStandardMaterial({ color: 0x010a16, roughness: 1, metalness: 0 });
+  const mesh = new THREE.Mesh(geo, _terrainMat);
   mesh.receiveShadow = true;
   scene.add(mesh);
 }
@@ -252,9 +259,10 @@ function buildTerrainGrid(scene) {
   }
   wPos.needsUpdate = true;
 
+  _wireMat = new THREE.LineBasicMaterial({ color: 0x005577, transparent: true, opacity: 0.55 });
   scene.add(new THREE.LineSegments(
     new THREE.WireframeGeometry(wGeo),
-    new THREE.LineBasicMaterial({ color: 0x005577, transparent: true, opacity: 0.55 })
+    _wireMat
   ));
 }
 
@@ -292,12 +300,13 @@ export function createScene(canvas) {
   buildTerrainMesh(scene);
   buildTerrainGrid(scene);
 
-  // Dynamic boundary line
+  // Dynamic boundary fence — LineSegments with 3 rails + vertical posts
   const boundaryGeo  = new THREE.BufferGeometry();
-  const boundaryLine = new THREE.Line(
+  const boundaryLine = new THREE.LineSegments(
     boundaryGeo,
-    new THREE.LineBasicMaterial({ color: 0x00ffff, opacity: 0.70, transparent: true })
+    new THREE.LineBasicMaterial({ color: 0x00ffff, opacity: 0.80, transparent: true })
   );
+  boundaryLine.frustumCulled = false; // prevent culling when camera looks away
   scene.add(boundaryLine);
 
   // Build initial obstacles
@@ -311,4 +320,9 @@ export function createScene(canvas) {
   });
 
   return { scene, camera, renderer, boundaryGeo, fog, ambientLight, dirLight: dir };
+}
+
+export function setTerrainColors(terrainHex, wireHex) {
+  if (_terrainMat) _terrainMat.color.setHex(terrainHex);
+  if (_wireMat) _wireMat.color.setHex(wireHex);
 }

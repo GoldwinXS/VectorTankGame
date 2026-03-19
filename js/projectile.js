@@ -18,6 +18,8 @@ export class Projectile {
     // Collision radius grows slightly with visual scale (cannon only)
     this.radius   = isMG ? 0.07 : 0.1 + (visualScale - 1.0) * 0.04;
     this.alive    = true;
+    this.splashRadius = 0; // set externally for mortar shells
+    this._splashPos   = null;
     this.hasGravity = hasGravity !== undefined ? hasGravity : isPlayer;
 
     const color = isPlayer ? (isMG ? 0xffee44 : typeColor) : typeColor;
@@ -53,6 +55,7 @@ export class Projectile {
     this.mesh.position.addScaledVector(this.vel, delta);
     const p = this.mesh.position;
     if (p.y < terrainH(p.x, p.z)) {
+      if (this.splashRadius > 0) this._splashPos = p.clone();
       this.destroy();
       return;
     }

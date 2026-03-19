@@ -9,6 +9,7 @@ import {
   ZONE_SIZE,
   terrainH,
   terrainSlope,
+  setTerrainColors,
 } from "./scene.js";
 import { GRAVITY } from "./projectile.js";
 import { Player } from "./player.js";
@@ -137,38 +138,33 @@ const { scene, camera, renderer, boundaryGeo, fog, ambientLight, dirLight } =
 const STAGE_VIBES = [
   {
     // Stage 0 — standard ops (waves 1-4)
-    fogColor: 0x020b18,
-    clearColor: 0x010810,
-    ambientHex: 0x112244,
-    dirHex: 0x4488ff,
+    fogColor: 0x020b18, clearColor: 0x010810,
+    ambientHex: 0x112244, ambientInt: 6, dirHex: 0x4488ff, dirInt: 3,
+    fogDensity: 0.040, terrainHex: 0x010a16, wireHex: 0x005577,
   },
   {
-    // Stage 1 — deep blue (boss wave 5)
-    fogColor: 0x031228,
-    clearColor: 0x020c1e,
-    ambientHex: 0x0e1c44,
-    dirHex: 0x2255dd,
+    // Stage 1 — deep navy (boss wave 5)
+    fogColor: 0x020e22, clearColor: 0x010a1c,
+    ambientHex: 0x0a1840, ambientInt: 5, dirHex: 0x1166cc, dirInt: 2.5,
+    fogDensity: 0.046, terrainHex: 0x010c18, wireHex: 0x003388,
   },
   {
-    // Stage 2 — violet shadow (boss wave 10)
-    fogColor: 0x080422,
-    clearColor: 0x06031a,
-    ambientHex: 0x180840,
-    dirHex: 0x7722cc,
+    // Stage 2 — purple void (boss wave 10)
+    fogColor: 0x0d0230, clearColor: 0x080120,
+    ambientHex: 0x1e0850, ambientInt: 4.5, dirHex: 0x9933cc, dirInt: 2.2,
+    fogDensity: 0.054, terrainHex: 0x060018, wireHex: 0x660099,
   },
   {
     // Stage 3 — blood ember (boss wave 15)
-    fogColor: 0x1c0408,
-    clearColor: 0x130304,
-    ambientHex: 0x2a0808,
-    dirHex: 0xcc4422,
+    fogColor: 0x300808, clearColor: 0x1e0404,
+    ambientHex: 0x420c0c, ambientInt: 4, dirHex: 0xdd3322, dirInt: 2.0,
+    fogDensity: 0.062, terrainHex: 0x170202, wireHex: 0x991100,
   },
   {
-    // Stage 4 — crimson night (boss wave 20+)
-    fogColor: 0x220202,
-    clearColor: 0x180101,
-    ambientHex: 0x200404,
-    dirHex: 0xff2200,
+    // Stage 4 — crimson endgame (boss wave 20+)
+    fogColor: 0x3d0404, clearColor: 0x220101,
+    ambientHex: 0x440606, ambientInt: 3.5, dirHex: 0xff2200, dirInt: 1.8,
+    fogDensity: 0.072, terrainHex: 0x1e0000, wireHex: 0xbb1100,
   },
 ];
 let _currentStage = 0;
@@ -176,9 +172,13 @@ let _currentStage = 0;
 function applyStageVibe(stage, showFlash = true) {
   const v = STAGE_VIBES[Math.min(stage, STAGE_VIBES.length - 1)];
   fog.color.setHex(v.fogColor);
+  fog.density = v.fogDensity;
   renderer.setClearColor(v.clearColor);
   ambientLight.color.setHex(v.ambientHex);
+  ambientLight.intensity = v.ambientInt;
   dirLight.color.setHex(v.dirHex);
+  dirLight.intensity = v.dirInt;
+  setTerrainColors(v.terrainHex, v.wireHex);
   if (showFlash) {
     const el = document.getElementById("damage-flash");
     if (el) {
@@ -488,6 +488,21 @@ function updateBuffDisplay() {
         `<div class="buff-row"><span class="buff-name">${BUFF_NAMES[k] ?? k.toUpperCase()}</span><span class="buff-timer">${Math.ceil(buffs[k].timer)}s</span></div>`,
     )
     .join("");
+  // Also update top-bar buff chip
+  const chipEl = document.getElementById('mob-buff-chip');
+  if (chipEl) {
+    if (keys.length === 0) {
+      chipEl.classList.add('hidden');
+    } else {
+      const k = keys[0];
+      const name = BUFF_NAMES[k] ?? k.toUpperCase();
+      const timer = Math.ceil(buffs[k].timer);
+      chipEl.textContent = keys.length > 1
+        ? `${name} ${timer}s +${keys.length - 1}`
+        : `${name} ${timer}s`;
+      chipEl.classList.remove('hidden');
+    }
+  }
 }
 
 const _landingPt = new THREE.Vector3();
@@ -708,6 +723,21 @@ function checkCollisions() {
   for (let pi = projectiles.length - 1; pi >= 0; pi--) {
     const proj = projectiles[pi];
     if (!proj.alive) {
+      // Mortar splash damage
+      if (proj._splashPos && proj.splashRadius > 0 && player?.alive) {
+        const sd = proj._splashPos.distanceTo(player.position);
+        if (sd < proj.splashRadius && player._invincTimer <= 0) {
+          const falloff = 1 - sd / proj.splashRadius;
+          player.takeDamage(Math.round(proj.damage * falloff));
+          ui.flashDamage();
+          shakeIntensity = Math.max(shakeIntensity, 0.6 * falloff);
+          // Splash visual
+          _spawnSplashExplosion(scene, proj._splashPos.clone());
+        } else if (sd < proj.splashRadius + 1) {
+          _spawnSplashExplosion(scene, proj._splashPos.clone());
+        }
+        proj._splashPos = null;
+      }
       projectiles.splice(pi, 1);
       continue;
     }
@@ -742,9 +772,7 @@ function checkCollisions() {
           audio.playHit();
           if (!e.alive) {
             audio.playExplosion();
-            const baseScore = e.isBoss
-              ? 1000 + waveNum * 50
-              : 100 + waveNum * 10;
+            const baseScore = e.isBoss ? 2000 : 100;
             score += Math.round(baseScore * player.scoreMult);
             showScorePopup(
               Math.round(baseScore * player.scoreMult),
@@ -794,6 +822,34 @@ function checkCollisions() {
       }
     }
   }
+}
+
+function _spawnSplashExplosion(scene, pos) {
+  const rGeo = new THREE.RingGeometry(0.1, 0.6, 16);
+  rGeo.rotateX(-Math.PI / 2);
+  const rMat = new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+  const ring = new THREE.Mesh(rGeo, rMat);
+  ring.position.copy(pos);
+  scene.add(ring);
+
+  const glow = new THREE.PointLight(0xff4400, 20, 12);
+  glow.position.copy(pos);
+  glow.position.y += 0.5;
+  scene.add(glow);
+
+  let t = 0;
+  const iv = setInterval(() => {
+    t += 18;
+    const pct = Math.min(t / 550, 1);
+    ring.scale.setScalar(1 + pct * 10);
+    rMat.opacity = 0.9 * (1 - pct);
+    glow.intensity = 20 * Math.max(0, 1 - pct * 1.6);
+    if (pct >= 1) {
+      clearInterval(iv);
+      scene.remove(ring); scene.remove(glow);
+      rGeo.dispose(); rMat.dispose();
+    }
+  }, 18);
 }
 
 // ── Intro camera fly-in ───────────────────────────────────────────────────────

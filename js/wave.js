@@ -78,7 +78,7 @@ export class WaveManager {
     };
 
     // Boss archetype cycles through wave encounters — each boss looks different
-    const archetypes = ["tanky", "fast", "stug", "hover", "swarm"];
+    const archetypes = ["tanky", "fast", "hover", "stug", "swarm"];
     const archetype = archetypes[(this._bossNum - 1) % archetypes.length];
 
     const bossDiff = difficulty * (1 + (this._bossNum - 1) * 0.35);
@@ -103,7 +103,8 @@ export class WaveManager {
     boss.group.scale.setScalar(bossScale);
     boss.radius = bossScale * 1.4;
 
-    boss.setTactic("RUSH");
+    // Phantom (fast archetype) gets FLANK to prevent straight-line rushing into walls
+    boss.setTactic(archetype === 'fast' ? 'FLANK' : 'RUSH');
     this.enemies.push(boss);
   }
 
@@ -115,7 +116,9 @@ export class WaveManager {
     const hasGunner = waveNum >= 6;
     const hasLancer = waveNum >= 7;
     const hasStug = waveNum >= 8;
-    const hasHover = waveNum >= 10;
+    const hasHover  = waveNum >= 10;
+    const hasDrone  = waveNum >= 6;
+    const hasMortar = waveNum >= 9;
 
     const p = Math.min((waveNum - 1) / 10, 1);
     const wF = 1 - p * 0.25;
@@ -125,8 +128,10 @@ export class WaveManager {
     const wG = hasGunner ? 0.1 + p * 0.2 : 0;
     const wL = hasLancer ? 0.07 + p * 0.1 : 0;
     const wSt = hasStug ? 0.08 + p * 0.12 : 0;
-    const wHv = hasHover ? 0.12 + p * 0.4 : 0;
-    const sum = wF + wT + wSc + wSw + wG + wL + wSt + wHv;
+    const wHv = hasHover  ? 0.10 + p * 0.3 : 0;
+    const wDr = hasDrone  ? 0.12 + p * 0.2 : 0;
+    const wMo = hasMortar ? 0.06 + p * 0.1 : 0;
+    const sum = wF + wT + wSc + wSw + wG + wL + wSt + wHv + wDr + wMo;
 
     const nFast = Math.max(1, Math.round((wF / sum) * total));
     const nScout = hasScout ? Math.max(0, Math.round((wSc / sum) * total)) : 0;
@@ -143,10 +148,16 @@ export class WaveManager {
     const nHover = hasHover
       ? Math.max(0, Math.min(3, Math.round((wHv / sum) * total)))
       : 0;
+    const nDrone = hasDrone
+      ? Math.max(0, Math.min(4, Math.round((wDr / sum) * total)))
+      : 0;
+    const nMortar = hasMortar
+      ? Math.max(0, Math.min(2, Math.round((wMo / sum) * total)))
+      : 0;
     const nTanky = hasTanky
       ? Math.max(
           0,
-          total - nFast - nScout - nSwarm - nGunner - nLancer - nStug - nHover,
+          total - nFast - nScout - nSwarm - nGunner - nLancer - nStug - nHover - nDrone - nMortar,
         )
       : 0;
 
@@ -159,6 +170,8 @@ export class WaveManager {
       ...Array(nLancer).fill("lancer"),
       ...Array(nStug).fill("stug"),
       ...Array(nHover).fill("hover"),
+      ...Array(nDrone).fill("drone"),
+      ...Array(nMortar).fill("mortar"),
     ];
     // Shuffle
     for (let i = types.length - 1; i > 0; i--) {

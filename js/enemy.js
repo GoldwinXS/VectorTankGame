@@ -152,6 +152,19 @@ export const TYPES = {
     bulletSpeed: 22, preferDist: 34, traverseSpeed: 1.3, baseSpread: 0.05,
     leadFactor: 0.85, hasGravity: true, turnRate: 1.5,
   },
+  drone: {
+    color: 0xffdd00, emissive: 0xddaa00, scale: 0.42,
+    speed: 3.0, hp: 14, damage: 3, shootRange: 30, shootCd: 0.09,
+    bulletSpeed: 32, preferDist: 13, traverseSpeed: 6.0, baseSpread: 0.26,
+    isHover: true, isMG: true, leadFactor: 0.0, turnRate: 7.0,
+  },
+  mortar: {
+    color: 0xff8800, emissive: 0xdd4400, scale: 0.85,
+    speed: 0.5, hp: 65, damage: 45, shootRange: 58, shootCd: 5.5,
+    bulletSpeed: 20, preferDist: 44, traverseSpeed: 0.6, baseSpread: 0.02,
+    hasGravity: true, hasSplash: true, splashRadius: 4.0,
+    leadFactor: 0.7, turnRate: 0.7,
+  },
 };
 
 const PLAYER_RADIUS = 1.0;
@@ -244,6 +257,8 @@ export class Enemy {
     if (this.type === 'stug')   { this._buildStugMesh();   return; }
     if (this.type === 'hover')  { this._buildHoverMesh();  return; }
     if (this.type === 'lancer') { this._buildLancerMesh(); return; }
+    if (this.type === 'drone')  { this._buildDroneMesh();  return; }
+    if (this.type === 'mortar') { this._buildMortarMesh(); return; }
 
     this.group = new THREE.Group();
     this.group.scale.setScalar(this.def.scale);
@@ -497,6 +512,85 @@ export class Enemy {
     if (this.isBoss) this._buildBossExtras();
   }
 
+  _buildDroneMesh() {
+    this.group = new THREE.Group();
+    this.group.scale.setScalar(this.def.scale);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.6, roughness: 0.2, metalness: 0.9,
+    });
+    // Central body
+    this.group.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.5), mat));
+
+    // 4 arms + rotor rings
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.09), mat.clone());
+      arm.position.set(Math.cos(a) * 0.3, 0, Math.sin(a) * 0.3);
+      arm.rotation.y = a;
+      this.group.add(arm);
+
+      const rotorGeo = new THREE.TorusGeometry(0.22, 0.04, 4, 10);
+      rotorGeo.rotateX(Math.PI / 2);
+      const rotor = new THREE.Mesh(rotorGeo, new THREE.MeshStandardMaterial({
+        color: this.def.emissive, emissive: this.def.emissive,
+        emissiveIntensity: 1.2, roughness: 0, metalness: 1,
+      }));
+      rotor.position.set(Math.cos(a) * 0.6, 0, Math.sin(a) * 0.6);
+      this.group.add(rotor);
+    }
+
+    this.turretGroup = new THREE.Group();
+    this.group.add(this.turretGroup);
+
+    // Small forward-pointing MG barrel
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.52, 5), new THREE.MeshStandardMaterial({
+      color: this.def.emissive, emissive: this.def.emissive, emissiveIntensity: 0.9,
+    }));
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.z = 0.35;
+    this.turretGroup.add(barrel);
+  }
+
+  _buildMortarMesh() {
+    this.group = new THREE.Group();
+    this.group.scale.setScalar(this.def.scale);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.28, roughness: 0.55, metalness: 0.75,
+    });
+    const edgeMat = new THREE.LineBasicMaterial({ color: this.def.emissive, opacity: 0.5, transparent: true });
+
+    // Wide low chassis
+    const chassisGeo = new THREE.BoxGeometry(1.7, 0.5, 1.9);
+    this.group.add(new THREE.Mesh(chassisGeo, mat));
+    this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(chassisGeo), edgeMat));
+
+    // Mortar tube — angled cylinder pointing upward
+    const tubeMat = new THREE.MeshStandardMaterial({
+      color: this.def.emissive, emissive: this.def.emissive,
+      emissiveIntensity: 0.95, roughness: 0.1, metalness: 1.0,
+    });
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.18, 1.4, 7), tubeMat);
+    tube.position.set(0, 0.8, 0.25);
+    tube.rotation.x = -0.72;
+    this.group.add(tube);
+
+    // Bipod legs
+    [-0.55, 0.55].forEach(xOff => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.6, 0.07), mat.clone());
+      leg.position.set(xOff, 0.15, 0.45);
+      leg.rotation.x = 0.32;
+      this.group.add(leg);
+    });
+
+    this.turretGroup = new THREE.Group();
+    this.group.add(this.turretGroup);
+    if (this.isBoss) this._buildBossExtras();
+  }
+
   _buildBossExtras() {
     // Pulsing ground ring indicator — clearly marks the boss
     const ringPts = [];
@@ -622,6 +716,16 @@ export class Enemy {
     const hpRatio = this.hp / this._maxHp;
     let activeTactic = this._tactic;
     if (hpRatio < 0.25 && !this.fixedGun) activeTactic = 'SUPPRESS'; // retreat when critical
+
+    // Boss periodically switches tactics to avoid getting stuck on obstacles
+    if (this.isBoss) {
+      this._bossTacticTimer = (this._bossTacticTimer ?? 0) - delta;
+      if (this._bossTacticTimer <= 0) {
+        const pool = hpRatio > 0.4 ? ['RUSH', 'FLANK', 'ENCIRCLE'] : ['RUSH', 'FLANK'];
+        this.setTactic(pool[Math.floor(Math.random() * pool.length)]);
+        this._bossTacticTimer = 6 + Math.random() * 5;
+      }
+    }
 
     // ── Movement ─────────────────────────────────────────────────────────
     let shootCdMult  = 1.0;
@@ -766,7 +870,8 @@ export class Enemy {
         }
       }
     } else if (this.shootTimer <= 0 && dist <= this.def.shootRange && !this._losBlocked) {
-      this._shoot();
+      if (this.def.hasSplash) this._shootMortar(aimTarget);
+      else this._shoot();
       this.shootTimer = this.def.shootCd * shootCdMult;
     }
 
@@ -799,6 +904,36 @@ export class Enemy {
       this.def.color, this.def.hasGravity ?? false, this.def.isMG ?? false,
     );
     proj._enemyType = this.type;
+    this.projectiles.push(proj);
+  }
+
+  _shootMortar(aimTarget) {
+    if (this.projectiles.filter(p => !p.isPlayer).length > 75) return;
+    const _GRAV = 4.5;
+    const dx = aimTarget.x - this.group.position.x;
+    const dz = aimTarget.z - this.group.position.z;
+    const hDist = Math.max(4, Math.sqrt(dx * dx + dz * dz));
+    // High-arc launch: fixed vertical speed, horizontal scaled to reach target
+    const vy = this.def.bulletSpeed * 0.82;
+    const tof = (2 * vy) / _GRAV;
+    const vh = Math.min(hDist / tof, this.def.bulletSpeed * 0.7);
+    const hx = dx / hDist, hz = dz / hDist;
+    const vel = new THREE.Vector3(hx * vh, vy, hz * vh);
+    const speed = vel.length();
+    const dir = vel.clone().normalize();
+
+    const spawnPos = this.group.position.clone();
+    spawnPos.y += 1.2;
+
+    const proj = new Projectile(
+      this.scene, spawnPos, dir, speed, this.damage, false,
+      this.def.color, true, false,
+    );
+    proj._enemyType = this.type;
+    proj.splashRadius = this.def.splashRadius ?? 4.0;
+    // Predicted landing position for warning ring
+    proj._warnX = this.group.position.x + hx * hDist;
+    proj._warnZ = this.group.position.z + hz * hDist;
     this.projectiles.push(proj);
   }
 
