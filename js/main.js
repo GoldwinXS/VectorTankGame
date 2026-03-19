@@ -15,6 +15,67 @@ function safeExitPointerLock() {
   try { document.exitPointerLock?.(); } catch (_) {}
 }
 
+// ── Leaderboard (localStorage) ────────────────────────────────────────────────
+const LS_KEY = 'vector_highscores_v1';
+
+function loadScores() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? []; } catch { return []; }
+}
+
+function saveScore(score, waves, hull) {
+  const scores = loadScores();
+  scores.push({ score, waves, hull: hull ?? 'vanguard', date: new Date().toLocaleDateString() });
+  scores.sort((a, b) => b.score - a.score);
+  scores.splice(10);
+  localStorage.setItem(LS_KEY, JSON.stringify(scores));
+}
+
+function renderLeaderboard() {
+  const el = document.getElementById('leaderboard-entries');
+  const scores = loadScores();
+  if (scores.length === 0) {
+    el.innerHTML = '<div class="lb-empty">No scores recorded yet.</div>';
+    return;
+  }
+  el.innerHTML = scores.slice(0, 10).map((e, i) => `
+    <div class="lb-row${i === 0 ? ' lb-top' : ''}">
+      <span class="lb-rank">#${i + 1}</span>
+      <span class="lb-score">${e.score.toLocaleString()}</span>
+      <span class="lb-detail">${(e.hull ?? '—').toUpperCase()} · WV ${e.waves}</span>
+      <span class="lb-date">${e.date ?? ''}</span>
+    </div>`).join('');
+}
+
+// ── Menu helpers ──────────────────────────────────────────────────────────────
+function showMenuPanel(name) {
+  document.getElementById('menu-main-panel').classList.toggle('hidden', name !== 'main');
+  document.getElementById('menu-settings-panel').classList.toggle('hidden', name !== 'settings');
+  document.getElementById('menu-leaderboard-panel').classList.toggle('hidden', name !== 'leaderboard');
+}
+
+function showMainMenu() {
+  safeExitPointerLock();
+  // Tear down any running game
+  if (player)      scene.remove(player.group);
+  if (waveManager) waveManager.clearEnemies();
+  projectiles.forEach(p => p.destroy());
+  projectiles = [];
+  clearPickups();
+  player = null; waveManager = null;
+  score = 0; scoreRef.value = 0; waveNum = 0;
+  chosenHull = 'vanguard';
+  document.querySelectorAll('.hull-choice').forEach(b => b.classList.remove('selected'));
+  document.querySelector('.hull-choice[data-hull="vanguard"]')?.classList.add('selected');
+  ui.hidePause();
+  document.getElementById('game-over-screen')?.classList.add('hidden');
+  document.getElementById('hull-select-screen').classList.add('hidden');
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('main-menu-screen').classList.remove('hidden');
+  showMenuPanel('main');
+  state = STATE.IDLE;
+  paused = false;
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 const STATE = { IDLE: 0, PLAYING: 1, WAVE_TRANSITION: 2, GAME_OVER: 3 };
 let state = STATE.IDLE;
@@ -491,7 +552,21 @@ function checkCollisions() {
 const _camPos  = new THREE.Vector3();
 const _camLook = new THREE.Vector3();
 
+let _idleOrbitAngle = 0;
 function updateCamera(delta) {
+  // Idle: slow orbit over terrain for main menu background
+  if (state === STATE.IDLE) {
+    _idleOrbitAngle += delta * 0.08;
+    const r = 28;
+    camera.position.set(
+      Math.sin(_idleOrbitAngle) * r,
+      14,
+      Math.cos(_idleOrbitAngle) * r
+    );
+    camera.lookAt(0, 0, 0);
+    return;
+  }
+
   if (!player) return;
 
   // Apply mouse delta, then clear it
@@ -639,6 +714,7 @@ function loop(ts) {
     if (!player.alive) {
       state = STATE.GAME_OVER;
       safeExitPointerLock();
+      saveScore(score, waveNum - 1, chosenHull);
       setTimeout(() => {
         ui.showGameOver(score, waveNum - 1, nn.summary(waveNum - 1), () => {
           lockPointer();
@@ -839,6 +915,58 @@ document.querySelectorAll('.hull-choice').forEach(btn => {
 document.getElementById('btn-hull-confirm')?.addEventListener('click', () => {
   document.getElementById('hull-select-screen').classList.add('hidden');
   document.getElementById('start-screen').classList.remove('hidden');
+});
+
+// ── Main menu button wiring ───────────────────────────────────────────────────
+document.getElementById('btn-menu-engage')?.addEventListener('click', () => {
+  document.getElementById('main-menu-screen').classList.add('hidden');
+  document.getElementById('hull-select-screen').classList.remove('hidden');
+});
+
+document.getElementById('btn-menu-settings')?.addEventListener('click', () => {
+  // Sync current audio state to sliders before showing
+  const mmv = document.getElementById('menu-vol-master');
+  const mmm = document.getElementById('menu-vol-music');
+  const mms = document.getElementById('menu-vol-sfx');
+  if (mmv) mmv.value = String(audio.masterVol);
+  if (mmm) mmm.value = String(audio.musicVol);
+  if (mms) mms.value = String(audio.sfxVol);
+  _syncMuteBtns();
+  showMenuPanel('settings');
+});
+
+document.getElementById('btn-menu-leaderboard')?.addEventListener('click', () => {
+  renderLeaderboard();
+  showMenuPanel('leaderboard');
+});
+
+document.getElementById('btn-menu-settings-back')?.addEventListener('click', () => {
+  showMenuPanel('main');
+});
+
+document.getElementById('btn-menu-leaderboard-back')?.addEventListener('click', () => {
+  showMenuPanel('main');
+});
+
+// Wire audio controls in the main menu settings panel
+_wireAudio('menu-btn-mute', 'menu-vol-master');
+['menu'].forEach(screen => {
+  const mv = document.getElementById(`${screen}-vol-music`);
+  const sv = document.getElementById(`${screen}-vol-sfx`);
+  if (mv) { mv.value = String(audio.musicVol); mv.addEventListener('input', e => audio.setMusicVol(parseFloat(e.target.value))); }
+  if (sv) { sv.value = String(audio.sfxVol);   sv.addEventListener('input', e => audio.setSfxVol(parseFloat(e.target.value))); }
+});
+
+// Pause → main menu
+document.getElementById('btn-pause-menu')?.addEventListener('click', () => {
+  ui.hidePause();
+  showMainMenu();
+});
+
+// Game over → main menu
+document.getElementById('btn-gameover-menu')?.addEventListener('click', () => {
+  document.getElementById('game-over-screen')?.classList.add('hidden');
+  showMainMenu();
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

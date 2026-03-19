@@ -100,49 +100,49 @@ export const TYPES = {
     color: 0x00ff88, emissive: 0x00ff88, scale: 0.75,
     speed: 1.5, hp: 40, damage: 12, shootRange: 42, shootCd: 1.6,
     bulletSpeed: 22, preferDist: 14, traverseSpeed: 2.5, baseSpread: 0.22,
-    leadFactor: 0.3,
+    leadFactor: 0.3, turnRate: 3.5,
   },
   tanky: {
     color: 0xff3300, emissive: 0xff2200, scale: 1.3,
     speed: 1.8, hp: 160, damage: 30, shootRange: 55, shootCd: 3.0,
     bulletSpeed: 16, preferDist: 22, traverseSpeed: 0.7, baseSpread: 0.10,
-    leadFactor: 0.6,
+    leadFactor: 0.6, turnRate: 1.2,
   },
   swarm: {
     color: 0xff00ff, emissive: 0xcc00cc, scale: 0.5,
     speed: 1.5, hp: 18, damage: 8, shootRange: 28, shootCd: 1.8,
     bulletSpeed: 22, preferDist: 10, traverseSpeed: 3.5, baseSpread: 0.28,
-    leadFactor: 0.0,
+    leadFactor: 0.0, turnRate: 4.5,
   },
   boss: {
     color: 0xff5500, emissive: 0xff3300, scale: 2.8,
     speed: 1.4, hp: 600, damage: 50, shootRange: 65, shootCd: 1.8,
     bulletSpeed: 18, preferDist: 24, traverseSpeed: 0.9, baseSpread: 0.05,
-    leadFactor: 0.9,
+    leadFactor: 0.9, turnRate: 0.9,
   },
   gunner: {
     color: 0x88ff00, emissive: 0x44bb00, scale: 0.9,
     speed: 1.4, hp: 55, damage: 6, shootRange: 42, shootCd: 0.1,
     bulletSpeed: 30, preferDist: 22, traverseSpeed: 2.2, baseSpread: 0.12,
-    isMG: true, leadFactor: 0.0,
+    isMG: true, leadFactor: 0.0, turnRate: 2.2,
   },
   scout: {
     color: 0x44ffaa, emissive: 0x22cc77, scale: 0.6,
     speed: 2.5, hp: 22, damage: 3, shootRange: 32, shootCd: 0.12,
     bulletSpeed: 32, preferDist: 14, traverseSpeed: 3.5, baseSpread: 0.20,
-    isMG: true, leadFactor: 0.0,
+    isMG: true, leadFactor: 0.0, turnRate: 5.0,
   },
   stug: {
     color: 0xaa8855, emissive: 0x775533, scale: 1.1,
     speed: 1.0, hp: 130, damage: 45, shootRange: 60, shootCd: 3.2,
     bulletSpeed: 36, preferDist: 36, traverseSpeed: 0, turnSpeed: 0.65,
-    baseSpread: 0.04, leadFactor: 1.0,
+    baseSpread: 0.04, leadFactor: 1.0, // stug uses turnSpeed for hull aiming separately
   },
   hover: {
     color: 0xcc33ff, emissive: 0xaa22dd, scale: 0.9,
     speed: 2.2, hp: 80, damage: 22, shootRange: 46, shootCd: 1.5,
     bulletSpeed: 28, preferDist: 20, traverseSpeed: 4.0, baseSpread: 0.17,
-    isHover: true, leadFactor: 0.5,
+    isHover: true, leadFactor: 0.5, turnRate: 3.0,
   },
   lancer: {
     // Long-range artillery that fires arcing shells like the player.
@@ -150,7 +150,7 @@ export const TYPES = {
     color: 0x1a0033, emissive: 0xbb00ff, scale: 1.05,
     speed: 1.6, hp: 75, damage: 50, shootRange: 58, shootCd: 4.2,
     bulletSpeed: 22, preferDist: 34, traverseSpeed: 1.3, baseSpread: 0.05,
-    leadFactor: 0.85, hasGravity: true,
+    leadFactor: 0.85, hasGravity: true, turnRate: 1.5,
   },
 };
 
@@ -682,11 +682,16 @@ export class Enemy {
       }
     }
 
-    // ── Hull faces movement direction ────────────────────────────────────
+    // ── Hull smoothly rotates toward movement direction ──────────────────
     const moved = this.group.position.clone().sub(prevPos);
     moved.y = 0;
     if (!this.fixedGun && moved.lengthSq() > 0.0001) {
-      this.group.rotation.y = Math.atan2(moved.x, moved.z);
+      const desired = Math.atan2(moved.x, moved.z);
+      let diff = desired - this.group.rotation.y;
+      while (diff >  Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      const rate = (this.def.turnRate ?? 2.5) * delta;
+      this.group.rotation.y += Math.sign(diff) * Math.min(Math.abs(diff), rate);
     }
 
     // ── Stug standoff ────────────────────────────────────────────────────

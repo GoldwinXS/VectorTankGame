@@ -647,6 +647,92 @@ button:hover {
   100% { opacity: 0; transform: translateX(-50%) translateY(-70px); }
 }
 
+/* ── Main menu ── */
+.menu-btns {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.menu-btns button { width: 220px; }
+
+.btn-secondary {
+  border-color: rgba(0, 255, 255, 0.4);
+  color: rgba(0, 255, 255, 0.7);
+  font-size: 12px;
+  letter-spacing: 5px;
+  padding: 10px 36px;
+}
+.btn-secondary:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0,255,255,0.06);
+  box-shadow: 0 0 16px rgba(0,255,255,0.2);
+}
+
+.btn-back {
+  font-size: 11px;
+  letter-spacing: 4px;
+  border-color: rgba(0,255,255,0.3);
+  color: rgba(0,255,255,0.6);
+  padding: 8px 24px;
+  margin-top: 16px;
+}
+.btn-back:hover { color: var(--cyan); border-color: var(--cyan); }
+
+.panel-title {
+  font-size: 18px;
+  letter-spacing: 8px;
+  color: var(--amber);
+  margin-bottom: 16px;
+  text-shadow: 0 0 12px rgba(255,204,68,0.3);
+}
+
+.menu-sub-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 320px;
+}
+.menu-sub-panel.hidden { display: none; }
+
+/* ── Leaderboard ── */
+#leaderboard-entries {
+  min-width: 380px;
+  max-width: 480px;
+}
+.lb-empty {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--label);
+  padding: 20px;
+  text-align: center;
+}
+.lb-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  margin-bottom: 5px;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+.lb-row.lb-top {
+  border-color: var(--amber);
+  box-shadow: 0 0 14px rgba(255,204,68,0.15);
+}
+.lb-rank  { color: var(--label); font-size: 10px; }
+.lb-top .lb-rank { color: var(--amber); font-size: 13px; }
+.lb-score { color: var(--cyan); font-size: 16px; letter-spacing: 1px; }
+.lb-top .lb-score { color: var(--amber); }
+.lb-detail { color: var(--text); font-size: 10px; white-space: nowrap; }
+.lb-date   { color: var(--label); font-size: 9px; white-space: nowrap; }
+
 /* ── Hull selection ── */
 .hull-grid {
   display: flex;
@@ -704,6 +790,19 @@ button:hover {
   letter-spacing: 1px;
   line-height: 1.6;
 }
+
+/* ── Hull card per-type colour coding ── */
+.hull-choice[data-hull="vanguard"] .hull-name { color: #00ffff; text-shadow: 0 0 10px #00ffff; }
+.hull-choice[data-hull="blitzer"]  .hull-name { color: #88ff00; text-shadow: 0 0 10px #88ff00; }
+.hull-choice[data-hull="bastion"]  .hull-name { color: #ff5500; text-shadow: 0 0 10px #ff5500; }
+.hull-choice[data-hull="vanguard"] .hull-role { color: #00ccdd; }
+.hull-choice[data-hull="blitzer"]  .hull-role { color: #66cc00; }
+.hull-choice[data-hull="bastion"]  .hull-role { color: #cc4400; }
+.hull-choice[data-hull="vanguard"].selected { border-color: #00ffff; box-shadow: 0 0 22px rgba(0,255,255,0.3); }
+.hull-choice[data-hull="blitzer"].selected  { border-color: #88ff00; box-shadow: 0 0 22px rgba(136,255,0,0.3); background: rgba(10,30,0,0.95); }
+.hull-choice[data-hull="bastion"].selected  { border-color: #ff5500; box-shadow: 0 0 22px rgba(255,85,0,0.3);  background: rgba(30,10,0,0.95); }
+.hull-choice[data-hull="blitzer"]:hover     { border-color: rgba(136,255,0,0.6); background: rgba(5,20,0,0.9); }
+.hull-choice[data-hull="bastion"]:hover     { border-color: rgba(255,85,0,0.6);  background: rgba(20,5,0,0.9); }
 
 /* ── Mobile pause button ── */
 #btn-pause-mob {

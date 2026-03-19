@@ -105,8 +105,51 @@
     <!-- FPV indicator -->
     <div id="fpv-indicator" class="hidden">[ FPV ]</div>
 
+    <!-- ── Main menu screen ──────────────────────────────────────────── -->
+    <div id="main-menu-screen" class="screen">
+      <div class="screen-content">
+        <h1>VECTOR</h1>
+        <p class="subtitle">THE AI ADAPTS TO YOUR WEAKNESSES</p>
+
+        <!-- Main buttons panel -->
+        <div id="menu-main-panel">
+          <div class="menu-btns">
+            <button id="btn-menu-engage">ENGAGE</button>
+            <button id="btn-menu-settings" class="btn-secondary">SETTINGS</button>
+            <button id="btn-menu-leaderboard" class="btn-secondary">LEADERBOARD</button>
+          </div>
+        </div>
+
+        <!-- Settings sub-panel -->
+        <div id="menu-settings-panel" class="hidden menu-sub-panel">
+          <h2 class="panel-title">AUDIO SETTINGS</h2>
+          <div class="audio-row">
+            <button class="inline-mute" id="menu-btn-mute">♪</button>
+            <span class="audio-label">MASTER</span>
+            <input type="range" class="inline-vol" id="menu-vol-master" min="0" max="1" step="0.05" value="0.5">
+          </div>
+          <div class="audio-row">
+            <span class="audio-label" style="margin-left:44px">MUSIC</span>
+            <input type="range" class="inline-vol" id="menu-vol-music" min="0" max="1" step="0.05" value="0.35">
+          </div>
+          <div class="audio-row">
+            <span class="audio-label" style="margin-left:44px">SFX</span>
+            <input type="range" class="inline-vol" id="menu-vol-sfx" min="0" max="1" step="0.05" value="0.65">
+          </div>
+          <button id="btn-menu-settings-back" class="btn-back">← BACK</button>
+        </div>
+
+        <!-- Leaderboard sub-panel -->
+        <div id="menu-leaderboard-panel" class="hidden menu-sub-panel">
+          <h2 class="panel-title">LEADERBOARD</h2>
+          <div id="leaderboard-entries"></div>
+          <button id="btn-menu-leaderboard-back" class="btn-back">← BACK</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Hull selection screen — shown before start screen is submitted -->
-    <div id="hull-select-screen" class="screen">
+    <div id="hull-select-screen" class="screen hidden">
       <div class="screen-content">
         <h1>SELECT HULL</h1>
         <p class="subtitle">CHOOSE YOUR COMBAT PLATFORM</p>
@@ -255,6 +298,7 @@
           <input type="range" class="inline-vol" id="pause-vol-sfx" min="0" max="1" step="0.05" value="0.65">
         </div>
         <button id="btn-resume">RESUME</button>
+        <button id="btn-pause-menu" class="btn-secondary" style="margin-top:4px">MAIN MENU</button>
       </div>
     </div>
 
@@ -271,6 +315,7 @@
           <div id="ai-insight-text"></div>
         </div>
         <button id="btn-restart">TRY AGAIN</button>
+        <button id="btn-gameover-menu" class="btn-secondary" style="margin-top:4px">MAIN MENU</button>
       </div>
     </div>
 
