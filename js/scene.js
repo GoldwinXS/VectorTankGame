@@ -257,7 +257,8 @@ export function createScene(canvas) {
   camera.position.set(0, 12, -10);
   camera.lookAt(0, 0, 5);
 
-  scene.add(new THREE.AmbientLight(0x112244, 6));
+  const ambientLight = new THREE.AmbientLight(0x112244, 6);
+  scene.add(ambientLight);
   const dir = new THREE.DirectionalLight(0x4488ff, 3);
   dir.position.set(10, 25, 15);
   dir.castShadow = true;
@@ -292,5 +293,5 @@ export function createScene(canvas) {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  return { scene, camera, renderer, boundaryGeo, fog };
+  return { scene, camera, renderer, boundaryGeo, fog, ambientLight, dirLight: dir };
 }

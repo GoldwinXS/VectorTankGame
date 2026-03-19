@@ -932,15 +932,24 @@ button:hover {
   inset: 0;
   pointer-events: none;
   z-index: 6;
-  background: radial-gradient(ellipse at center, transparent 52%, rgba(200,0,0,0.55) 100%);
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(200,0,0,0.6) 100%);
   opacity: 0;
 }
+/* Heartbeat double-pulse at <25% HP */
 #low-hp-vignette.active {
-  animation: low-hp-pulse 1.3s ease-in-out infinite;
+  animation: heartbeat 1.6s ease-in-out infinite;
 }
-@keyframes low-hp-pulse {
-  0%, 100% { opacity: 0.55; }
-  50%       { opacity: 1.0; }
+/* Frantic pulse at <12% HP */
+#low-hp-vignette.lhp-critical {
+  animation: heartbeat 0.75s ease-in-out infinite;
+  background: radial-gradient(ellipse at center, transparent 44%, rgba(220,0,0,0.72) 100%);
+}
+@keyframes heartbeat {
+  0%, 100% { opacity: 0.35; }
+  12%      { opacity: 0.72; }
+  26%      { opacity: 0.35; }
+  38%      { opacity: 0.92; }
+  55%, 90% { opacity: 0.35; }
 }
 
 /* ── Boss HP bar ── */
@@ -948,7 +957,7 @@ button:hover {
   position: fixed;
   top: 14px; left: 50%;
   transform: translateX(-50%);
-  width: min(440px, 60vw);
+  width: min(520px, 72vw);
   text-align: center;
   pointer-events: none;
   z-index: 20;
@@ -959,19 +968,56 @@ button:hover {
   font-size: 10px;
   letter-spacing: 4px;
   margin-bottom: 5px;
-  text-shadow: 0 0 10px rgba(255,68,0,0.8);
+  text-shadow: 0 0 12px rgba(255,68,0,0.9);
+}
+/* Critical: label flashes */
+#boss-bar-container.boss-critical #boss-bar-label {
+  animation: boss-label-flash 0.55s ease-in-out infinite;
+  color: #ff1100;
+}
+@keyframes boss-label-flash {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
 }
 #boss-bar-track {
-  width: 100%; height: 8px;
-  background: rgba(0,0,0,0.65);
-  border: 1px solid rgba(255,68,0,0.45);
-  box-shadow: 0 0 14px rgba(255,68,0,0.2);
+  position: relative;
+  overflow: hidden;
+  width: 100%; height: 12px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,68,0,0.5);
+  box-shadow: 0 0 18px rgba(255,68,0,0.25);
 }
+/* Scan-line shimmer sweeping left→right */
+#boss-bar-track::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: -30%; width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255,200,150,0.28), transparent);
+  animation: boss-scan 2.8s linear infinite;
+  pointer-events: none;
+}
+@keyframes boss-scan { to { left: 110%; } }
 #boss-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #cc1100, #ff5500);
-  box-shadow: 0 0 8px rgba(255,80,0,0.75);
+  background: linear-gradient(90deg, #bb1100, #ff5500, #ff7700);
+  box-shadow: 0 0 10px rgba(255,80,0,0.8);
   transition: width 0.12s linear;
+}
+/* Critical: bar turns blood-red */
+#boss-bar-container.boss-critical #boss-bar-fill {
+  background: linear-gradient(90deg, #ff0000, #ff3300);
+  box-shadow: 0 0 14px rgba(255,0,0,0.95);
+  animation: boss-fill-pulse 0.55s ease-in-out infinite;
+}
+@keyframes boss-fill-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.6); }
+}
+#boss-bar-hp-text {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: rgba(255,110,30,0.65);
+  margin-top: 4px;
 }
 
 @media (max-width: 600px) {
@@ -982,6 +1028,6 @@ button:hover {
   h1 { font-size: 48px; letter-spacing: 10px; }
   .upg-grid { flex-direction: column; }
   .shop-grid { max-height: 45vh; }
-  /* Push boss bar below mobile status strip */
-  #boss-bar-container { top: 38px; width: min(280px, 55vw); }
+  /* Push boss bar below mobile status strip; narrower on small screens */
+  #boss-bar-container { top: 38px; width: min(300px, 58vw); }
 }

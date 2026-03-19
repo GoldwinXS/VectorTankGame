@@ -199,8 +199,11 @@ export class UI {
     el.classList.remove('hidden');
     const pct = Math.max(0, (boss.hp / boss._maxHp) * 100);
     $('boss-bar-fill').style.width = pct + '%';
+    el.classList.toggle('boss-critical', pct < 25);
     const name = UI.BOSS_NAMES[boss.type] ?? boss.type.toUpperCase();
     $('boss-bar-label').textContent = `⚠  ${name}  ⚠`;
+    const hpEl = $('boss-bar-hp-text');
+    if (hpEl) hpEl.textContent = `${Math.ceil(boss.hp).toLocaleString()} / ${boss._maxHp.toLocaleString()}`;
   }
 
   showStartScreen()  { this.startScreen.classList.remove('hidden'); }

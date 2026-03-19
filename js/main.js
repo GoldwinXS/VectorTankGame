@@ -86,15 +86,32 @@ const isMobile = 'ontouchstart' in window;
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('canvas');
-const { scene, camera, renderer, boundaryGeo, fog } = createScene(canvas);
+const { scene, camera, renderer, boundaryGeo, fog, ambientLight, dirLight } = createScene(canvas);
 
-// ── Stage vibe system (advances with each boss kill) ──────────────────────────
+// ── Stage vibe system (advances at start of each boss wave: 5, 10, 15, 20…) ──
+// Each stage shifts fog, sky, ambient light, and directional light for a full
+// scene transformation. Stages 0–4 cover the full run.
 const STAGE_VIBES = [
-  { fogColor: 0x020b18, clearColor: 0x010810 }, // Stage 0 — run start
-  { fogColor: 0x031220, clearColor: 0x020e18 }, // Stage 1 — first blood
-  { fogColor: 0x080520, clearColor: 0x050318 }, // Stage 2 — purple edge
-  { fogColor: 0x180508, clearColor: 0x100304 }, // Stage 3 — red menace
-  { fogColor: 0x1e0303, clearColor: 0x160202 }, // Stage 4 — full danger
+  { // Stage 0 — standard ops (waves 1-4)
+    fogColor: 0x020b18, clearColor: 0x010810,
+    ambientHex: 0x112244, dirHex: 0x4488ff,
+  },
+  { // Stage 1 — deep blue (boss wave 5)
+    fogColor: 0x031228, clearColor: 0x020c1e,
+    ambientHex: 0x0e1c44, dirHex: 0x2255dd,
+  },
+  { // Stage 2 — violet shadow (boss wave 10)
+    fogColor: 0x080422, clearColor: 0x06031a,
+    ambientHex: 0x180840, dirHex: 0x7722cc,
+  },
+  { // Stage 3 — blood ember (boss wave 15)
+    fogColor: 0x1c0408, clearColor: 0x130304,
+    ambientHex: 0x2a0808, dirHex: 0xcc4422,
+  },
+  { // Stage 4 — crimson night (boss wave 20+)
+    fogColor: 0x220202, clearColor: 0x180101,
+    ambientHex: 0x200404, dirHex: 0xff2200,
+  },
 ];
 let _currentStage = 0;
 
@@ -102,6 +119,8 @@ function applyStageVibe(stage, showFlash = true) {
   const v = STAGE_VIBES[Math.min(stage, STAGE_VIBES.length - 1)];
   fog.color.setHex(v.fogColor);
   renderer.setClearColor(v.clearColor);
+  ambientLight.color.setHex(v.ambientHex);
+  dirLight.color.setHex(v.dirHex);
   if (showFlash) {
     const el = document.getElementById('damage-flash');
     if (el) {
@@ -503,8 +522,10 @@ async function startNextWave() {
 
   }
 
-  // Warn before boss waves
+  // Boss wave: advance atmosphere BEFORE the wave begins — darkness arrives first
   if (waveNum % 5 === 0) {
+    _currentStage = Math.min(_currentStage + 1, STAGE_VIBES.length - 1);
+    applyStageVibe(_currentStage, false); // no gold flash yet — save that for the kill
     await ui.showWaveMessage('!! BOSS WAVE !!', 1400);
   }
 
@@ -552,8 +573,12 @@ function checkCollisions() {
             if (e.isBoss) {
               shakeIntensity = 1.8;
               audio.nextTrack();
-              _currentStage = Math.min(_currentStage + 1, STAGE_VIBES.length - 1);
-              applyStageVibe(_currentStage);
+              // Gold kill flash — vibe already shifted at wave start
+              const _flashEl = document.getElementById('damage-flash');
+              if (_flashEl) {
+                _flashEl.style.background = 'rgba(255,200,0,0.30)';
+                setTimeout(() => { _flashEl.style.background = ''; }, 650);
+              }
               const drops = spawnPickupsAt(scene, ['health', 'damage', 'speed', 'armor'], e.position.x, e.position.z);
               pickups.push(...drops);
             }
@@ -767,10 +792,12 @@ function loop(ts) {
     : null;
   ui.updateBossBar(_activeBoss);
 
-  // Low-HP vignette — pulse red edge when hull critical
-  lowHpVignetteEl?.classList.toggle('active',
-    state === STATE.PLAYING && !!player && player.hp / player.maxHp < 0.25
-  );
+  // Low-HP vignette — heartbeat pulse at <25%, frantic at <12%
+  {
+    const _hpRatio = (state === STATE.PLAYING && player) ? player.hp / player.maxHp : 1;
+    lowHpVignetteEl?.classList.toggle('active',       _hpRatio < 0.25);
+    lowHpVignetteEl?.classList.toggle('lhp-critical', _hpRatio < 0.12);
+  }
 
   renderer.render(scene, camera);
 }
