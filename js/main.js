@@ -421,6 +421,7 @@ function init() {
   updateBoundary(boundaryGeo, gameBounds);
 
   upgrades.resetRun();
+  audio.startRun();
   player      = new Player(scene, projectiles, chosenHull);
   _applyHullChoice(player);
   // Wire component damage notifications back to UI
@@ -704,10 +705,7 @@ function loop(ts) {
     if (_nnAdaptTimer >= NN_ADAPT_INTERVAL) {
       _nnAdaptTimer = 0;
       const newTactic = waveManager.adaptMidWave(player.hp, player.maxHp, player.shotsHit, player.shotsFired);
-      if (newTactic) {
-        ui.updateProtocol(newTactic, nn.probs);
-        ui.showWaveMessage(`PROTOCOL SHIFT: ${newTactic}`, 900);
-      }
+      if (newTactic) ui.updateProtocol(newTactic, nn.probs);
     }
 
     if (waveManager.isWaveComplete()) startNextWave();

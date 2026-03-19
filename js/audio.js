@@ -143,6 +143,8 @@ class AudioEngine {
     if      (n >= 17) this._BPM = Math.min(158, 140 + (n - 16));
     else if (n >= 12) this._BPM = 143;
     else              this._BPM = 140;
+
+    // Track is fixed per-run (set by startRun()); only layers build here
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -155,6 +157,52 @@ class AudioEngine {
   // Dense arp (MIDI): original _ARP_NOTES array below
   // Volume levels: _GENTLE_ARP_VOL controls soft arp loudness
   // ══════════════════════════════════════════════════════════════════════════════
+
+  // ── Multi-track definitions (swap at wave milestones) ─────────────────────
+  // Track 0: E minor (waves 1-5) — current default
+  // Track 1: D minor (waves 6-11) — down a tone, more ominous
+  // Track 2: F minor (waves 12+)  — up a semitone from E, most intense
+  _TRACKS = [
+    {
+      bass:      [40, 40, 43, 47, 40, 38, 40, 43, 40, 40, 45, 47, 38, 38, 43, 45],
+      chords:    [[220, 262, 330], [196, 233, 294], [175, 220, 277], [208, 247, 311]],
+      gentleArp: [60, 64, 67, 71, 69, 65, 62, 60],
+      acid:      [52, 55, 52, 57, 50, 52, 55, 50],
+      arp:       [64, 67, 71, 74, 67, 71, 76, 74, 72, 69, 67, 64, 67, 71, 72, 74],
+    },
+    {
+      bass:      [38, 38, 41, 45, 38, 36, 38, 41, 38, 38, 43, 45, 36, 36, 41, 43],
+      chords:    [[196, 233, 294], [175, 208, 262], [156, 185, 233], [185, 220, 277]],
+      gentleArp: [58, 62, 65, 69, 67, 63, 60, 58],
+      acid:      [50, 53, 50, 55, 48, 50, 53, 48],
+      arp:       [62, 65, 69, 72, 65, 69, 74, 72, 70, 67, 65, 62, 65, 69, 70, 72],
+    },
+    {
+      bass:      [41, 41, 44, 48, 41, 39, 41, 44, 41, 41, 46, 48, 39, 39, 44, 46],
+      chords:    [[233, 277, 349], [208, 247, 311], [185, 220, 277], [220, 262, 330]],
+      gentleArp: [61, 65, 68, 72, 70, 66, 63, 61],
+      acid:      [53, 56, 53, 58, 51, 53, 56, 51],
+      arp:       [65, 68, 72, 75, 68, 72, 77, 75, 73, 70, 68, 65, 68, 72, 73, 75],
+    },
+  ];
+  _runIndex  = -1; // incremented each new run, cycles through tracks
+
+  _applyTrack(idx) {
+    const t = this._TRACKS[idx];
+    this._BASS        = t.bass;
+    this._CHORDS      = t.chords;
+    this._GENTLE_ARP  = t.gentleArp;
+    this._ACID_NOTES  = t.acid;
+    this._ARP_NOTES   = t.arp;
+  }
+
+  // Call once at the start of each new run (from main.js init())
+  startRun() {
+    this._runIndex = (this._runIndex + 1) % this._TRACKS.length;
+    this._applyTrack(this._runIndex);
+    this._waveLayer = 0;
+    this._BPM       = 140;
+  }
 
   // ── Drum machines ─────────────────────────────────────────────────────────
   _kick(t) {
