@@ -58,6 +58,8 @@ export class Player {
     this.repairRate = 1; // multiplier for debuff recovery speed (upgrades raise this)
     this._compCb = null; // callback set by main.js to show component damage UI
 
+    this._invincTimer = 0; // seconds of post-respawn invincibility remaining
+
     this.aimCharge = 0;
     this.barrelPitch = 0; // current barrel elevation in radians (0 = flat)
 
@@ -272,6 +274,9 @@ export class Player {
     pitchDelta = 0,
   ) {
     if (!this.alive) return;
+
+    // Tick down post-respawn invincibility
+    if (this._invincTimer > 0) this._invincTimer -= delta;
 
     // Tick temporary buffs
     for (const key of Object.keys(this._buffs)) {
@@ -562,6 +567,7 @@ export class Player {
         this.lives--;
         this.hp = Math.ceil(this.maxHp * 0.4);
         this._justRespawned = true;
+        this._invincTimer = 2.5; // 2.5s invincibility after reserve hull activates
         this.mgAmmo = this.mgMaxAmmo;
         this.mgReloading = false;
       } else {

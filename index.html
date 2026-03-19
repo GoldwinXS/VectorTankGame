@@ -109,6 +109,9 @@
     <!-- Damage flash -->
     <div id="damage-flash"></div>
 
+    <!-- Low-HP danger vignette — pulsing red edge when hull < 25% -->
+    <div id="low-hp-vignette"></div>
+
     <!-- FPV indicator -->
     <div id="fpv-indicator" class="hidden">[ FPV ]</div>
 
@@ -348,6 +351,12 @@
     <div id="fpv-tank-overlay" class="hidden">
       <div class="hud-label">HEADING</div>
       <canvas id="fpv-mini-canvas" width="64" height="64"></canvas>
+    </div>
+
+    <!-- Boss health bar — appears during boss waves -->
+    <div id="boss-bar-container" class="hidden">
+      <div id="boss-bar-label">BOSS</div>
+      <div id="boss-bar-track"><div id="boss-bar-fill"></div></div>
     </div>
 
     <!-- In-game controls hint (shown at wave 1, dismissible) -->

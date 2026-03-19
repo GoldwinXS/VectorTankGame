@@ -183,6 +183,26 @@ export class UI {
     el.style.display = hasActive ? '' : 'none';
   }
 
+  // Boss names keyed by enemy type — shown in the boss bar label
+  static BOSS_NAMES = {
+    tanky: 'DREADNOUGHT',
+    fast:  'PHANTOM',
+    stug:  'SIEGE ENGINE',
+    hover: 'WRAITH',
+    swarm: 'HIVEMIND',
+  };
+
+  updateBossBar(boss) {
+    const el = $('boss-bar-container');
+    if (!el) return;
+    if (!boss) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    const pct = Math.max(0, (boss.hp / boss._maxHp) * 100);
+    $('boss-bar-fill').style.width = pct + '%';
+    const name = UI.BOSS_NAMES[boss.type] ?? boss.type.toUpperCase();
+    $('boss-bar-label').textContent = `⚠  ${name}  ⚠`;
+  }
+
   showStartScreen()  { this.startScreen.classList.remove('hidden'); }
   hideStartScreen()  { this.startScreen.classList.add('hidden'); }
 

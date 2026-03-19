@@ -462,6 +462,23 @@ class AudioEngine {
     osc.start(now); osc.stop(now + 0.6);
   }
 
+  playRespawn() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    // Rising alert tone — signals emergency activation
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(720, now + 0.35);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.5, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+    osc.connect(g); g.connect(this._sfxBus);
+    osc.start(now); osc.stop(now + 0.5);
+    // White noise surge underneath
+    this._playSfxNoise(now, 0.35, 900, 'bandpass', 0.55);
+  }
+
   playComponentHit() {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;

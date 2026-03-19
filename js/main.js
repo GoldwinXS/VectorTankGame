@@ -258,8 +258,9 @@ window.addEventListener('mouseup', e => {
 window.addEventListener('contextmenu', e => e.preventDefault());
 
 // ── Crosshair / Heading / Buffs ───────────────────────────────────────────────
-const crosshairEl  = document.getElementById('crosshair');
-const miniCanvas     = document.getElementById('mini-tank-canvas');
+const crosshairEl      = document.getElementById('crosshair');
+const lowHpVignetteEl  = document.getElementById('low-hp-vignette');
+const miniCanvas       = document.getElementById('mini-tank-canvas');
 const miniCtx        = miniCanvas.getContext('2d');
 const fpvMiniCanvas  = document.getElementById('fpv-mini-canvas');
 const fpvMiniCtx     = fpvMiniCanvas?.getContext('2d') ?? null;
@@ -565,12 +566,8 @@ function checkCollisions() {
     } else {
       if (!player.alive) continue;
       if (proj.mesh.position.distanceTo(player.position) < proj.radius + player.radius) {
-        player.takeDamage(proj.damage);
-        if (player._justRespawned) {
-          player._justRespawned = false;
-          shakeIntensity = 1.0;
-          ui.showWaveMessage('RESERVE HULL ACTIVATED', 1000);
-        } else {
+        if (player._invincTimer <= 0) {
+          player.takeDamage(proj.damage);
           ui.flashDamage();
           shakeIntensity = 0.3;
         }
@@ -678,6 +675,14 @@ function loop(ts) {
   if (state === STATE.PLAYING && !paused) {
     player.update(delta, keys, aimTarget, mouseDown, rightMouseDown, gameBounds, freeLook, pitchDelta);
     pitchDelta = 0;
+
+    // Reserve hull activation — fires once immediately when a life is consumed
+    if (player._justRespawned) {
+      player._justRespawned = false;
+      shakeIntensity = 1.2;
+      audio.playRespawn();
+      ui.showWaveMessage('RESERVE HULL ACTIVATED', 1100);
+    }
     player.group.position.y = terrainH(player.group.position.x, player.group.position.z);
 
     // Tilt player tank to follow terrain slope (YXZ Euler: rotation.x/z are local pitch/roll)
@@ -755,6 +760,18 @@ function loop(ts) {
   updateHeadingArrow();
   updateBuffDisplay();
   if (player && state === STATE.PLAYING) ui.updateComponentPanel(player._compDmg);
+
+  // Boss HP bar — show during boss fights, hide otherwise
+  const _activeBoss = (state === STATE.PLAYING && waveManager)
+    ? (waveManager.enemies.find(e => e.isBoss && e.alive) ?? null)
+    : null;
+  ui.updateBossBar(_activeBoss);
+
+  // Low-HP vignette — pulse red edge when hull critical
+  lowHpVignetteEl?.classList.toggle('active',
+    state === STATE.PLAYING && !!player && player.hp / player.maxHp < 0.25
+  );
+
   renderer.render(scene, camera);
 }
 
