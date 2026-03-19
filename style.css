@@ -612,8 +612,7 @@ button:hover {
   z-index: 8;
 }
 
-/* Shared base for all bottom-right mobile buttons */
-#btn-fire-cannon, #btn-fire-mg,
+/* Bottom-right mobile buttons */
 #btn-fpv-mob, #btn-hud-mob {
   position: absolute;
   width: 110px;
@@ -628,33 +627,10 @@ button:hover {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-}
-/* Fire button visuals only — interaction handled by right-touch-zone */
-#btn-fire-cannon, #btn-fire-mg {
-  pointer-events: none;
-  z-index: 7;
-}
-/* Secondary buttons sit above right-touch-zone */
-#btn-fpv-mob, #btn-hud-mob {
   pointer-events: all;
   z-index: 15;
-}
-/* Bottom row — fire buttons */
-#btn-fire-cannon, #btn-fire-mg {
   bottom: 28px;
-  height: 74px;
-  font-size: 11px;
-  letter-spacing: 3px;
-  border-color: var(--cyan);
-  box-shadow: 0 0 10px rgba(0,255,255,0.14);
-}
-#btn-fire-cannon { right: 140px; }
-#btn-fire-mg     { right: 20px; }
-
-/* Top row — secondary buttons */
-#btn-fpv-mob, #btn-hud-mob {
-  bottom: 112px;
-  height: 52px;
+  height: 62px;
   font-size: 10px;
   opacity: 0.85;
 }
