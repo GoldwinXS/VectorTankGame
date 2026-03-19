@@ -683,10 +683,12 @@ async function startNextWave() {
   audio.setWave(waveNum);
   // Pass nn.probs so each enemy draws its own tactic from the distribution
   waveManager.startWave(waveNum, gameBounds, player.hp, nn.probs);
+  // Start intro fly-in BEFORE the wave message await so camera transitions
+  // smoothly from wherever the idle orbit left it — no jarring snap.
+  if (waveNum === 1) _startIntroShot();
   await ui.showWaveMessage(`WAVE  ${waveNum}`, 800);
   state = STATE.PLAYING;
   if (waveNum === 1) {
-    _startIntroShot();
     if (!isMobile && !localStorage.getItem("vec_hint_shown")) {
       document.getElementById("controls-hint")?.classList.remove("hidden");
       setTimeout(
@@ -803,13 +805,9 @@ function _startIntroShot() {
   _introCam = {
     progress: 0,
     dur: 3.8,
-    fromPos: new THREE.Vector3(
-      px - Math.sin(camYaw) * 35,
-      py + 24,
-      pz - Math.cos(camYaw) * 35,
-    ),
+    fromPos: camera.position.clone(), // capture current idle orbit position — no jarring cut
     toPos: new THREE.Vector3(px, py + 1.2, pz),
-    fromLook: new THREE.Vector3(px, py + 0.5, pz),
+    fromLook: new THREE.Vector3(0, 0, 0), // idle orbit always looks at origin
     toLook: new THREE.Vector3(
       px + Math.sin(camYaw) * 20,
       py + 1.2,
@@ -1102,13 +1100,30 @@ document.addEventListener("pointerlockchange", () => {
 });
 
 // ── Mobile touch controls ─────────────────────────────────────────────────────
+// ── Desktop HUD toggle ────────────────────────────────────────────────────────
+const _hudEl = document.getElementById("hud");
+if (!isMobile) {
+  // On desktop: hide heading overlay (it's always bottom-right but we only show on desktop)
+  // Hide sidebar HUD by default — top status bar provides essential info
+  _hudEl.classList.add("hud-hidden");
+  const btnHudDesktop = document.getElementById("btn-hud-toggle");
+  if (btnHudDesktop) {
+    btnHudDesktop.classList.remove("hidden");
+    let _hudDesktopVis = false;
+    btnHudDesktop.addEventListener("click", () => {
+      _hudDesktopVis = !_hudDesktopVis;
+      _hudEl.classList.toggle("hud-hidden", !_hudDesktopVis);
+      btnHudDesktop.classList.toggle("hud-toggle-active", _hudDesktopVis);
+    });
+  }
+} else {
+  // On mobile: hide heading overlay (buttons overlap it) and hide HUD sidebar by default
+  document.getElementById("heading-overlay")?.style.setProperty("display", "none");
+  _hudEl.classList.add("hud-hidden");
+}
+
 if (isMobile) {
   document.getElementById("mobile-controls").classList.remove("hidden");
-
-  // Show mobile status strip and hide the full HUD sidebar by default
-  document.getElementById("mob-status").style.display = "flex";
-  const _hudEl = document.getElementById("hud");
-  _hudEl.classList.add("hud-hidden");
 
   // ── FPV toggle ────────────────────────────────────────────────────────────
   const btnFpvMob = document.getElementById("btn-fpv-mob");

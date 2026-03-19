@@ -59,7 +59,7 @@ html, body {
 /* ── HUD ── */
 #hud {
   position: absolute;
-  top: 20px; left: 20px;
+  top: 38px; left: 20px; /* below top status bar */
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -517,9 +517,9 @@ button:hover {
 .shop-desc { font-size: 10px; letter-spacing: 1px; color: var(--text); }
 .shop-cost { font-size: 11px; letter-spacing: 2px; color: #ffdd00; white-space: nowrap; }
 
-/* ── Mobile status strip ── */
+/* ── Top status bar (desktop + mobile) ── */
 #mob-status {
-  display: none; /* shown via JS on mobile */
+  display: flex; /* always visible */
   position: absolute;
   top: 0; left: 0; right: 0;
   padding: 7px 14px;
@@ -530,6 +530,34 @@ button:hover {
   pointer-events: none;
   z-index: 5;
 }
+
+/* Desktop-only items in the top bar */
+.desk-only { display: inline; }
+
+/* Desktop HUD toggle button — lives inside the top status bar */
+#btn-hud-toggle {
+  margin-left: auto;
+  font-size: 9px;
+  letter-spacing: 3px;
+  padding: 2px 10px;
+  margin-top: 0;
+  border-color: rgba(0,255,255,0.3);
+  color: rgba(0,255,255,0.55);
+  pointer-events: all;
+  cursor: pointer;
+}
+#btn-hud-toggle:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0,255,255,0.08);
+}
+#btn-hud-toggle.hud-toggle-active {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0,255,255,0.12);
+  box-shadow: 0 0 10px rgba(0,255,255,0.2);
+}
+#btn-hud-toggle.hidden { display: none; }
 #mob-hp-track {
   flex: 0 0 100px;
   height: 5px;
@@ -1011,7 +1039,7 @@ button:hover {
 /* ── Boss HP bar ── */
 #boss-bar-container {
   position: fixed;
-  top: 14px; left: 50%;
+  top: 40px; left: 50%;
   transform: translateX(-50%);
   width: min(520px, 72vw);
   text-align: center;
@@ -1086,6 +1114,7 @@ button:hover {
   .shop-grid { max-height: 45vh; }
   /* Push boss bar below mobile status strip; narrower on small screens */
   #boss-bar-container { top: 38px; width: min(300px, 58vw); }
-  /* Heading overlay too cluttered on mobile */
+  /* Heading overlay and desk-only items hidden on mobile */
   #heading-overlay { display: none; }
+  .desk-only { display: none !important; }
 }

@@ -138,24 +138,6 @@ export class Player {
       new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), edgeMat),
     );
 
-    // Track sponsons — widen the lower hull
-    const sponsonMat = new THREE.MeshStandardMaterial({
-      color: c.body2,
-      emissive: c.emissive,
-      emissiveIntensity: 0.08,
-      roughness: 0.6,
-      metalness: 0.7,
-    });
-    [-0.82, 0.82].forEach((xOff) => {
-      const sp = new THREE.Mesh(
-        new THREE.BoxGeometry(0.22, 0.32, 2.1),
-        sponsonMat,
-      );
-      sp.position.set(xOff, -0.29, 0);
-      sp.castShadow = true;
-      this.group.add(sp);
-    });
-
     // Glacis plate — angled front armour
     const glacis = new THREE.Mesh(
       new THREE.BoxGeometry(1.35, 0.38, 0.42),
@@ -228,16 +210,19 @@ export class Player {
     this.barrelPivot = new THREE.Group();
     this.turret.add(this.barrelPivot);
 
-    const barrel = new THREE.Mesh(
-      new THREE.BoxGeometry(0.18, 0.18, 1.1),
+    // Cannon barrel — cylinder aligned along Z for recoil animation
+    const cannonGeo = new THREE.CylinderGeometry(0.09, 0.09, 1.1, 8);
+    this.cannonBarrel = new THREE.Mesh(
+      cannonGeo,
       new THREE.MeshStandardMaterial({
         color: c.barrel,
         emissive: c.barrel,
         emissiveIntensity: 0.5,
       }),
     );
-    barrel.position.z = 0.9;
-    this.barrelPivot.add(barrel);
+    this.cannonBarrel.rotation.x = Math.PI / 2; // align cylinder along Z axis
+    this.cannonBarrel.position.z = 0.9;
+    this.barrelPivot.add(this.cannonBarrel);
 
     // Coaxial MG barrel — thin, offset to the right of main barrel
     const mgBarrel = new THREE.Mesh(
@@ -394,9 +379,9 @@ export class Player {
       this.shootCd = SHOOT_CD * this.reloadMult;
     }
 
-    // Barrel recoil decay
+    // Barrel recoil decay — only moves cannon barrel, not MG
     this._recoilT = Math.max(0, this._recoilT - delta * 7);
-    this.barrelPivot.position.z = -0.35 * this._recoilT;
+    this.cannonBarrel.position.z = 0.9 - 0.35 * this._recoilT;
 
     // R key — manual MG reload
     if (keys["KeyR"] && !this.mgReloading && this.mgAmmo < this.mgMaxAmmo) {

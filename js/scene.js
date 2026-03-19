@@ -193,14 +193,31 @@ export function activateZone(direction, scene) {
 
 export function updateBoundary(geo, bounds) {
   const { minX, maxX, minZ, maxZ } = bounds;
-  const yAt = (x, z) => terrainH(x, z) + 0.5;
-  geo.setFromPoints([
-    new THREE.Vector3(minX, yAt(minX, minZ), minZ),
-    new THREE.Vector3(maxX, yAt(maxX, minZ), minZ),
-    new THREE.Vector3(maxX, yAt(maxX, maxZ), maxZ),
-    new THREE.Vector3(minX, yAt(minX, maxZ), maxZ),
-    new THREE.Vector3(minX, yAt(minX, minZ), minZ),
-  ]);
+  const yAt = (x, z) => terrainH(x, z) + 0.55;
+  const N = 20;
+  const pts = [];
+  // South edge (minZ), West→East
+  for (let i = 0; i <= N; i++) {
+    const x = minX + (maxX - minX) * i / N;
+    pts.push(new THREE.Vector3(x, yAt(x, minZ), minZ));
+  }
+  // East edge (maxX), South→North
+  for (let i = 1; i <= N; i++) {
+    const z = minZ + (maxZ - minZ) * i / N;
+    pts.push(new THREE.Vector3(maxX, yAt(maxX, z), z));
+  }
+  // North edge (maxZ), East→West
+  for (let i = N - 1; i >= 0; i--) {
+    const x = minX + (maxX - minX) * i / N;
+    pts.push(new THREE.Vector3(x, yAt(x, maxZ), maxZ));
+  }
+  // West edge (minX), North→South
+  for (let i = N - 1; i >= 0; i--) {
+    const z = minZ + (maxZ - minZ) * i / N;
+    pts.push(new THREE.Vector3(minX, yAt(minX, z), z));
+  }
+  pts.push(pts[0].clone()); // close the loop
+  geo.setFromPoints(pts);
 }
 
 // ── Terrain mesh ──────────────────────────────────────────────────────────────
@@ -227,7 +244,7 @@ function buildTerrainGrid(scene) {
   // Lower-resolution displaced mesh used purely for wireframe drawing.
   // WireframeGeometry shows every triangle edge, giving the classic
   // sci-fi 3D-terrain wireframe look that reveals the hill shapes.
-  const wGeo = new THREE.PlaneGeometry(250, 250, 50, 50);
+  const wGeo = new THREE.PlaneGeometry(250, 250, 100, 100);
   wGeo.rotateX(-Math.PI / 2);
   const wPos = wGeo.attributes.position;
   for (let i = 0; i < wPos.count; i++) {

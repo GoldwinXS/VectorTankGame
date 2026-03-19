@@ -72,13 +72,20 @@
       </div>
     </div>
 
-    <!-- Mobile status strip — always visible, replaces full HUD sidebar -->
+    <!-- Top status bar — always visible on desktop; minimal HUD replacement -->
     <div id="mob-status">
       <div id="mob-hp-track"><div id="mob-hp-bar"></div></div>
       <span id="mob-score-val">0</span>
       <span class="mob-sep">|</span>
       <span class="mob-lbl">WV</span>
       <span id="mob-wave-val">—</span>
+      <span class="mob-sep desk-only">|</span>
+      <span class="mob-lbl desk-only">LIVES</span>
+      <span id="mob-lives-disp" class="desk-only">0</span>
+      <span class="mob-sep desk-only">|</span>
+      <span class="mob-lbl desk-only">MG</span>
+      <span id="mob-mg-disp" class="desk-only">30/30</span>
+      <button id="btn-hud-toggle" class="hidden">≡ HUD</button>
     </div>
 
     <!-- Mobile touch controls (hidden on desktop) -->

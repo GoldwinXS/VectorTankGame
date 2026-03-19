@@ -50,13 +50,14 @@ export class UI {
     this.scoreEl.textContent   = score;
     this.waveNumEl.textContent = waveNum || '—';
     if (this.livesEl) this.livesEl.textContent = lives ?? 0;
-    // Mobile mini-status strip
+    // Top status bar (desktop + mobile)
     const mhb = $('mob-hp-bar');
     if (mhb) {
       mhb.style.width      = pct + '%';
       mhb.style.background = hpColor;
       const msv = $('mob-score-val'); if (msv) msv.textContent = score;
       const mwv = $('mob-wave-val');  if (mwv) mwv.textContent = waveNum || '—';
+      const mld = $('mob-lives-disp'); if (mld) mld.textContent = lives ?? 0;
     }
   }
 
@@ -92,8 +93,13 @@ export class UI {
 
   updateAmmo(ammo, maxAmmo, reloading) {
     if (!this.mgAmmoEl) return;
-    this.mgAmmoEl.textContent = reloading ? 'LOADING...' : `${ammo} / ${maxAmmo}`;
-    this.mgAmmoEl.style.color = reloading ? '#ffaa00' : ammo > 8 ? 'var(--cyan)' : '#ff5555';
+    const txt = reloading ? 'LOADING...' : `${ammo} / ${maxAmmo}`;
+    const col = reloading ? '#ffaa00' : ammo > 8 ? 'var(--cyan)' : '#ff5555';
+    this.mgAmmoEl.textContent = txt;
+    this.mgAmmoEl.style.color = col;
+    // Also update desk-only top-bar MG display
+    const mgd = $('mob-mg-disp');
+    if (mgd) { mgd.textContent = txt; mgd.style.color = col; }
   }
 
   setFpv(active) {
