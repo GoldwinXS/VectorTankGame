@@ -125,6 +125,7 @@ export class UI {
       <div class="sstat-row"><span class="sstat-label">MG AMMO</span><span class="sstat-val">${p.mgAmmo} / ${p.mgMaxAmmo}</span></div>
       <div class="sstat-row"><span class="sstat-label">MG DMG</span><span class="sstat-val">${Math.round((p.mgDamageMult ?? 1) * 100)}%</span></div>
       <div class="sstat-row"><span class="sstat-label">MG SPD</span><span class="sstat-val">${Math.round((1 / (p.mgSpreadMult ?? 1)) * 100)}%</span></div>
+      <div class="sstat-row"><span class="sstat-label">TRV SPD</span><span class="sstat-val">${Math.round((p.traverseMult ?? 1) * 100)}%</span></div>
     `;
   }
 

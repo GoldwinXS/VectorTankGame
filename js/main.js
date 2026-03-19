@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createScene, resolveObstacles, hitsObstacle, updateBoundary,
-         activateZone, INITIAL_HALF, ZONE_SIZE, terrainH } from './scene.js';
+         activateZone, INITIAL_HALF, ZONE_SIZE, terrainH, terrainSlope } from './scene.js';
 import { GRAVITY } from './projectile.js';
 import { Player }         from './player.js';
 import { WaveManager }    from './wave.js';
@@ -10,6 +10,10 @@ import { Shop }           from './shop.js';
 import { UpgradePicker }  from './upgrade.js';
 import { spawnPickups, spawnPickupsAt } from './pickup.js';
 import { audio }          from './audio.js';
+
+function safeExitPointerLock() {
+  try { document.exitPointerLock?.(); } catch (_) {}
+}
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const STATE = { IDLE: 0, PLAYING: 1, WAVE_TRANSITION: 2, GAME_OVER: 3 };
@@ -25,6 +29,22 @@ const ui      = new UI();
 const nn      = new TacticSelector();
 const shop    = new Shop();
 const upgrades = new UpgradePicker();
+
+// ── Hull selection ────────────────────────────────────────────────────────────
+let chosenHull = 'vanguard';
+
+function _applyHullChoice(p) {
+  if (chosenHull === 'blitzer') {
+    p.maxHp = 70; p.hp = 70;
+    p.speedMult = 1.35; p.damageMult = 0.85; p.reloadMult = 0.80;
+    p.traverseMult = 1.40; // fast light turret
+  } else if (chosenHull === 'bastion') {
+    p.maxHp = 145; p.hp = 145;
+    p.speedMult = 0.72; p.damageMult = 1.30; p.reloadMult = 1.25; p.armorMult = 0.85;
+    p.traverseMult = 0.65; // heavy slow turret
+  }
+  // vanguard = defaults (traverseMult = 1.0)
+}
 
 // ── Game objects ──────────────────────────────────────────────────────────────
 let projectiles = [], pickups = [], player, waveManager;
@@ -115,10 +135,14 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyP' && state === STATE.PLAYING) {
     paused = !paused;
     if (paused) {
-      document.exitPointerLock();
+      safeExitPointerLock();
       // Sync pause-screen audio controls to current state
       const pv = document.getElementById('pause-vol-master');
       if (pv) pv.value = String(audio.masterVol);
+      const pmv = document.getElementById('pause-vol-music');
+      if (pmv) pmv.value = String(audio.musicVol);
+      const psv = document.getElementById('pause-vol-sfx');
+      if (psv) psv.value = String(audio.sfxVol);
       _syncMuteBtns();
       ui.showPause(player, () => { paused = false; lockPointer(); });
     } else { ui.hidePause(); lockPointer(); }
@@ -209,7 +233,7 @@ function updateHeadingArrow() {
   miniCtx.restore();
 }
 
-const BUFF_NAMES = { speed: 'SPD', damage: 'DMG', armor: 'ARM' };
+const BUFF_NAMES = { speed: 'SPD', damage: 'DMG', armor: 'ARM', traverse: 'TRV' };
 function updateBuffDisplay() {
   if (!player || state !== STATE.PLAYING) { buffPanelEl.style.display = 'none'; return; }
   const buffs = player.activeBuffs;
@@ -276,6 +300,21 @@ function updateCrosshair() {
   crosshairEl.style.opacity     = String(0.55 + charge * 0.45);
 }
 
+// ── Score popup ───────────────────────────────────────────────────────────────
+function showScorePopup(points, worldPos) {
+  const v = worldPos.clone().project(camera);
+  if (v.z > 1) return; // behind camera
+  const sx = ( v.x * 0.5 + 0.5) * window.innerWidth;
+  const sy = (-v.y * 0.5 + 0.5) * window.innerHeight;
+  const el = document.createElement('div');
+  el.className = 'score-popup';
+  el.textContent = '+' + points;
+  el.style.left = sx + 'px';
+  el.style.top  = sy + 'px';
+  document.getElementById('ui').appendChild(el);
+  setTimeout(() => el.remove(), 1200);
+}
+
 // ── Pickups ───────────────────────────────────────────────────────────────────
 function clearPickups() {
   pickups.forEach(pk => pk.collect());
@@ -319,6 +358,7 @@ function init() {
 
   upgrades.resetRun();
   player      = new Player(scene, projectiles);
+  _applyHullChoice(player);
   // Wire component damage notifications back to UI
   player._compCb = (comp) => ui.showComponentDamage(comp);
   waveManager = new WaveManager(scene, projectiles, nn);
@@ -347,7 +387,7 @@ async function startNextWave() {
     pickups = spawnPickups(scene, gameBounds, 3 + Math.floor(waveNum / 2));
 
     // Roguelike upgrade pick
-    document.exitPointerLock();
+    safeExitPointerLock();
     await upgrades.open(player, waveNum - 1, {
       score,
       shotsHit:    player.shotsHit,
@@ -357,7 +397,7 @@ async function startNextWave() {
     });
 
     // Shop
-    document.exitPointerLock();
+    safeExitPointerLock();
     scoreRef.value = score;
     await shop.open(player, scoreRef);
     score = scoreRef.value;
@@ -413,6 +453,7 @@ function checkCollisions() {
             audio.playExplosion();
             const baseScore = e.isBoss ? 1000 + waveNum * 50 : 100 + waveNum * 10;
             score += Math.round(baseScore * player.scoreMult);
+            showScorePopup(Math.round(baseScore * player.scoreMult), e.position.clone());
             player.hp = Math.min(player.maxHp, player.hp + player.hpPerKill);
             if (e.isBoss) {
               shakeIntensity = 1.8;
@@ -529,6 +570,18 @@ function loop(ts) {
     pitchDelta = 0;
     player.group.position.y = terrainH(player.group.position.x, player.group.position.z);
 
+    // Tilt player tank to follow terrain slope (YXZ Euler: rotation.x/z are local pitch/roll)
+    {
+      const { dHdx, dHdz } = terrainSlope(player.group.position.x, player.group.position.z);
+      const ry = player.group.rotation.y;
+      const fwdSlope   = dHdx * Math.sin(ry) + dHdz * Math.cos(ry);
+      const rightSlope = dHdx * Math.cos(ry) - dHdz * Math.sin(ry);
+      const tPitch = Math.max(-0.28, Math.min(0.28, -fwdSlope));
+      const tRoll  = Math.max(-0.28, Math.min(0.28,  rightSlope)); // positive = right side up
+      player.group.rotation.x += (tPitch - player.group.rotation.x) * Math.min(1, delta * 5);
+      player.group.rotation.z += (tRoll  - player.group.rotation.z) * Math.min(1, delta * 5);
+    }
+
     distanceTraveled += player.position.distanceTo(_lastPlayerPos);
     _lastPlayerPos.copy(player.position);
 
@@ -539,10 +592,28 @@ function loop(ts) {
       if (e.alive) {
         resolveObstacles(e.group.position, e.radius);
         e.group.position.y = terrainH(e.group.position.x, e.group.position.z) + e.hoverOffset;
+        if (!e.isHover) {
+          const { dHdx, dHdz } = terrainSlope(e.group.position.x, e.group.position.z);
+          const ry = e.group.rotation.y;
+          const fwdSlope   = dHdx * Math.sin(ry) + dHdz * Math.cos(ry);
+          const rightSlope = dHdx * Math.cos(ry) - dHdz * Math.sin(ry);
+          const tPitch = Math.max(-0.28, Math.min(0.28, -fwdSlope));
+          const tRoll  = Math.max(-0.28, Math.min(0.28,  rightSlope)); // positive = right side up
+          e.group.rotation.x += (tPitch - e.group.rotation.x) * Math.min(1, delta * 4);
+          e.group.rotation.z += (tRoll  - e.group.rotation.z) * Math.min(1, delta * 4);
+        }
       }
     }
 
     for (const p of projectiles) p.update(delta);
+
+    // Cap total enemy projectiles to prevent late-wave lag
+    if (projectiles.filter(p => !p.isPlayer).length > 75) {
+      for (let i = 0; i < projectiles.length; i++) {
+        if (!projectiles[i].isPlayer) { projectiles[i].destroy(false); projectiles.splice(i--, 1); break; }
+      }
+    }
+
     checkCollisions();
     checkPickupCollisions();
 
@@ -553,7 +624,7 @@ function loop(ts) {
 
     if (!player.alive) {
       state = STATE.GAME_OVER;
-      document.exitPointerLock();
+      safeExitPointerLock();
       setTimeout(() => {
         ui.showGameOver(score, waveNum - 1, nn.summary(waveNum - 1), () => {
           lockPointer();
@@ -695,6 +766,25 @@ if (isMobile) {
   btnCannon.addEventListener('touchend',   () =>                      { mouseDown = false;      }, { passive: true  });
   btnMg.addEventListener('touchstart',     e => { e.preventDefault(); rightMouseDown = true;  }, { passive: false });
   btnMg.addEventListener('touchend',       () =>                      { rightMouseDown = false; }, { passive: true  });
+
+  const btnPauseMob = document.getElementById('btn-pause-mob');
+  if (btnPauseMob) {
+    btnPauseMob.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (state !== STATE.PLAYING) return;
+      paused = !paused;
+      if (paused) {
+        safeExitPointerLock();
+        const pv = document.getElementById('pause-vol-master');
+        if (pv) pv.value = String(audio.masterVol);
+        _syncMuteBtns();
+        ui.showPause(player, () => { paused = false; });
+      } else {
+        ui.hidePause();
+      }
+      btnPauseMob.classList.toggle('mob-btn-active', paused);
+    }, { passive: false });
+  }
 }
 
 // ── Audio controls (start screen + pause screen) ──────────────────────────────
@@ -715,7 +805,33 @@ function _wireAudio(muteId, volId) {
 _wireAudio('start-btn-mute', 'start-vol-master');
 _wireAudio('pause-btn-mute', 'pause-vol-master');
 
+// Wire music + sfx volume sliders for both start and pause screens
+['start', 'pause'].forEach(screen => {
+  const mv = document.getElementById(`${screen}-vol-music`);
+  const sv = document.getElementById(`${screen}-vol-sfx`);
+  if (mv) { mv.value = String(audio.musicVol); mv.addEventListener('input', e => audio.setMusicVol(parseFloat(e.target.value))); }
+  if (sv) { sv.value = String(audio.sfxVol);   sv.addEventListener('input', e => audio.setSfxVol(parseFloat(e.target.value))); }
+});
+
+// ── Hull selection ────────────────────────────────────────────────────────────
+document.querySelectorAll('.hull-choice').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.hull-choice').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    chosenHull = btn.dataset.hull;
+  });
+});
+
+document.getElementById('btn-hull-confirm')?.addEventListener('click', () => {
+  document.getElementById('hull-select-screen').classList.add('hidden');
+  document.getElementById('start-screen').classList.remove('hidden');
+});
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
+document.getElementById('btn-start').addEventListener('touchstart', () => {
+  audio.start(); // iOS: prime AudioContext on touchstart before click fires
+}, { passive: true });
+
 document.getElementById('btn-start').addEventListener('click', () => {
   audio.start();          // must be called from a user gesture
   ui.hideStartScreen();

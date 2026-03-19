@@ -1,170 +1,133 @@
 import * as THREE from "three";
 import { Projectile } from "./projectile.js";
+import { OBSTACLES } from "./scene.js";
 
+// ── Enemy type definitions ──────────────────────────────────────────────────
+// leadFactor: 0 = no predictive aim, 1 = full ballistic intercept
 export const TYPES = {
   fast: {
-    color: 0x00ff88,
-    emissive: 0x00ff88,
-    scale: 0.75,
-    speed: 1.5,
-    hp: 40,
-    damage: 12,
-    shootRange: 30,
-    shootCd: 1.6,
-    bulletSpeed: 16,
-    preferDist: 10,
-    traverseSpeed: 2.5,
-    baseSpread: 0.22,
+    color: 0x00ff88, emissive: 0x00ff88, scale: 0.75,
+    speed: 1.5, hp: 40, damage: 12, shootRange: 30, shootCd: 1.6,
+    bulletSpeed: 16, preferDist: 10, traverseSpeed: 2.5, baseSpread: 0.22,
+    leadFactor: 0.3,
   },
   tanky: {
-    color: 0xff3300,
-    emissive: 0xff2200,
-    scale: 1.3,
-    speed: 1.8,
-    hp: 160,
-    damage: 30,
-    shootRange: 40,
-    shootCd: 3.0,
-    bulletSpeed: 10,
-    preferDist: 15,
-    traverseSpeed: 0.7,
-    baseSpread: 0.1,
+    color: 0xff3300, emissive: 0xff2200, scale: 1.3,
+    speed: 1.8, hp: 160, damage: 30, shootRange: 40, shootCd: 3.0,
+    bulletSpeed: 10, preferDist: 15, traverseSpeed: 0.7, baseSpread: 0.10,
+    leadFactor: 0.6,
   },
   swarm: {
-    color: 0xff00ff,
-    emissive: 0xcc00cc,
-    scale: 0.5,
-    speed: 1.5,
-    hp: 18,
-    damage: 8,
-    shootRange: 20,
-    shootCd: 1.8,
-    bulletSpeed: 17,
-    preferDist: 7,
-    traverseSpeed: 3.5,
-    baseSpread: 0.28,
+    color: 0xff00ff, emissive: 0xcc00cc, scale: 0.5,
+    speed: 1.5, hp: 18, damage: 8, shootRange: 20, shootCd: 1.8,
+    bulletSpeed: 17, preferDist: 7, traverseSpeed: 3.5, baseSpread: 0.28,
+    leadFactor: 0.0,
   },
   boss: {
-    color: 0xff5500,
-    emissive: 0xff3300,
-    scale: 2.8,
-    speed: 1.4,
-    hp: 600,
-    damage: 50,
-    shootRange: 50,
-    shootCd: 1.8,
-    bulletSpeed: 11,
-    preferDist: 18,
-    traverseSpeed: 0.9,
-    baseSpread: 0.05,
+    color: 0xff5500, emissive: 0xff3300, scale: 2.8,
+    speed: 1.4, hp: 600, damage: 50, shootRange: 50, shootCd: 1.8,
+    bulletSpeed: 11, preferDist: 18, traverseSpeed: 0.9, baseSpread: 0.05,
+    leadFactor: 0.9,
   },
   gunner: {
-    color: 0x88ff00,
-    emissive: 0x44bb00,
-    scale: 0.9,
-    speed: 1.4,
-    hp: 55,
-    damage: 6,
-    shootRange: 30,
-    shootCd: 0.1,
-    bulletSpeed: 24,
-    preferDist: 16,
-    traverseSpeed: 2.2,
-    baseSpread: 0.12,
-    isMG: true,
+    color: 0x88ff00, emissive: 0x44bb00, scale: 0.9,
+    speed: 1.4, hp: 55, damage: 6, shootRange: 30, shootCd: 0.1,
+    bulletSpeed: 24, preferDist: 16, traverseSpeed: 2.2, baseSpread: 0.12,
+    isMG: true, leadFactor: 0.0,
   },
-  // Light scout — MG only, very fast, fragile
   scout: {
-    color: 0x44ffaa,
-    emissive: 0x22cc77,
-    scale: 0.6,
-    speed: 2.5,
-    hp: 22,
-    damage: 3,
-    shootRange: 22,
-    shootCd: 0.12,
-    bulletSpeed: 26,
-    preferDist: 10,
-    traverseSpeed: 3.5,
-    baseSpread: 0.20,
-    isMG: true,
+    color: 0x44ffaa, emissive: 0x22cc77, scale: 0.6,
+    speed: 2.5, hp: 22, damage: 3, shootRange: 22, shootCd: 0.12,
+    bulletSpeed: 26, preferDist: 10, traverseSpeed: 3.5, baseSpread: 0.20,
+    isMG: true, leadFactor: 0.0,
   },
-  // Tank destroyer — hull-aims, fixed gun, high damage, long range
   stug: {
-    color: 0xaa8855,
-    emissive: 0x775533,
-    scale: 1.1,
-    speed: 1.0,
-    hp: 130,
-    damage: 45,
-    shootRange: 45,
-    shootCd: 3.2,
-    bulletSpeed: 28,
-    preferDist: 28,
-    traverseSpeed: 0,
-    turnSpeed: 0.65,
-    baseSpread: 0.04,
+    color: 0xaa8855, emissive: 0x775533, scale: 1.1,
+    speed: 1.0, hp: 130, damage: 45, shootRange: 45, shootCd: 3.2,
+    bulletSpeed: 28, preferDist: 28, traverseSpeed: 0, turnSpeed: 0.65,
+    baseSpread: 0.04, leadFactor: 1.0,
   },
-  // Alien hovercraft — floats above terrain, fast, erratic flanker
   hover: {
-    color: 0xcc33ff,
-    emissive: 0xaa22dd,
-    scale: 0.9,
-    speed: 2.2,
-    hp: 80,
-    damage: 22,
-    shootRange: 34,
-    shootCd: 1.5,
-    bulletSpeed: 22,
-    preferDist: 14,
-    traverseSpeed: 4.0,
-    baseSpread: 0.17,
-    isHover: true,
+    color: 0xcc33ff, emissive: 0xaa22dd, scale: 0.9,
+    speed: 2.2, hp: 80, damage: 22, shootRange: 34, shootCd: 1.5,
+    bulletSpeed: 22, preferDist: 14, traverseSpeed: 4.0, baseSpread: 0.17,
+    isHover: true, leadFactor: 0.5,
   },
 };
 
 const PLAYER_RADIUS = 1.0;
-const AIM_CHARGE_RATE = 0.45; // slightly slower than player
-const AIM_DECAY_RATE = 1.5;
-const AIM_LOCK_THRESH = 0.12; // rad
+const AIM_CHARGE_RATE = 0.45;
+const AIM_DECAY_RATE  = 1.5;
+const AIM_LOCK_THRESH = 0.12;
+
+// ── Line-of-sight: segment vs AABB ─────────────────────────────────────────
+function _segmentHitsBox(x1, z1, x2, z2, minX, maxX, minZ, maxZ) {
+  const dx = x2 - x1, dz = z2 - z1;
+  let tmin = 0, tmax = 1;
+  if (Math.abs(dx) < 1e-8) { if (x1 < minX || x1 > maxX) return false; }
+  else {
+    const t1 = (minX - x1) / dx, t2 = (maxX - x1) / dx;
+    tmin = Math.max(tmin, Math.min(t1, t2));
+    tmax = Math.min(tmax, Math.max(t1, t2));
+    if (tmin > tmax) return false;
+  }
+  if (Math.abs(dz) < 1e-8) { if (z1 < minZ || z1 > maxZ) return false; }
+  else {
+    const t1 = (minZ - z1) / dz, t2 = (maxZ - z1) / dz;
+    tmin = Math.max(tmin, Math.min(t1, t2));
+    tmax = Math.min(tmax, Math.max(t1, t2));
+    if (tmin > tmax) return false;
+  }
+  return tmin < tmax;
+}
 
 export class Enemy {
-  constructor(scene, projectiles, type, spawnPos, difficulty = 1) {
-    this.scene = scene;
+  constructor(scene, projectiles, type, spawnPos, difficulty = 1, isBossOverride = false) {
+    this.scene       = scene;
     this.projectiles = projectiles;
-    this.type = type;
-    this.def = TYPES[type];
-    this.hp     = Math.round(this.def.hp * difficulty);
-    // Damage also scales — slowly at first, meaningfully at high waves
-    this.damage = Math.round(this.def.damage * (0.7 + difficulty * 0.3));
-    this.alive  = true;
-    this.shootTimer = Math.random() * this.def.shootCd;
-    this.isBoss = type === "boss";
-    this.radius = this.def.scale * (this.isBoss ? 1.4 : 0.9);
+    this.type        = type;
+    this.def         = TYPES[type];
+    this._difficulty = difficulty;
+    this._maxHp      = Math.round(this.def.hp * difficulty);
+    this.hp          = this._maxHp;
+    this.damage      = Math.round(this.def.damage * (0.7 + difficulty * 0.3));
+    this.alive       = true;
+    this.shootTimer  = Math.random() * this.def.shootCd;
+    this.isBoss      = type === 'boss' || isBossOverride;
+    this.radius      = this.def.scale * (this.isBoss ? 1.4 : 0.9);
 
-    this.aimCharge = 0;
-    this._aimDelta = Math.PI;
-
-    this._tactic = "RUSH";
-    this._encircleAngle = 0;
+    this.aimCharge   = 0;
+    this._aimDelta   = Math.PI;
+    this._tactic     = 'RUSH';
+    this._encircleAngle   = 0;
     this._encircleElapsed = 0;
-    this._strafeDir = Math.random() > 0.5 ? 1 : -1;
+    this._strafeDir  = Math.random() > 0.5 ? 1 : -1;
     this._jitterTimer = 0;
-    this.fixedGun = (type === 'stug'); // hull-aims instead of turret
-
-    // Hover state — animated vertical offset above terrain
-    this.isHover   = !!this.def.isHover;
+    this.fixedGun    = (type === 'stug');
+    this.isHover     = !!this.def.isHover;
     this.hoverOffset = 0;
     if (this.isHover) this._hoverTime = Math.random() * Math.PI * 2;
 
-    // Burst fire for MG enemies — fire N rounds then pause for reload
     if (this.def.isMG) {
-      this._burstMax      = this.type === 'scout' ? 10 : 16;
+      this._burstMax      = (type === 'scout') ? 10 : 16;
       this._burstLeft     = this._burstMax;
       this._burstCooldown = 0;
     }
 
+    // Player velocity tracking for predictive aim
+    this._prevPlayerPos = null;
+    this._playerVel     = new THREE.Vector3();
+
+    // Stuck detection
+    this._stuckTimer    = 0;
+    this._stuckCheckPos = null;
+
+    // LOS state
+    this._losBlocked    = false;
+    this._losCheckTimer = 0;
+
     this._buildMesh();
+    this.group.rotation.order = 'YXZ'; // YXZ = yaw first, then local pitch/roll
     this.group.position.set(spawnPos.x, 0, spawnPos.z);
     scene.add(this.group);
   }
@@ -175,64 +138,113 @@ export class Enemy {
     this._encircleElapsed = 0;
   }
 
+  // ── Mesh builders ────────────────────────────────────────────────────────
+
   _buildMesh() {
     if (this.type === 'stug')  { this._buildStugMesh();  return; }
     if (this.type === 'hover') { this._buildHoverMesh(); return; }
+
     this.group = new THREE.Group();
     this.group.scale.setScalar(this.def.scale);
 
     const hullMat = new THREE.MeshStandardMaterial({
-      color: this.def.color,
-      emissive: this.def.emissive,
-      emissiveIntensity: 0.15,
-      roughness: 0.4,
-      metalness: 0.7,
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.22, roughness: 0.4, metalness: 0.7,
     });
     const hullGeo = new THREE.BoxGeometry(1.4, 0.9, 2.0);
-    const hull = new THREE.Mesh(hullGeo, hullMat);
+    const hull    = new THREE.Mesh(hullGeo, hullMat);
     hull.castShadow = true;
     this.group.add(hull);
-    this.group.add(
-      new THREE.LineSegments(
-        new THREE.EdgesGeometry(hullGeo),
-        new THREE.LineBasicMaterial({
-          color: this.def.color,
-          opacity: 0.7,
-          transparent: true,
-        }),
-      ),
-    );
+    this.group.add(new THREE.LineSegments(
+      new THREE.EdgesGeometry(hullGeo),
+      new THREE.LineBasicMaterial({ color: this.def.color, opacity: 0.7, transparent: true }),
+    ));
 
+    // ── Type-specific hull additions ──────────────────────────────────────
+    if (this.type === 'tanky') {
+      // Heavy side skirt armor plates
+      [-0.88, 0.88].forEach(xOff => {
+        const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.52, 2.1), hullMat.clone());
+        skirt.position.set(xOff, -0.18, 0);
+        this.group.add(skirt);
+      });
+      // Front angled armor plate
+      const glacis = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.55, 0.22), hullMat.clone());
+      glacis.position.set(0, 0.12, 1.0);
+      glacis.rotation.x = 0.38;
+      this.group.add(glacis);
+    }
+
+    if (this.type === 'fast') {
+      // Rear spoiler fins — aerodynamic look
+      [-0.6, 0.6].forEach(xOff => {
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.38, 0.48), hullMat.clone());
+        fin.position.set(xOff, 0.22, -0.9);
+        fin.rotation.z = xOff > 0 ? 0.22 : -0.22;
+        this.group.add(fin);
+      });
+      // Low wedge front plate
+      const wedge = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.25, 0.55), hullMat.clone());
+      wedge.position.set(0, -0.25, 0.9); wedge.rotation.x = 0.55;
+      this.group.add(wedge);
+    }
+
+    if (this.type === 'scout') {
+      // Sensor mast — tall thin post with dish
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.9, 5), hullMat.clone());
+      mast.position.set(0.3, 0.85, -0.3);
+      this.group.add(mast);
+      const dish = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 4, 0, Math.PI), hullMat.clone());
+      dish.position.set(0.3, 1.35, -0.3); dish.rotation.z = Math.PI / 2;
+      this.group.add(dish);
+    }
+
+    // ── Turret ────────────────────────────────────────────────────────────
     this.turretGroup = new THREE.Group();
     this.turretGroup.position.y = 0.65;
     this.group.add(this.turretGroup);
 
+    let turretW = 0.75, turretD = 0.85;
+    if (this.type === 'tanky') { turretW = 1.05; turretD = 1.0; }
+
     const turretMat = new THREE.MeshStandardMaterial({
-      color: this.def.color,
-      emissive: this.def.emissive,
-      emissiveIntensity: 0.25,
-      roughness: 0.3,
-      metalness: 0.85,
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.38, roughness: 0.3, metalness: 0.85,
     });
-    this.turretGroup.add(
-      new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.4, 0.85), turretMat),
-    );
+    this.turretGroup.add(new THREE.Mesh(new THREE.BoxGeometry(turretW, 0.4, turretD), turretMat));
 
+    if (this.type === 'gunner') {
+      // Radar/sensor disc on top of turret
+      const disc = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.26, 0.26, 0.06, 8),
+        new THREE.MeshStandardMaterial({ color: this.def.color, emissive: this.def.emissive, emissiveIntensity: 0.7, roughness: 0.1, metalness: 1.0 }),
+      );
+      disc.position.y = 0.28;
+      this.turretGroup.add(disc);
+    }
+
+    // ── Barrel(s) ─────────────────────────────────────────────────────────
     const barrelMat = new THREE.MeshStandardMaterial({
-      color: this.def.color,
-      emissive: this.def.emissive,
-      emissiveIntensity: 0.6,
+      color: this.def.color, emissive: this.def.emissive, emissiveIntensity: 0.75,
     });
-    const barrel = new THREE.Mesh(
-      new THREE.BoxGeometry(0.16, 0.16, 1.1),
-      barrelMat,
-    );
-    barrel.position.z = 0.75;
-    this.turretGroup.add(barrel);
 
-    const glow = new THREE.PointLight(this.def.color, 2.5, 4);
-    glow.position.y = 0.5;
-    this.group.add(glow);
+    if (this.type === 'swarm') {
+      // Three-pronged multi-barrel cluster — distinctive bug/drone look
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2;
+        const b = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.72, 5), barrelMat.clone());
+        b.rotation.x = Math.PI / 2;
+        b.position.set(Math.cos(a) * 0.2, Math.sin(a) * 0.2, 0.56);
+        this.turretGroup.add(b);
+      }
+    } else {
+      const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 1.1), barrelMat);
+      barrel.position.z = 0.75;
+      this.turretGroup.add(barrel);
+    }
+
+    // No PointLight for standard enemies (performance: too many lights at wave 20)
+    // Visual glow comes entirely from emissive materials
 
     if (this.isBoss) this._buildBossExtras();
   }
@@ -243,44 +255,33 @@ export class Enemy {
 
     const mat = new THREE.MeshStandardMaterial({
       color: this.def.color, emissive: this.def.emissive,
-      emissiveIntensity: 0.15, roughness: 0.5, metalness: 0.65,
+      emissiveIntensity: 0.22, roughness: 0.5, metalness: 0.65,
     });
     const edgeMat = new THREE.LineBasicMaterial({ color: this.def.color, opacity: 0.6, transparent: true });
 
-    // Wide low hull
     const hullGeo = new THREE.BoxGeometry(1.6, 0.65, 2.4);
     this.group.add(new THREE.Mesh(hullGeo, mat));
     this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), edgeMat));
 
-    // Casemate / superstructure
     const caseGeo = new THREE.BoxGeometry(1.35, 0.55, 1.9);
-    const caseM = new THREE.Mesh(caseGeo, mat);
-    caseM.position.set(0, 0.6, 0.15);
+    const caseM   = new THREE.Mesh(caseGeo, mat); caseM.position.set(0, 0.6, 0.15);
     this.group.add(caseM);
     const caseEdge = new THREE.LineSegments(new THREE.EdgesGeometry(caseGeo), edgeMat.clone());
-    caseEdge.position.copy(caseM.position);
-    this.group.add(caseEdge);
+    caseEdge.position.copy(caseM.position); this.group.add(caseEdge);
 
-    // Long fixed barrel from casemate front
-    const barrelMat = new THREE.MeshStandardMaterial({ color: this.def.color, emissive: this.def.emissive, emissiveIntensity: 0.55 });
+    const barrelMat = new THREE.MeshStandardMaterial({ color: this.def.color, emissive: this.def.emissive, emissiveIntensity: 0.75 });
     const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 2.1), barrelMat);
-    barrel.position.set(0, 0.6, 1.5);
-    this.group.add(barrel);
+    barrel.position.set(0, 0.6, 1.5); this.group.add(barrel);
 
-    // Track sponsons
     [-0.9, 0.9].forEach(xOff => {
       const sp = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.28, 2.5), mat);
-      sp.position.set(xOff, -0.26, 0);
-      this.group.add(sp);
+      sp.position.set(xOff, -0.26, 0); this.group.add(sp);
     });
 
-    // Fixed turret group — rotation always stays 0, hull aims instead
     this.turretGroup = new THREE.Group();
     this.group.add(this.turretGroup);
 
-    const glow = new THREE.PointLight(this.def.color, 2.5, 4);
-    glow.position.y = 0.5;
-    this.group.add(glow);
+    if (this.isBoss) this._buildBossExtras();
   }
 
   _buildHoverMesh() {
@@ -289,39 +290,27 @@ export class Enemy {
 
     const mat = new THREE.MeshStandardMaterial({
       color: this.def.color, emissive: this.def.emissive,
-      emissiveIntensity: 0.3, roughness: 0.15, metalness: 0.95,
+      emissiveIntensity: 0.38, roughness: 0.15, metalness: 0.95,
     });
     const edgeMat = new THREE.LineBasicMaterial({ color: this.def.color, opacity: 0.75, transparent: true });
 
-    // Main disc hull
     const discGeo = new THREE.CylinderGeometry(1.0, 1.25, 0.28, 10);
-    const disc = new THREE.Mesh(discGeo, mat);
-    this.group.add(disc);
+    this.group.add(new THREE.Mesh(discGeo, mat));
     this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(discGeo), edgeMat));
 
-    // Top dome (translucent canopy)
     const domeMat = new THREE.MeshStandardMaterial({
-      color: this.def.color, emissive: this.def.emissive,
-      emissiveIntensity: 0.55, roughness: 0.05, metalness: 1.0,
-      transparent: true, opacity: 0.75,
+      color: this.def.color, emissive: this.def.emissive, emissiveIntensity: 0.6,
+      roughness: 0.05, metalness: 1.0, transparent: true, opacity: 0.75,
     });
-    const domeGeo = new THREE.SphereGeometry(0.52, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2);
-    const dome = new THREE.Mesh(domeGeo, domeMat);
-    dome.position.y = 0.14;
-    this.group.add(dome);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.52, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+    dome.position.y = 0.14; this.group.add(dome);
 
-    // Emitter ring — glows like an engine
-    const ringMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff, emissive: this.def.color,
-      emissiveIntensity: 2.0, roughness: 0, metalness: 1,
-    });
+    const ringMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: this.def.color, emissiveIntensity: 2.2, roughness: 0, metalness: 1 });
     const ringGeo = new THREE.TorusGeometry(0.62, 0.07, 5, 16);
     ringGeo.rotateX(Math.PI / 2);
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.position.y = -0.06;
+    const ring = new THREE.Mesh(ringGeo, ringMat); ring.position.y = -0.06;
     this.group.add(ring);
 
-    // Three engine pods below the disc
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * Math.PI * 2;
       const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.16, 0.38, 6), mat.clone());
@@ -329,148 +318,195 @@ export class Enemy {
       this.group.add(pod);
     }
 
-    // Underside glow
-    const glow = new THREE.PointLight(this.def.color, 3.5, 7);
-    glow.position.y = -0.5;
-    this.group.add(glow);
+    // Hover keeps ONE PointLight for its signature underside glow (small count type)
+    const glow = new THREE.PointLight(this.def.color, 2.0, 4.5);
+    glow.position.y = -0.5; this.group.add(glow);
 
-    // Invisible turret group — used by standard aim/shoot logic
     this.turretGroup = new THREE.Group();
     this.group.add(this.turretGroup);
+
+    if (this.isBoss) this._buildBossExtras();
   }
 
   _buildBossExtras() {
-    // Boss gets a distinctive ground ring indicator and extra glow
-    if (this.isBoss) {
-      const ringPts = [];
-      for (let i = 0; i <= 36; i++) {
-        const a = (i / 36) * Math.PI * 2;
-        ringPts.push(
-          new THREE.Vector3(Math.cos(a) * 1.8, -0.44, Math.sin(a) * 1.8),
-        );
-      }
-      const ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
-      this.group.add(
-        new THREE.Line(
-          ringGeo,
-          new THREE.LineBasicMaterial({
-            color: 0xff4400,
-            opacity: 0.9,
-            transparent: true,
-          }),
-        ),
-      );
+    // Pulsing ground ring indicator — clearly marks the boss
+    const ringPts = [];
+    for (let i = 0; i <= 40; i++) {
+      const a = (i / 40) * Math.PI * 2;
+      ringPts.push(new THREE.Vector3(Math.cos(a) * 2.1, -0.44, Math.sin(a) * 2.1));
+    }
+    this.group.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(ringPts),
+      new THREE.LineBasicMaterial({ color: 0xff4400, opacity: 0.95, transparent: true }),
+    ));
 
-      const bossGlow = new THREE.PointLight(0xff4400, 4, 8);
-      bossGlow.position.y = 1;
-      this.group.add(bossGlow);
+    // Single strong glow light for the boss (only one per boss)
+    const bossGlow = new THREE.PointLight(0xff4400, 6, 12);
+    bossGlow.position.y = 1.2;
+    this.group.add(bossGlow);
+  }
+
+  // ── Visual damage state — update material appearance based on HP ──────────
+  _updateDamageVisuals() {
+    const ratio = this.hp / this._maxHp;
+    const mats  = this.group.children
+      .filter(c => c.isMesh && c.material?.emissive)
+      .map(c => c.material);
+
+    for (const m of mats) {
+      if (ratio > 0.6) {
+        // Healthy — normal emissive
+        m.emissiveIntensity = 0.22;
+      } else if (ratio > 0.3) {
+        // Damaged — yellowish tint
+        m.emissive.setHex(0xffaa00);
+        m.emissiveIntensity = 0.35;
+      } else {
+        // Critical — red flash
+        m.emissive.setHex(0xff2200);
+        m.emissiveIntensity = 0.55 + Math.sin(Date.now() * 0.01) * 0.2;
+      }
     }
   }
 
+  // ── LOS check ────────────────────────────────────────────────────────────
+  _hasLineOfSight(playerPos) {
+    const ex = this.group.position.x, ez = this.group.position.z;
+    const px = playerPos.x, pz = playerPos.z;
+    for (const obs of OBSTACLES) {
+      if (_segmentHitsBox(ex, ez, px, pz,
+        obs.x - obs.w / 2, obs.x + obs.w / 2,
+        obs.z - obs.h / 2, obs.z + obs.h / 2)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // ── Main update ──────────────────────────────────────────────────────────
   update(delta, playerPos, enemies, bounds) {
     if (!this.alive) return;
 
-    const toPlayer = new THREE.Vector3().subVectors(
-      playerPos,
-      this.group.position,
-    );
+    const toPlayer = new THREE.Vector3().subVectors(playerPos, this.group.position);
     toPlayer.y = 0;
     const dist = toPlayer.length();
-    const dir =
-      dist > 0.01 ? toPlayer.clone().normalize() : new THREE.Vector3(1, 0, 0);
+    const dir  = dist > 0.01 ? toPlayer.clone().normalize() : new THREE.Vector3(1, 0, 0);
 
-    // Turret traverses toward player (skipped for stug — hull aims instead)
+    // ── Player velocity tracking for predictive aim ──────────────────────
+    if (!this._prevPlayerPos) this._prevPlayerPos = playerPos.clone();
+    this._playerVel.subVectors(playerPos, this._prevPlayerPos).divideScalar(Math.max(delta, 0.001));
+    if (this._playerVel.lengthSq() > 225) this._playerVel.setLength(15); // clamp spike
+    this._prevPlayerPos.copy(playerPos);
+
+    // ── Compute lead-adjusted aim target ────────────────────────────────
+    let aimTarget = playerPos.clone();
+    const leadFactor = this.def.leadFactor ?? 0;
+    if (leadFactor > 0 && this._playerVel.lengthSq() > 0.04) {
+      const tof  = dist / Math.max(this.def.bulletSpeed, 1);
+      const lead = this._playerVel.clone().multiplyScalar(tof * leadFactor);
+      lead.y = 0;
+      aimTarget.add(lead);
+    }
+
+    const toAim = new THREE.Vector3().subVectors(aimTarget, this.group.position);
+    toAim.y = 0;
+
+    // ── Turret traversal ─────────────────────────────────────────────────
     if (!this.fixedGun && dist > 0.1) {
-      const worldToPlayer = Math.atan2(toPlayer.x, toPlayer.z);
-      const desiredLocal = worldToPlayer - this.group.rotation.y;
+      const worldToTarget = Math.atan2(toAim.x, toAim.z);
+      const desiredLocal  = worldToTarget - this.group.rotation.y;
       let diff = desiredLocal - this.turretGroup.rotation.y;
-      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff > Math.PI)  diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-
       const maxStep = this.def.traverseSpeed * delta;
-      this.turretGroup.rotation.y +=
-        Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
+      this.turretGroup.rotation.y += Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
       this._aimDelta = Math.abs(diff);
     }
 
-    // Stug: rotate entire hull toward player for aiming
+    // ── Stug hull aiming ─────────────────────────────────────────────────
     if (this.fixedGun && dist > 0.1) {
-      const desired = Math.atan2(toPlayer.x, toPlayer.z);
+      const desired = Math.atan2(toAim.x, toAim.z);
       let diff = desired - this.group.rotation.y;
-      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff > Math.PI)  diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      const turnRate = this.def.turnSpeed ?? 0.65;
-      this.group.rotation.y += Math.sign(diff) * Math.min(Math.abs(diff), turnRate * delta);
+      this.group.rotation.y += Math.sign(diff) * Math.min(Math.abs(diff), (this.def.turnSpeed ?? 0.65) * delta);
       this.turretGroup.rotation.y = 0;
       this._aimDelta = Math.abs(diff);
     }
 
-    // Aim charge — builds when barrel is aligned, decays when swinging
+    // ── Aim charge ───────────────────────────────────────────────────────
     if (this._aimDelta < AIM_LOCK_THRESH) {
       this.aimCharge = Math.min(1, this.aimCharge + delta * AIM_CHARGE_RATE);
     } else {
       this.aimCharge = Math.max(0, this.aimCharge - delta * AIM_DECAY_RATE);
     }
 
-    // ── Tactic movement ──────────────────────────────────────────────────────
-    let shootCdMult = 1.0;
-    const minSep = this.radius + PLAYER_RADIUS + 0.3;
-    const prevPos = this.group.position.clone();
+    // ── LOS check (every 0.4s — not every frame) ─────────────────────────
+    this._losCheckTimer -= delta;
+    if (this._losCheckTimer <= 0) {
+      this._losBlocked = !this._hasLineOfSight(playerPos);
+      this._losCheckTimer = 0.4 + Math.random() * 0.2;
+    }
 
-    if (this._tactic === "RUSH") {
+    // ── Effective tactic — override when low HP or LOS blocked ───────────
+    const hpRatio = this.hp / this._maxHp;
+    let activeTactic = this._tactic;
+    if (hpRatio < 0.25 && !this.fixedGun) activeTactic = 'SUPPRESS'; // retreat when critical
+
+    // ── Movement ─────────────────────────────────────────────────────────
+    let shootCdMult  = 1.0;
+    const minSep     = this.radius + PLAYER_RADIUS + 0.3;
+    const prevPos    = this.group.position.clone();
+
+    // If LOS is blocked AND enemy is at range, move toward a flanking spot
+    const wantsToFlankForLOS = this._losBlocked && dist > 8 && !this.fixedGun;
+
+    if (wantsToFlankForLOS) {
+      // Strafe perpendicular to player direction to find LOS
+      const lateralDir = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(this._strafeDir);
+      this.group.position.addScaledVector(lateralDir, this.def.speed * 0.9 * delta);
+      this.group.position.addScaledVector(dir, this.def.speed * 0.4 * delta); // also close in
+    } else if (activeTactic === 'RUSH') {
       if (dist > minSep) {
         this.group.position.addScaledVector(dir, this.def.speed * 1.3 * delta);
       }
-    } else if (this._tactic === "SUPPRESS") {
+    } else if (activeTactic === 'SUPPRESS') {
       const hold = this.def.shootRange - 2;
-      if (dist > hold + 1)
-        this.group.position.addScaledVector(dir, this.def.speed * 0.7 * delta);
-      else if (dist < hold - 1)
-        this.group.position.addScaledVector(dir, -this.def.speed * 0.5 * delta);
+      if (dist > hold + 1)      this.group.position.addScaledVector(dir,  this.def.speed * 0.7 * delta);
+      else if (dist < hold - 2) this.group.position.addScaledVector(dir, -this.def.speed * 0.7 * delta);
+      else {
+        // Lateral drift while suppressing — stops the static hovering
+        const lat = new THREE.Vector3(-dir.z, 0, dir.x);
+        this.group.position.addScaledVector(lat, this.def.speed * 0.35 * this._strafeDir * delta);
+      }
       shootCdMult = 0.55;
-    } else if (this._tactic === "ENCIRCLE") {
+    } else if (activeTactic === 'ENCIRCLE') {
       this._encircleElapsed += delta;
-      const radius = Math.max(6, 22 - this._encircleElapsed * 0.65);
-      const tx = playerPos.x + Math.cos(this._encircleAngle) * radius;
-      const tz = playerPos.z + Math.sin(this._encircleAngle) * radius;
-      const toSlot = new THREE.Vector3(
-        tx - this.group.position.x,
-        0,
-        tz - this.group.position.z,
-      );
+      const orbitR = Math.max(6, 22 - this._encircleElapsed * 0.65);
+      this._encircleAngle += delta * 0.5; // advance orbit
+      const tx = playerPos.x + Math.cos(this._encircleAngle) * orbitR;
+      const tz = playerPos.z + Math.sin(this._encircleAngle) * orbitR;
+      const toSlot = new THREE.Vector3(tx - this.group.position.x, 0, tz - this.group.position.z);
       if (toSlot.lengthSq() > 0.01) {
-        this.group.position.addScaledVector(
-          toSlot.normalize(),
-          this.def.speed * 0.85 * delta,
-        );
+        this.group.position.addScaledVector(toSlot.normalize(), this.def.speed * 0.85 * delta);
       }
     } else {
-      // FLANK
+      // FLANK — approach to preferred distance with strafing for fast/scout/hover
       const pref = this.def.preferDist;
+      const strafe = this.type === 'fast' || this.type === 'scout' || this.type === 'hover';
       if (dist > pref + 1.5) {
         let moveDir = dir.clone();
-        if (this.type === "fast") {
+        if (strafe) {
           this._jitterTimer -= delta;
-          if (this._jitterTimer <= 0) {
-            this._strafeDir *= -1;
-            this._jitterTimer = 0.8 + Math.random() * 0.8;
-          }
-          moveDir
-            .addScaledVector(
-              new THREE.Vector3(-dir.z, 0, dir.x),
-              this._strafeDir * 0.5,
-            )
-            .normalize();
+          if (this._jitterTimer <= 0) { this._strafeDir *= -1; this._jitterTimer = 0.6 + Math.random() * 0.6; }
+          moveDir.addScaledVector(new THREE.Vector3(-dir.z, 0, dir.x), this._strafeDir * 0.6).normalize();
         }
         this.group.position.addScaledVector(moveDir, this.def.speed * delta);
       } else if (dist < pref - 2) {
         this.group.position.addScaledVector(dir, -this.def.speed * 0.4 * delta);
-      } else if (this.type === "fast") {
+      } else if (strafe) {
         this._jitterTimer -= delta;
-        if (this._jitterTimer <= 0) {
-          this._strafeDir *= -1;
-          this._jitterTimer = 0.8 + Math.random() * 0.8;
-        }
+        if (this._jitterTimer <= 0) { this._strafeDir *= -1; this._jitterTimer = 0.6 + Math.random() * 0.6; }
         this.group.position.addScaledVector(
           new THREE.Vector3(-dir.z, 0, dir.x),
           this.def.speed * this._strafeDir * delta,
@@ -478,31 +514,30 @@ export class Enemy {
       }
     }
 
-    // Hull faces movement direction (stug hull is controlled by aim logic above)
+    // ── Hull faces movement direction ────────────────────────────────────
     const moved = this.group.position.clone().sub(prevPos);
     moved.y = 0;
     if (!this.fixedGun && moved.lengthSq() > 0.0001) {
       this.group.rotation.y = Math.atan2(moved.x, moved.z);
     }
 
-    // Stug: maintain standoff distance while hull-facing player
+    // ── Stug standoff ────────────────────────────────────────────────────
     if (this.fixedGun) {
       const pref = this.def.preferDist;
-      if (dist > pref + 2)      this.group.position.addScaledVector(dir, this.def.speed * delta);
+      if (dist > pref + 2)      this.group.position.addScaledVector(dir,  this.def.speed * delta);
       else if (dist < pref - 2) this.group.position.addScaledVector(dir, -this.def.speed * 0.6 * delta);
     }
 
-    // Hover craft floats and bobs — hoverOffset is read by main.js for y positioning
+    // ── Hover banking ────────────────────────────────────────────────────
     if (this.isHover) {
       this._hoverTime += delta;
       this.hoverOffset = 1.8 + Math.sin(this._hoverTime * 1.6) * 0.22;
-      // Gently tilt the disc in movement direction for a banking effect
       const bank = moved.lengthSq() > 0.0001 ? 0.18 : 0;
       this.group.rotation.x = Math.cos(this.group.rotation.y) * bank * -moved.z;
       this.group.rotation.z = Math.sin(this.group.rotation.y) * bank * moved.x;
     }
 
-    // Hard min separation from player
+    // ── Hard min separation from player ──────────────────────────────────
     {
       const dx = this.group.position.x - playerPos.x;
       const dz = this.group.position.z - playerPos.z;
@@ -513,76 +548,77 @@ export class Enemy {
       }
     }
 
-    // Enemy separation
+    // ── Enemy separation ─────────────────────────────────────────────────
     for (const other of enemies) {
       if (other === this || !other.alive) continue;
-      const away = new THREE.Vector3().subVectors(
-        this.group.position,
-        other.group.position,
-      );
+      const away = new THREE.Vector3().subVectors(this.group.position, other.group.position);
       away.y = 0;
       const d = away.length();
       const minD = (this.radius + other.radius) * 1.4;
-      if (d < minD && d > 0.001)
-        this.group.position.addScaledVector(away.normalize(), (minD - d) * 0.5);
+      if (d < minD && d > 0.001) this.group.position.addScaledVector(away.normalize(), (minD - d) * 0.5);
     }
 
-    // Clamp
+    // ── Stuck detection — nudge if barely moved ───────────────────────────
+    this._stuckTimer += delta;
+    if (!this._stuckCheckPos) this._stuckCheckPos = this.group.position.clone();
+    if (this._stuckTimer > 1.5) {
+      if (this.group.position.distanceTo(this._stuckCheckPos) < 0.25 && dist > 3) {
+        const escAngle = Math.random() * Math.PI * 2;
+        this.group.position.x += Math.cos(escAngle) * 1.8;
+        this.group.position.z += Math.sin(escAngle) * 1.8;
+        this._strafeDir *= -1; // also flip strafe direction
+      }
+      this._stuckCheckPos.copy(this.group.position);
+      this._stuckTimer = 0;
+    }
+
+    // ── Bounds clamp ─────────────────────────────────────────────────────
     const pos = this.group.position;
     pos.x = Math.max(bounds.minX - 4, Math.min(bounds.maxX + 4, pos.x));
     pos.z = Math.max(bounds.minZ - 4, Math.min(bounds.maxZ + 4, pos.z));
 
-    // Shoot — MG types use burst-fire with reload gap to limit projectile count
+    // ── Shooting ─────────────────────────────────────────────────────────
     this.shootTimer -= delta;
     if (this.def.isMG) {
       if (this._burstCooldown > 0) {
         this._burstCooldown -= delta;
-      } else if (this.shootTimer <= 0 && dist <= this.def.shootRange) {
+      } else if (this.shootTimer <= 0 && dist <= this.def.shootRange && !this._losBlocked) {
         this._shoot();
         this.shootTimer = this.def.shootCd * shootCdMult;
-        this._burstLeft--;
-        if (this._burstLeft <= 0) {
-          const reloadTime = this.type === 'scout' ? 2.0 : 2.5;
-          this._burstCooldown = reloadTime;
+        if (--this._burstLeft <= 0) {
+          this._burstCooldown = (this.type === 'scout') ? 2.0 : 2.5;
           this._burstLeft = this._burstMax;
         }
       }
-    } else if (this.shootTimer <= 0 && dist <= this.def.shootRange) {
+    } else if (this.shootTimer <= 0 && dist <= this.def.shootRange && !this._losBlocked) {
       this._shoot();
       this.shootTimer = this.def.shootCd * shootCdMult;
     }
+
+    // ── Visual damage update ──────────────────────────────────────────────
+    this._updateDamageVisuals();
   }
 
   _shoot() {
-    const turretWorldAngle =
-      this.group.rotation.y + this.turretGroup.rotation.y;
-    const dir = new THREE.Vector3(
-      Math.sin(turretWorldAngle),
-      0,
-      Math.cos(turretWorldAngle),
-    );
+    // Projectile cap — don't add more enemy projectiles if too many exist
+    if (this.projectiles.filter(p => !p.isPlayer).length > 75) return;
 
-    // Spread shrinks as aim charge builds (75% reduction at full charge)
+    const turretWorldAngle = this.group.rotation.y + this.turretGroup.rotation.y;
+    const dir = new THREE.Vector3(Math.sin(turretWorldAngle), 0, Math.cos(turretWorldAngle));
     const spread = this.def.baseSpread * (1 - this.aimCharge * 0.75);
     dir.x += (Math.random() - 0.5) * spread;
     dir.z += (Math.random() - 0.5) * spread;
     dir.normalize();
 
-    const barrelZ = this.type === 'stug' ? 2.4 : 1.5;
+    const barrelZ    = this.type === 'stug' ? 2.4 : 1.5;
     const barrelLocal = new THREE.Vector3(0, 0.65, barrelZ);
     this.group.localToWorld(barrelLocal);
     barrelLocal.y = this.group.position.y + (this.type === 'stug' ? 0.6 * this.def.scale : 0.45);
 
     const proj = new Projectile(
-      this.scene,
-      barrelLocal,
-      dir,
-      this.def.bulletSpeed,
-      this.damage,
-      false,
-      this.def.color,
-      undefined,
-      this.def.isMG ?? false,
+      this.scene, barrelLocal, dir,
+      this.def.bulletSpeed, this.damage, false,
+      this.def.color, undefined, this.def.isMG ?? false,
     );
     proj._enemyType = this.type;
     this.projectiles.push(proj);
@@ -590,15 +626,12 @@ export class Enemy {
 
   takeDamage(amount) {
     this.hp -= amount;
-    if (this.hp <= 0) {
-      this.alive = false;
-      this._die();
-    }
+    if (this.hp <= 0) { this.alive = false; this._die(); }
     return this.hp <= 0;
   }
 
   _die() {
-    this.group.children.forEach((c) => {
+    this.group.children.forEach(c => {
       if (c.material?.emissive) {
         c.material.emissive.setHex(0xffffff);
         c.material.emissiveIntensity = 1;
@@ -607,7 +640,5 @@ export class Enemy {
     setTimeout(() => this.group.parent?.remove(this.group), 150);
   }
 
-  get position() {
-    return this.group.position;
-  }
+  get position() { return this.group.position; }
 }

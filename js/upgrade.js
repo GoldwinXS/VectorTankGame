@@ -26,8 +26,8 @@ const UPGRADE_POOL = [
   // ── Firepower (tiered — each tier gives a larger individual boost) ────────
   { id: 'damage',   tag: 'firepower', maxTier: 3,
     label: t => `ORDNANCE ${ROMAN[t-1]}`,
-    desc:  t => `+${Math.round((0.20 + (t-1)*0.08)*100)}% cannon damage`,
-    apply: (p, t) => { p.damageMult = Math.min(5.0, p.damageMult * (1.20 + (t-1)*0.08)); } },
+    desc:  t => `+${Math.round((0.18 + (t-1)*0.06)*100)}% cannon damage`,
+    apply: (p, t) => { p.damageMult = Math.min(5.0, p.damageMult * (1.18 + (t-1)*0.06)); } },
 
   { id: 'reload',   tag: 'firepower', maxTier: 3,
     label: t => `AUTO-LOADER ${ROMAN[t-1]}`,
@@ -41,8 +41,8 @@ const UPGRADE_POOL = [
 
   { id: 'barrel',   tag: 'firepower', maxTier: 2,
     label: t => `EXTENDED BARREL ${ROMAN[t-1]}`,
-    desc:  t => `+${Math.round((0.25 + (t-1)*0.15)*100)}% projectile speed`,
-    apply: (p, t) => { p.bulletSpeedMult = Math.min(2.5, p.bulletSpeedMult * (1.25 + (t-1)*0.15)); } },
+    desc:  t => `+${Math.round((0.20 + (t-1)*0.10)*100)}% projectile speed`,
+    apply: (p, t) => { p.bulletSpeedMult = Math.min(2.5, p.bulletSpeedMult * (1.20 + (t-1)*0.10)); } },
 
   { id: 'burst',    tag: 'firepower', maxTier: 2,
     label: t => `BURST FIRE ${ROMAN[t-1]}`,
@@ -69,8 +69,8 @@ const UPGRADE_POOL = [
   // ── Utility (tiered) ─────────────────────────────────────────────────────
   { id: 'lifesteal', tag: 'utility',  maxTier: 3,
     label: t => `VAMPIRE ROUND ${ROMAN[t-1]}`,
-    desc:  t => `+${[4, 7, 11][t-1]} HP per enemy destroyed`,
-    apply: (p, t) => { p.hpPerKill = Math.min(40, (p.hpPerKill || 0) + [4, 7, 11][t-1]); } },
+    desc:  t => `+${[3, 6, 9][t-1]} HP per enemy destroyed`,
+    apply: (p, t) => { p.hpPerKill = Math.min(40, (p.hpPerKill || 0) + [3, 6, 9][t-1]); } },
 
   { id: 'bounty',   tag: 'utility',   maxTier: 2,
     label: t => `KILL BOUNTY ${ROMAN[t-1]}`,
@@ -85,33 +85,33 @@ const UPGRADE_POOL = [
   // ── Build archetypes (single-use — strong by design) ─────────────────────
   { id: 'glass',    tag: 'firepower', maxTier: 1,
     label: () => 'GLASS CANNON',
-    desc:  () => '+60% damage — +22% damage taken',
-    apply: p => { p.damageMult = Math.min(6.0, p.damageMult * 1.60); p.armorMult = Math.min(2.0, p.armorMult * 1.22); } },
+    desc:  () => '+55% damage — +32% damage taken',
+    apply: p => { p.damageMult = Math.min(6.0, p.damageMult * 1.55); p.armorMult = Math.min(2.0, p.armorMult * 1.32); } },
 
   { id: 'fortress', tag: 'defense',   maxTier: 1,
     label: () => 'FORTRESS',
-    desc:  () => '-35% dmg taken, -18% move speed',
-    apply: p => { p.armorMult = Math.max(0.08, p.armorMult * 0.65); p.speedMult = Math.max(0.4, p.speedMult * 0.82); } },
+    desc:  () => '-40% dmg taken, -22% move speed',
+    apply: p => { p.armorMult = Math.max(0.08, p.armorMult * 0.60); p.speedMult = Math.max(0.4, p.speedMult * 0.78); } },
 
   { id: 'sniper',   tag: 'firepower', maxTier: 1,
     label: () => 'SNIPER PROTOCOL',
-    desc:  () => '+50% proj speed, +40% traverse',
-    apply: p => { p.bulletSpeedMult = Math.min(2.5, p.bulletSpeedMult * 1.50); p.traverseMult = Math.min(3.0, p.traverseMult * 1.40); } },
+    desc:  () => '+40% proj speed, +35% traverse',
+    apply: p => { p.bulletSpeedMult = Math.min(2.5, p.bulletSpeedMult * 1.40); p.traverseMult = Math.min(3.0, p.traverseMult * 1.35); } },
 
   { id: 'rampage',  tag: 'utility',   maxTier: 1,
     label: () => 'RAMPAGE',
-    desc:  () => '+25% speed and +25% damage',
-    apply: p => { p.speedMult = Math.min(2.5, p.speedMult * 1.25); p.damageMult = Math.min(5.0, p.damageMult * 1.25); } },
+    desc:  () => '+18% speed and +18% damage',
+    apply: p => { p.speedMult = Math.min(2.5, p.speedMult * 1.18); p.damageMult = Math.min(5.0, p.damageMult * 1.18); } },
 
   { id: 'overclock', tag: 'firepower', maxTier: 1,
     label: () => 'OVERCLOCK',
-    desc:  () => '+45% traverse, -25% reload time',
-    apply: p => { p.traverseMult = Math.min(3.0, p.traverseMult * 1.45); p.reloadMult = Math.max(0.25, p.reloadMult * 0.75); } },
+    desc:  () => '+40% traverse, -22% reload',
+    apply: p => { p.traverseMult = Math.min(3.0, p.traverseMult * 1.40); p.reloadMult = Math.max(0.25, p.reloadMult * 0.78); } },
 
   { id: 'sprint',   tag: 'speed',     maxTier: 1,
     label: () => 'NITRO DRIVE',
-    desc:  () => '+40% move speed',
-    apply: p => { p.speedMult = Math.min(2.5, p.speedMult * 1.40); } },
+    desc:  () => '+30% move speed',
+    apply: p => { p.speedMult = Math.min(2.5, p.speedMult * 1.30); } },
 
   { id: 'wide',     tag: 'firepower', maxTier: 1,
     label: () => 'WIDE PATTERN',

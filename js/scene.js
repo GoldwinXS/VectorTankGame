@@ -15,6 +15,21 @@ export function terrainH(x, z) {
   );
 }
 
+// Analytical partial derivatives of terrainH — used for tank pitch/roll
+export function terrainSlope(x, z) {
+  const dHdx = (
+    0.9  * 0.10 * Math.cos(x * 0.10)       * Math.cos(z * 0.13)       +
+    0.45 * 0.23 * Math.cos(x * 0.23 + 0.9) * Math.sin(z * 0.20 + 1.4) -
+    0.22 * 0.41 * Math.sin(x * 0.41 + 0.5) * Math.cos(z * 0.37 + 2.1)
+  );
+  const dHdz = (
+   -0.9  * 0.13 * Math.sin(x * 0.10)       * Math.sin(z * 0.13)       +
+    0.45 * 0.20 * Math.sin(x * 0.23 + 0.9) * Math.cos(z * 0.20 + 1.4) -
+    0.22 * 0.37 * Math.cos(x * 0.41 + 0.5) * Math.sin(z * 0.37 + 2.1)
+  );
+  return { dHdx, dHdz };
+}
+
 // Rectangular obstacles — height field controls vertical size
 // Low barriers (height ~0.85) can be shot over with barrel elevation
 export const OBSTACLES = [

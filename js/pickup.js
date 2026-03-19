@@ -4,11 +4,11 @@ import { terrainH } from './scene.js';
 // Permanent pickups restore a resource (hp, lives).
 // Temporary pickups apply a timed buff via player.applyBuff(key, mult, seconds).
 export const PICKUP_DEFS = {
-  health:    { color: 0x00ff88, emissive: 0x00ff44, label: 'HULL REPAIR',        effect: p => { p.hp = Math.min(p.maxHp, p.hp + 40); },           temp: false },
-  speed:     { color: 0x00ccff, emissive: 0x0088ff, label: 'SPEED BURST  12s',   effect: p => p.applyBuff('speed',  1.30, 12),                   temp: true  },
-  damage:    { color: 0xff8800, emissive: 0xff4400, label: 'DAMAGE AMP   10s',   effect: p => p.applyBuff('damage', 1.40, 10),                   temp: true  },
-  extralife: { color: 0xffdd00, emissive: 0xffaa00, label: 'RESERVE HULL',       effect: p => { p.lives++; },                                    temp: false },
-  armor:     { color: 0xcc44ff, emissive: 0x8800cc, label: 'REACTIVE ARMOR 15s', effect: p => p.applyBuff('armor',  0.70, 15),                   temp: true  },
+  health:    { color: 0x00ff88, emissive: 0x00ff44, label: 'HULL REPAIR',              effect: p => { p.hp = Math.min(p.maxHp, p.hp + 40); },                                           temp: false },
+  speed:     { color: 0x00ccff, emissive: 0x0088ff, label: 'SPEED BOOST (-TRV) 12s',   effect: p => { p.applyBuff('speed', 1.30, 12); p.applyBuff('traverse', 0.65, 12); },             temp: true  },
+  damage:    { color: 0xff8800, emissive: 0xff4400, label: 'FIREPOWER (+DMG TKN) 10s', effect: p => { p.applyBuff('damage', 1.45, 10); p.applyBuff('armor', 1.28, 10); },               temp: true  },
+  extralife: { color: 0xffdd00, emissive: 0xffaa00, label: 'RESERVE HULL',              effect: p => { p.lives++; },                                                                     temp: false },
+  armor:     { color: 0xcc44ff, emissive: 0x8800cc, label: 'ARMOR SHELL (-SPD) 15s',   effect: p => { p.applyBuff('armor', 0.62, 15); p.applyBuff('speed', 0.78, 15); },               temp: true  },
 };
 
 const _geo = new THREE.OctahedronGeometry(0.55, 0);

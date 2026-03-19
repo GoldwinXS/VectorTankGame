@@ -17,7 +17,7 @@ export class TacticSelector {
     this.W2 = [[r(),r()],[r(),r()],[r(),r()],[r(),r()]]; // 4×2
     this.b1 = [0, 0];
     this.b2 = [0, 0, 0, 0];
-    this.lr = 0.18;
+    this.lr = 0.30;
 
     this._lastX    = null;
     this._lastH    = null;
@@ -45,16 +45,22 @@ export class TacticSelector {
     return this._probs;
   }
 
-  // Run forward pass, return the highest-probability tactic
+  // Use multinomial sampling instead of argmax — gives better exploration
+  // and makes the protocol display actually change meaningfully
   selectTactic(healthLostRatio, inaccuracy, mobilityScore) {
     const probs = this._forward([healthLostRatio, inaccuracy, mobilityScore]);
-    const idx   = probs.indexOf(Math.max(...probs));
-    return { tactic: TACTICS[idx], idx };
+    // Multinomial sample — tactics explored proportional to their weight
+    let r = Math.random(), cum = 0;
+    for (let i = 0; i < probs.length; i++) {
+      cum += probs[i];
+      if (r <= cum) return { tactic: TACTICS[i], idx: i };
+    }
+    return { tactic: TACTICS[probs.length - 1], idx: probs.length - 1 };
   }
 
   // REINFORCE: push probability of chosenIdx up if challenge was high
   train(chosenIdx, challengeScore) {
-    if (!this._lastX || challengeScore < 0.03) return;
+    if (!this._lastX || challengeScore < 0.01) return;
     const s = this.lr * challengeScore;
 
     // Output gradient: (one_hot - probs) * scale

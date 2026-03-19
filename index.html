@@ -91,6 +91,7 @@
       <!-- 2×2 button grid: top row = secondary, bottom row = fire -->
       <div id="btn-fpv-mob">FPV</div>
       <div id="btn-hud-mob">≡ HUD</div>
+      <div id="btn-pause-mob">II</div>
       <div id="btn-fire-cannon">CANNON</div>
       <div id="btn-fire-mg">MG</div>
     </div>
@@ -104,8 +105,55 @@
     <!-- FPV indicator -->
     <div id="fpv-indicator" class="hidden">[ FPV ]</div>
 
+    <!-- Hull selection screen — shown before start screen is submitted -->
+    <div id="hull-select-screen" class="screen">
+      <div class="screen-content">
+        <h1>SELECT HULL</h1>
+        <p class="subtitle">CHOOSE YOUR COMBAT PLATFORM</p>
+        <div class="hull-grid">
+          <div class="hull-choice selected" data-hull="vanguard">
+            <div class="hull-name">VANGUARD</div>
+            <div class="hull-role">BALANCED</div>
+            <div class="hull-stats">
+              <div class="hstat"><span>HULL</span><span>100</span></div>
+              <div class="hstat"><span>SPEED</span><span>100%</span></div>
+              <div class="hstat"><span>DAMAGE</span><span>100%</span></div>
+              <div class="hstat"><span>RELOAD</span><span>100%</span></div>
+              <div class="hstat"><span>TRV SPD</span><span>100%</span></div>
+            </div>
+            <div class="hull-desc">The standard battle tank. Strong in every role.</div>
+          </div>
+          <div class="hull-choice" data-hull="blitzer">
+            <div class="hull-name">BLITZER</div>
+            <div class="hull-role">SPEED / RECON</div>
+            <div class="hull-stats">
+              <div class="hstat"><span>HULL</span><span>70</span></div>
+              <div class="hstat"><span>SPEED</span><span>135%</span></div>
+              <div class="hstat"><span>DAMAGE</span><span>85%</span></div>
+              <div class="hstat"><span>RELOAD</span><span>80%</span></div>
+              <div class="hstat"><span>TRV SPD</span><span>140%</span></div>
+            </div>
+            <div class="hull-desc">Fast and fragile. Quick turret lets you snap shots on the move.</div>
+          </div>
+          <div class="hull-choice" data-hull="bastion">
+            <div class="hull-name">BASTION</div>
+            <div class="hull-role">HEAVY / ASSAULT</div>
+            <div class="hull-stats">
+              <div class="hstat"><span>HULL</span><span>145</span></div>
+              <div class="hstat"><span>SPEED</span><span>72%</span></div>
+              <div class="hstat"><span>DAMAGE</span><span>130%</span></div>
+              <div class="hstat"><span>RELOAD</span><span>+25%</span></div>
+              <div class="hstat"><span>TRV SPD</span><span>65%</span></div>
+            </div>
+            <div class="hull-desc">Slow heavy hitter with a sluggish turret. Plan your shots.</div>
+          </div>
+        </div>
+        <button id="btn-hull-confirm">CONFIRM &amp; CONTINUE</button>
+      </div>
+    </div>
+
     <!-- Start screen -->
-    <div id="start-screen" class="screen">
+    <div id="start-screen" class="screen hidden">
       <div class="screen-content">
         <h1>VECTOR</h1>
         <p class="subtitle">THE AI LEARNS YOUR WEAKNESSES</p>
@@ -125,6 +173,14 @@
           <button class="inline-mute" id="start-btn-mute">♪</button>
           <span class="audio-label">VOL</span>
           <input type="range" class="inline-vol" id="start-vol-master" min="0" max="1" step="0.05" value="0.5">
+        </div>
+        <div class="audio-row">
+          <span class="audio-label">MUSIC</span>
+          <input type="range" class="inline-vol" id="start-vol-music" min="0" max="1" step="0.05" value="0.35">
+        </div>
+        <div class="audio-row">
+          <span class="audio-label">SFX</span>
+          <input type="range" class="inline-vol" id="start-vol-sfx" min="0" max="1" step="0.05" value="0.65">
         </div>
         <button id="btn-start">ENGAGE</button>
       </div>
@@ -189,6 +245,14 @@
           <button class="inline-mute" id="pause-btn-mute">♪</button>
           <span class="audio-label">VOL</span>
           <input type="range" class="inline-vol" id="pause-vol-master" min="0" max="1" step="0.05" value="0.5">
+        </div>
+        <div class="audio-row">
+          <span class="audio-label">MUSIC</span>
+          <input type="range" class="inline-vol" id="pause-vol-music" min="0" max="1" step="0.05" value="0.35">
+        </div>
+        <div class="audio-row">
+          <span class="audio-label">SFX</span>
+          <input type="range" class="inline-vol" id="pause-vol-sfx" min="0" max="1" step="0.05" value="0.65">
         </div>
         <button id="btn-resume">RESUME</button>
       </div>

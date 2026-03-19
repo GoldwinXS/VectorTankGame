@@ -51,8 +51,36 @@ class AudioEngine {
     this._master.connect(comp);
     comp.connect(this.ctx.destination);
 
-    this._nextBeat = this.ctx.currentTime + 0.1;
-    this._scheduleTick();
+    // iOS AudioContext unlock — play silent buffer within user gesture
+    const _unlock = () => {
+      const buf = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf; src.connect(this.ctx.destination); src.start(0);
+    };
+    _unlock();
+
+    // iOS Safari creates AudioContext in 'suspended' state even during a
+    // user-gesture click. Resume it, then start the scheduler once running.
+    const _startScheduler = () => {
+      this._nextBeat = this.ctx.currentTime + 0.1;
+      this._scheduleTick();
+    };
+    if (this.ctx.state === 'running') {
+      _startScheduler();
+    } else {
+      this.ctx.resume().then(_startScheduler);
+    }
+
+    // Re-resume if iOS suspends the context on page-blur / screen-lock
+    document.addEventListener('touchstart', () => {
+      if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    }, { passive: true });
+
+    document.addEventListener('visibilitychange', () => {
+      if (this.ctx && document.visibilityState === 'visible' && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+    });
   }
 
   // ── Scheduling loop ────────────────────────────────────────────────────────
@@ -68,33 +96,65 @@ class AudioEngine {
   }
 
   _scheduleBeat(t, step) {
+    const phaseStep = this._beatCount % 64; // 4-bar super-cycle
+    const isBreak   = phaseStep >= 56;      // last 8 steps: stripped break
+    const bar       = Math.floor(this._beatCount / 16);
+    const swing     = (step % 4 === 2) ? 0.014 : 0; // swing the off-beats
+
     // Layer 0+: percussion + bass (always present)
-    if (step % 4 === 0)               this._kick(t);
-    if (step === 4 || step === 12)    this._snare(t);
-    if (step % 4 === 2)               this._hihat(t, true);
-    if (step % 2 === 0)               this._hihat(t, false);
-    this._bass(t, step);
-    // Layer 1+: pad chords (wave 3+)
-    if (this._waveLayer >= 1 && (step === 0 || step === 8)) this._pad(t, step);
-    // Layer 2+: acid 303 lead (wave 6+)
-    if (this._waveLayer >= 2 && step % 4 === 2)             this._acid(t, step);
-    // Layer 3+: clap + crash cymbal (wave 10+)
-    if (this._waveLayer >= 3) {
-      if (step === 4 || step === 12)  this._clap(t);
-      if (step === 0)                 this._crash(t);
+    if (step % 4 === 0 && !isBreak) this._kick(t);
+    else if (step === 0)             this._kick(t);   // keep beat 1 in break
+    if (step === 4 || step === 12)   this._snare(t);  // snare always for pulse
+
+    // Hi-hats with swing; suppressed during break
+    if (!isBreak) {
+      if (step % 4 === 2) this._hihat(t + swing, true);
+      if (step % 2 === 0) this._hihat(t + swing, false);
     }
-    // Layer 4+: high arpeggio (wave 15+)
-    if (this._waveLayer >= 4)         this._arp(t, step);
+
+    // Bass — silent in break
+    if (!isBreak) this._bass(t, step);
+
+    // Layer 1+: warm pad
+    if (this._waveLayer >= 1 && (step === 0 || step === 8)) this._pad(t, bar);
+    // Layer 2+: gentle soft arp (half density, skip break)
+    if (this._waveLayer >= 2 && step % 4 === 0 && !isBreak) this._gentleArp(t, step);
+    // Layer 3+: clap + crash
+    if (this._waveLayer >= 3) {
+      if ((step === 4 || step === 12) && !isBreak) this._clap(t);
+      if (step === 0 && !isBreak) this._crash(t);
+    }
+    // Layer 4+: acid lead (now later in game, less frequent)
+    if (this._waveLayer >= 4 && step % 8 === 2 && !isBreak) this._acid(t, step);
+    // Layer 5+: dense arp (was layer 4)
+    if (this._waveLayer >= 5 && step % 2 === 0 && !isBreak) this._arp(t, step);
   }
 
   // Unlock a new music layer each time a wave threshold is crossed.
   // Also nudges BPM upward at high waves.
+  // Layers unlock gradually — each wave number threshold is easily editable
   setWave(n) {
-    this._waveLayer = n < 3 ? 0 : n < 6 ? 1 : n < 10 ? 2 : n < 15 ? 3 : 4;
-    if      (n >= 15) this._BPM = Math.min(156, 140 + (n - 14));
-    else if (n >= 10) this._BPM = 143;
+    this._waveLayer = n < 3  ? 0   // drums + bass only
+                    : n < 5  ? 1   // + warm pad chords
+                    : n < 8  ? 2   // + gentle arpeggio (soft lead)
+                    : n < 12 ? 3   // + clap + crash
+                    : n < 17 ? 4   // + acid 303 lead
+                    : 5;           // + dense high arp
+    if      (n >= 17) this._BPM = Math.min(158, 140 + (n - 16));
+    else if (n >= 12) this._BPM = 143;
     else              this._BPM = 140;
   }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // MUSIC CONFIG — edit these to customize the soundtrack
+  // BPM: starts at 140, increases after wave 12+
+  // Bass riff (MIDI note numbers): 40=E2, 43=G2, 47=B2, 38=D2, 45=A2
+  // Pad chords: frequencies in Hz — Am, G, F, Ab
+  // Acid notes (MIDI): 52=E3, 55=G3, 57=A3, 50=D3
+  // Gentle arp (MIDI): 60=C4, 64=E4, 67=G4, 71=B4 — soft melodic layer
+  // Dense arp (MIDI): original _ARP_NOTES array below
+  // Volume levels: _GENTLE_ARP_VOL controls soft arp loudness
+  // ══════════════════════════════════════════════════════════════════════════════
 
   // ── Drum machines ─────────────────────────────────────────────────────────
   _kick(t) {
@@ -175,13 +235,13 @@ class AudioEngine {
     [208, 247, 311],   // Ab
   ];
 
-  _pad(t, step) {
-    const chord = this._CHORDS[(step / 8) % this._CHORDS.length];
+  _pad(t, bar) {
+    const chord = this._CHORDS[bar % this._CHORDS.length];
     const beatDur = 60 / this._BPM;
     const dur = beatDur * 7.5;
     for (const freq of chord) {
       const osc = this.ctx.createOscillator();
-      osc.type  = 'square';
+      osc.type  = 'sine';
       osc.frequency.value = freq;
       const g = this.ctx.createGain();
       g.gain.setValueAtTime(0, t);
@@ -205,7 +265,7 @@ class AudioEngine {
     const filt = this.ctx.createBiquadFilter();
     filt.type  = 'lowpass'; filt.Q.value = 12;
     filt.frequency.setValueAtTime(300, t);
-    filt.frequency.exponentialRampToValueAtTime(2400, t + 0.06);
+    filt.frequency.exponentialRampToValueAtTime(1600, t + 0.06);
     filt.frequency.exponentialRampToValueAtTime(400, t + 0.14);
     const g = this.ctx.createGain();
     g.gain.setValueAtTime(0.12, t);
@@ -244,7 +304,7 @@ class AudioEngine {
     src.start(t); src.stop(t + dur);
   }
 
-  // High arpeggio melody — two 16th notes per step (layer 4)
+  // High arpeggio melody — two 16th notes per step (layer 5)
   _ARP_NOTES = [64, 67, 71, 74, 67, 71, 76, 74, 72, 69, 67, 64, 67, 71, 72, 74];
 
   _arp(t, step) {
@@ -254,7 +314,7 @@ class AudioEngine {
       const idx  = (step * 2 + sub) % this._ARP_NOTES.length;
       const freq = 440 * Math.pow(2, (this._ARP_NOTES[idx] - 69) / 12);
       const osc  = this.ctx.createOscillator();
-      osc.type   = 'square';
+      osc.type   = 'triangle';
       osc.frequency.value = freq;
       const g = this.ctx.createGain();
       g.gain.setValueAtTime(0.05, nt);
@@ -262,6 +322,26 @@ class AudioEngine {
       osc.connect(g); g.connect(this._musicBus);
       osc.start(nt); osc.stop(nt + beatDur * 0.5);
     }
+  }
+
+  // ── Easily editable music config ─────────────────────────────────────────────
+  // Gentle arp notes (MIDI) — plays in layer 2. Edit to taste.
+  _GENTLE_ARP = [60, 64, 67, 71, 69, 65, 62, 60];
+  // Gentle arp volume (0-1)
+  _GENTLE_ARP_VOL = 0.04;
+
+  _gentleArp(t, step) {
+    const beatDur = 60 / this._BPM;
+    const idx  = Math.floor(step / 1) % this._GENTLE_ARP.length; // one per call
+    const freq = 440 * Math.pow(2, (this._GENTLE_ARP[idx] - 69) / 12);
+    const osc  = this.ctx.createOscillator();
+    osc.type   = 'triangle'; // warm, non-harsh
+    osc.frequency.value = freq;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(this._GENTLE_ARP_VOL, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + beatDur * 2.0);
+    osc.connect(g); g.connect(this._musicBus);
+    osc.start(t); osc.stop(t + beatDur * 2.1);
   }
 
   // ── SFX ───────────────────────────────────────────────────────────────────

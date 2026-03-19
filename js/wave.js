@@ -1,4 +1,4 @@
-import { Enemy } from './enemy.js';
+import { Enemy, TYPES } from './enemy.js';
 import { TACTICS } from './nn.js';
 
 const TARGET_CLEAR_TIME = 25;
@@ -68,9 +68,23 @@ export class WaveManager {
     const spawnAngle = Math.random() * Math.PI * 2;
     const pos = { x: Math.cos(spawnAngle) * maxR, y: 0, z: Math.sin(spawnAngle) * maxR };
 
-    // Boss scales harder each encounter
+    // Boss archetype cycles through wave encounters — each boss looks different
+    const archetypes = ['tanky', 'fast', 'stug', 'hover', 'swarm'];
+    const archetype  = archetypes[(this._bossNum - 1) % archetypes.length];
+
     const bossDiff = difficulty * (1 + (this._bossNum - 1) * 0.35);
-    const boss = new Enemy(this.scene, this.projectiles, 'boss', pos, bossDiff);
+    // Create as the archetype type but flag it as boss (isBossOverride = true)
+    const boss = new Enemy(this.scene, this.projectiles, archetype, pos, bossDiff * 2.0, true);
+
+    // Override to boss-tier stats — massive HP and hard-hitting
+    boss._maxHp = boss.hp = Math.round(550 * (1 + (this._bossNum - 1) * 0.30));
+    boss.damage = Math.round(TYPES[archetype].damage * (0.7 + bossDiff * 0.4) * 2.0);
+
+    // Scale up to boss size
+    const bossScale = 2.1;
+    boss.group.scale.setScalar(bossScale);
+    boss.radius = bossScale * 1.4;
+
     boss.setTactic('RUSH');
     this.enemies.push(boss);
   }

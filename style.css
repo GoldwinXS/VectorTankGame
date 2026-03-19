@@ -625,6 +625,103 @@ button:hover {
   opacity: 1 !important;
 }
 
+/* ── Score popup ── */
+.score-popup {
+  position: absolute;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #ffff44;
+  text-shadow: 0 0 10px #ffaa00, 0 0 20px #ff8800;
+  pointer-events: none;
+  transform: translateX(-50%);
+  z-index: 25;
+  animation: scoreFloat 1.2s ease-out forwards;
+  white-space: nowrap;
+}
+@keyframes scoreFloat {
+  0%   { opacity: 1; transform: translateX(-50%) translateY(0px); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-70px); }
+}
+
+/* ── Hull selection ── */
+.hull-grid {
+  display: flex;
+  gap: 16px;
+  margin: 20px 0 28px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.hull-choice {
+  border: 1px solid rgba(0,255,255,0.2);
+  background: rgba(0,15,35,0.75);
+  padding: 20px 16px;
+  min-width: 180px;
+  max-width: 200px;
+  cursor: pointer;
+  pointer-events: all;
+  transition: border-color 0.2s, background 0.2s;
+  text-align: left;
+}
+.hull-choice:hover {
+  border-color: rgba(0,255,255,0.6);
+  background: rgba(0,30,60,0.9);
+}
+.hull-choice.selected {
+  border-color: var(--cyan);
+  background: rgba(0,40,70,0.95);
+  box-shadow: 0 0 18px rgba(0,255,255,0.25);
+}
+.hull-name {
+  font-size: 18px;
+  letter-spacing: 4px;
+  color: var(--cyan);
+  text-shadow: 0 0 10px var(--cyan);
+  margin-bottom: 4px;
+}
+.hull-role {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #336677;
+  margin-bottom: 14px;
+}
+.hull-stats { margin-bottom: 12px; }
+.hstat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 1px;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(0,255,255,0.08);
+  color: #88ccdd;
+}
+.hull-desc {
+  font-size: 10px;
+  color: #336677;
+  letter-spacing: 1px;
+  line-height: 1.5;
+}
+
+/* ── Mobile pause button ── */
+#btn-pause-mob {
+  position: fixed;
+  bottom: 112px;
+  right: 252px;
+  width: 56px;
+  height: 40px;
+  background: rgba(0,15,35,0.75);
+  border: 1px solid rgba(0,255,255,0.3);
+  color: var(--cyan);
+  font-size: 16px;
+  letter-spacing: 2px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  pointer-events: all;
+  touch-action: manipulation;
+  z-index: 30;
+}
+
 @media (max-width: 600px) {
   #hud { gap: 5px; }
   .hud-block { padding: 5px 8px; min-width: 130px; }

@@ -82,6 +82,7 @@ export class Player {
 
   _buildMesh() {
     this.group = new THREE.Group();
+    this.group.rotation.order = 'YXZ'; // YXZ = yaw first, then local pitch/roll
 
     const hullMat = new THREE.MeshStandardMaterial({
       color: 0x003344,
@@ -124,11 +125,11 @@ export class Player {
 
     // Glacis plate — angled front armour
     const glacis = new THREE.Mesh(
-      new THREE.BoxGeometry(1.35, 0.28, 0.42),
+      new THREE.BoxGeometry(1.35, 0.38, 0.42),
       hullMat,
     );
-    glacis.position.set(0, 0.3, 1.05);
-    glacis.rotation.x = 0.48;
+    glacis.position.set(0, 0.25, 0.9);
+    glacis.rotation.x = -0.3;
     this.group.add(glacis);
 
     // Engine hatch — rear indicator
@@ -276,11 +277,14 @@ export class Player {
     const engineOut = this._compDmg.engine > 0;
 
     // Hull rotation (A/D) — blocked if track is out
+    // Turret is counter-rotated to stay world-stable while hull turns
     if (!trackOut) {
+      const prevYaw = this.group.rotation.y;
       if (keys["KeyA"] || keys["ArrowLeft"])
         this.group.rotation.y += TURN_SPEED * delta;
       if (keys["KeyD"] || keys["ArrowRight"])
         this.group.rotation.y -= TURN_SPEED * delta;
+      this.turret.rotation.y -= (this.group.rotation.y - prevYaw);
     }
 
     // Drive (W/S) — blocked if track out; halved if engine damaged
@@ -329,7 +333,7 @@ export class Player {
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
 
-        const maxStep = TURRET_TRAVERSE * this.traverseMult * delta;
+        const maxStep = TURRET_TRAVERSE * this.traverseMult * (this._buffs.traverse?.mult ?? 1) * delta;
         this.turret.rotation.y +=
           Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
         aimDelta = Math.abs(diff);
@@ -387,13 +391,8 @@ export class Player {
     const dmg = Math.round(
       BASE_DAMAGE * this.damageMult * (this._buffs.damage?.mult ?? 1),
     );
-    const up = new THREE.Vector3(0, 1, 0);
-
     for (let i = 0; i < this.multiShot; i++) {
       const dir = baseDir.clone();
-      if (this.multiShot > 1) {
-        dir.applyAxisAngle(up, (i - (this.multiShot - 1) / 2) * 0.14);
-      }
       dir.x += (Math.random() - 0.5) * spread;
       dir.z += (Math.random() - 0.5) * spread;
       dir.normalize();
