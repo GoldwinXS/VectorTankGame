@@ -1,92 +1,58 @@
-// TacticSelector — 3 inputs → 2 hidden → 4 outputs
-// Learns which combat tactic stresses this specific player the most.
-//
-// Inputs:  [healthLostRatio, inaccuracy, mobilityScore]      (all 0–1)
-// Outputs: [P_RUSH, P_FLANK, P_SUPPRESS, P_ENCIRCLE]        (softmax)
-//
-// Training: REINFORCE — after each wave, reinforce the tactic that was used
-// in proportion to how much it challenged the player.
+// AdaptiveTactics — replaces the original NN with a simple weighted-history system.
+// Each tactic has a weight that increases when it successfully challenges the player.
+// After each wave, the tactic weight is reinforced by the challenge score (0-1).
+// This achieves the same "AI learns your weakness" narrative far more reliably
+// than REINFORCE on a tiny noisy dataset, and the probability bars work identically.
 
 export const TACTICS = ['RUSH', 'FLANK', 'SUPPRESS', 'ENCIRCLE'];
 
 export class TacticSelector {
   constructor() {
-    const r = () => (Math.random() - 0.5) * 0.5;
-    // 2 hidden neurons — intentionally tiny
-    this.W1 = [[r(),r(),r()], [r(),r(),r()]];           // 2×3
-    this.W2 = [[r(),r()],[r(),r()],[r(),r()],[r(),r()]]; // 4×2
-    this.b1 = [0, 0];
-    this.b2 = [0, 0, 0, 0];
-    this.lr = 0.30;
-
-    this._lastX    = null;
-    this._lastH    = null;
-    this._probs    = [0.25, 0.25, 0.25, 0.25];
+    this._weights = [1.0, 1.0, 1.0, 1.0]; // one weight per tactic
+    this._probs   = [0.25, 0.25, 0.25, 0.25];
+    this._lastIdx = 0;
   }
 
-  _sig(x) { return 1 / (1 + Math.exp(-Math.max(-15, Math.min(15, x)))); }
-
-  _softmax(arr) {
-    const max = Math.max(...arr);
-    const ex  = arr.map(v => Math.exp(v - max));
-    const sum = ex.reduce((a, b) => a + b, 0);
-    return ex.map(v => v / sum);
+  _refreshProbs() {
+    const sum = this._weights.reduce((a, b) => a + b, 0);
+    this._probs = this._weights.map(w => w / sum);
   }
 
-  _forward(x) {
-    this._lastX = x;
-    this._lastH = this.W1.map((row, i) =>
-      this._sig(row.reduce((s, w, j) => s + w * x[j], 0) + this.b1[i])
-    );
-    const logits = this.W2.map((row, i) =>
-      row.reduce((s, w, j) => s + w * this._lastH[j], 0) + this.b2[i]
-    );
-    this._probs = this._softmax(logits);
-    return this._probs;
-  }
-
-  // Use multinomial sampling instead of argmax — gives better exploration
-  // and makes the protocol display actually change meaningfully
-  selectTactic(healthLostRatio, inaccuracy, mobilityScore) {
-    const probs = this._forward([healthLostRatio, inaccuracy, mobilityScore]);
-    // Multinomial sample — tactics explored proportional to their weight
+  // API-compatible with the previous NN version (args unused — weight-based selection).
+  // 15% epsilon-greedy so no tactic is ever fully abandoned.
+  selectTactic(_healthLostRatio, _inaccuracy, _mobilityScore) {
+    this._refreshProbs();
+    if (Math.random() < 0.15) {
+      const idx = Math.floor(Math.random() * TACTICS.length);
+      this._lastIdx = idx;
+      return { tactic: TACTICS[idx], idx };
+    }
     let r = Math.random(), cum = 0;
-    for (let i = 0; i < probs.length; i++) {
-      cum += probs[i];
-      if (r <= cum) return { tactic: TACTICS[i], idx: i };
+    for (let i = 0; i < this._probs.length; i++) {
+      cum += this._probs[i];
+      if (r <= cum) { this._lastIdx = i; return { tactic: TACTICS[i], idx: i }; }
     }
-    return { tactic: TACTICS[probs.length - 1], idx: probs.length - 1 };
+    this._lastIdx = this._probs.length - 1;
+    return { tactic: TACTICS[this._lastIdx], idx: this._lastIdx };
   }
 
-  // REINFORCE: push probability of chosenIdx up if challenge was high
+  // Reinforce the chosen tactic proportional to how much it challenged the player.
+  // Gentle decay on all others prevents permanent single-tactic dominance.
   train(chosenIdx, challengeScore) {
-    if (!this._lastX || challengeScore < 0.01) return;
-    const s = this.lr * challengeScore;
-
-    // Output gradient: (one_hot - probs) * scale
-    const dOut = this._probs.map((p, i) => s * ((i === chosenIdx ? 1 : 0) - p));
-
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 2; j++) this.W2[i][j] += dOut[i] * this._lastH[j];
-      this.b2[i] += dOut[i];
+    if (challengeScore < 0.05) return;
+    this._weights[chosenIdx] = Math.min(8.0, this._weights[chosenIdx] + challengeScore * 1.0);
+    for (let i = 0; i < this._weights.length; i++) {
+      if (i !== chosenIdx) this._weights[i] = Math.max(0.4, this._weights[i] * 0.92);
     }
-
-    const dH = this._lastH.map((h, j) => {
-      const d = this.W2.reduce((s, row, i) => s + row[j] * dOut[i], 0);
-      return d * h * (1 - h);
-    });
-    for (let i = 0; i < 2; i++) {
-      for (let j = 0; j < 3; j++) this.W1[i][j] += dH[i] * this._lastX[j];
-      this.b1[i] += dH[i];
-    }
+    this._refreshProbs();
   }
 
   get probs() { return [...this._probs]; }
 
   summary(waveCount) {
-    if (waveCount < 2) return 'Not enough data yet.';
+    if (waveCount < 2) return 'Not enough combat data yet.';
     const idx = this._probs.indexOf(Math.max(...this._probs));
     const pct = Math.round(this._probs[idx] * 100);
-    return `After ${waveCount} waves the AI favoured ${TACTICS[idx]} (${pct}% weight) — that was your weak point.`;
+    return `After ${waveCount} waves the AI adapted towards ${TACTICS[idx]} tactics (${pct}% weight). That approach exploited your weaknesses most effectively.`;
   }
 }

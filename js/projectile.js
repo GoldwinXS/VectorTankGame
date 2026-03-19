@@ -3,27 +3,34 @@ import { terrainH } from "./scene.js";
 
 const CANNON_GEO = new THREE.SphereGeometry(0.18, 6, 6);
 const MG_GEO     = new THREE.BoxGeometry(0.05, 0.05, 0.3);
-const KILL_RANGE = 70;
+const KILL_RANGE = 140;
 
 export const GRAVITY = 4.5;
 
 export class Projectile {
   // isMG (9th param): uses elongated tracer geometry + spark-only impact
-  constructor(scene, pos, dir, speed, damage, isPlayer, typeColor, hasGravity, isMG = false) {
+  // visualScale (10th param): scales mesh and collision radius (cannon shells only)
+  constructor(scene, pos, dir, speed, damage, isPlayer, typeColor, hasGravity, isMG = false, visualScale = 1.0) {
     this.scene    = scene;
     this.damage   = damage;
     this.isPlayer = isPlayer;
     this.isMG     = isMG;
-    this.radius   = isMG ? 0.07 : 0.1;
+    // Collision radius grows slightly with visual scale (cannon only)
+    this.radius   = isMG ? 0.07 : 0.1 + (visualScale - 1.0) * 0.04;
     this.alive    = true;
     this.hasGravity = hasGravity !== undefined ? hasGravity : isPlayer;
 
-    const color = isPlayer ? (isMG ? 0xffee44 : 0xffffff) : typeColor;
+    const color = isPlayer ? (isMG ? 0xffee44 : typeColor) : typeColor;
     this.mesh = new THREE.Mesh(
       isMG ? MG_GEO : CANNON_GEO,
       new THREE.MeshBasicMaterial({ color })
     );
     this.mesh.position.copy(pos);
+
+    // Apply visual scale to cannon shells (MG tracers always stay the same size)
+    if (!isMG && visualScale !== 1.0) {
+      this.mesh.scale.setScalar(visualScale);
+    }
 
     if (isMG) {
       // Orient elongated tracer box along direction of travel
@@ -33,7 +40,7 @@ export class Projectile {
     // Only cannon shells carry an in-flight point light.
     // MG tracers (too many active at once) rely solely on impact flashes.
     if (!isMG) {
-      const light = new THREE.PointLight(color, 2, 4);
+      const light = new THREE.PointLight(color, 2 * Math.max(1, visualScale * 0.8), 4 * Math.max(1, visualScale * 0.8));
       this.mesh.add(light);
     }
 

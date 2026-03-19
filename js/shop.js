@@ -2,7 +2,6 @@
 // Costs are high; benefits are small to create meaningful spend decisions.
 const ITEMS = [
   { id: 'repair',   label: 'HULL REPAIR',       desc: 'Restore 35 HP',              cost: 200  },
-  { id: 'mg_ammo',  label: 'AMMO RESUPPLY',      desc: 'Full MG reload',             cost: 120  },
   { id: 'maxhp',    label: 'HULL REINFORCE',     desc: '+20 max hull points',        cost: 700  },
   { id: 'speed',    label: 'DRIVE SYSTEM',       desc: '+12% move speed',            cost: 500  },
   { id: 'damage',   label: 'ORDNANCE +',         desc: '+15% cannon damage',         cost: 550  },
@@ -44,7 +43,6 @@ export class Shop {
     const p = this._player;
     switch (item.id) {
       case 'repair':   p.hp = Math.min(p.maxHp, p.hp + 35); break;
-      case 'mg_ammo':  p.mgAmmo = p.mgMaxAmmo; p.mgReloading = false; break;
       case 'maxhp':    p.maxHp += 20; p.hp = Math.min(p.maxHp, p.hp + 10); break;
       case 'speed':    p.speedMult    = Math.min(2.5, p.speedMult    * 1.12); break;
       case 'damage':   p.damageMult   = Math.min(4.0, p.damageMult   * 1.15); break;

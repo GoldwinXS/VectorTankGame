@@ -10,8 +10,8 @@ const UPGRADE_POOL = [
   // ── Core / consumable ────────────────────────────────────────────────────
   { id: 'repair',   tag: 'defense',   maxTier: 1,
     label: () => 'HULL REPAIR',
-    desc:  () => 'Restore 100 hull points',
-    apply: p     => { p.hp = Math.min(p.maxHp, p.hp + 100); } },
+    desc:  () => 'Restore 40 hull points',
+    apply: p     => { p.hp = Math.min(p.maxHp, p.hp + 40); } },
 
   { id: 'maxhp',    tag: 'defense',   maxTier: 2,
     label: t => `HULL REINFORCE ${ROMAN[t-1]}`,
@@ -57,8 +57,8 @@ const UPGRADE_POOL = [
 
   { id: 'regen',    tag: 'defense',   maxTier: 2,
     label: t => `HULL REGEN ${ROMAN[t-1]}`,
-    desc:  t => `+${t === 1 ? 3 : 5} HP/sec passive regen`,
-    apply: (p, t) => { p.regenRate = Math.min(20, (p.regenRate || 0) + (t === 1 ? 3 : 5)); } },
+    desc:  t => `+${t === 1 ? 1 : 2.5} HP/sec passive regen`,
+    apply: (p, t) => { p.regenRate = Math.min(5, (p.regenRate || 0) + (t === 1 ? 1 : 2.5)); } },
 
   // ── Speed (tiered) ───────────────────────────────────────────────────────
   { id: 'speed',    tag: 'speed',     maxTier: 3,

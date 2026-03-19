@@ -51,6 +51,8 @@ let projectiles = [], pickups = [], player, waveManager;
 let score = 0, waveNum = 0, lastTime = 0;
 let shakeIntensity = 0;
 const scoreRef = { value: 0 };
+let _nnAdaptTimer = 0;
+const NN_ADAPT_INTERVAL = 22; // seconds between mid-wave tactic re-evaluations
 
 // ── Dynamic arena bounds ──────────────────────────────────────────────────────
 const EXPANSION_ORDER = ['east', 'south', 'west', 'north'];
@@ -357,7 +359,7 @@ function init() {
   updateBoundary(boundaryGeo, gameBounds);
 
   upgrades.resetRun();
-  player      = new Player(scene, projectiles);
+  player      = new Player(scene, projectiles, chosenHull);
   _applyHullChoice(player);
   // Wire component damage notifications back to UI
   player._compCb = (comp) => ui.showComponentDamage(comp);
@@ -417,6 +419,7 @@ async function startNextWave() {
   }
 
   distanceTraveled = 0;
+  _nnAdaptTimer = 0;
   _lastPlayerPos.copy(player.position);
   player.resetWaveStats();
   audio.setWave(waveNum);
@@ -619,6 +622,17 @@ function loop(ts) {
 
     ui.updateHUD(player.hp, player.maxHp, score, waveNum, player.lives);
     ui.updateAmmo(player.mgAmmo, player.mgMaxAmmo, player.mgReloading);
+
+    // Mid-wave NN adaptation — periodically re-evaluate and potentially switch tactics
+    _nnAdaptTimer += delta;
+    if (_nnAdaptTimer >= NN_ADAPT_INTERVAL) {
+      _nnAdaptTimer = 0;
+      const newTactic = waveManager.adaptMidWave(player.hp, player.maxHp, player.shotsHit, player.shotsFired);
+      if (newTactic) {
+        ui.updateProtocol(newTactic, nn.probs);
+        ui.showWaveMessage(`PROTOCOL SHIFT: ${newTactic}`, 900);
+      }
+    }
 
     if (waveManager.isWaveComplete()) startNextWave();
 

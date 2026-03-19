@@ -95,6 +95,7 @@ export class WaveManager {
     const hasScout  = waveNum >= 4;
     const hasSwarm  = waveNum >= 5;
     const hasGunner = waveNum >= 6;
+    const hasLancer = waveNum >= 7;
     const hasStug   = waveNum >= 8;
     const hasHover  = waveNum >= 10;
 
@@ -104,17 +105,19 @@ export class WaveManager {
     const wSc = hasScout  ? (0.15 + p * 0.1)  : 0;
     const wSw = hasSwarm  ? (0.2 + p * 0.25)  : 0;
     const wG  = hasGunner ? (0.1 + p * 0.2)   : 0;
+    const wL  = hasLancer ? (0.07 + p * 0.10) : 0;
     const wSt = hasStug   ? (0.08 + p * 0.12) : 0;
     const wHv = hasHover  ? (0.12 + p * 0.1)  : 0;
-    const sum = wF + wT + wSc + wSw + wG + wSt + wHv;
+    const sum = wF + wT + wSc + wSw + wG + wL + wSt + wHv;
 
     const nFast   = Math.max(1, Math.round((wF / sum) * total));
     const nScout  = hasScout  ? Math.max(0, Math.round((wSc / sum) * total)) : 0;
     const nGunner = hasGunner ? Math.max(0, Math.round((wG / sum) * total)) : 0;
     const nSwarm  = hasSwarm  ? Math.max(0, Math.round((wSw * 1.2 / sum) * total)) : 0;
+    const nLancer = hasLancer ? Math.max(0, Math.min(2, Math.round((wL / sum) * total))) : 0;
     const nStug   = hasStug   ? Math.max(0, Math.min(2, Math.round((wSt / sum) * total))) : 0;
     const nHover  = hasHover  ? Math.max(0, Math.min(3, Math.round((wHv / sum) * total))) : 0;
-    const nTanky  = hasTanky  ? Math.max(0, total - nFast - nScout - nSwarm - nGunner - nStug - nHover) : 0;
+    const nTanky  = hasTanky  ? Math.max(0, total - nFast - nScout - nSwarm - nGunner - nLancer - nStug - nHover) : 0;
 
     const types = [
       ...Array(nFast).fill('fast'),
@@ -122,6 +125,7 @@ export class WaveManager {
       ...Array(nScout).fill('scout'),
       ...Array(nSwarm).fill('swarm'),
       ...Array(nGunner).fill('gunner'),
+      ...Array(nLancer).fill('lancer'),
       ...Array(nStug).fill('stug'),
       ...Array(nHover).fill('hover'),
     ];
@@ -188,6 +192,27 @@ export class WaveManager {
     const { tactic, idx } = this.nn.selectTactic(healthRatio, inaccuracy, mobility);
     this._tactic    = tactic;
     this._tacticIdx = idx;
+    return tactic;
+  }
+
+  // Called mid-wave to let the NN switch tactics if the player's situation changes.
+  // Returns the new tactic name if a switch occurred, null otherwise.
+  adaptMidWave(playerHp, playerMaxHp, shotsHit, shotsFired) {
+    const aliveCount = this.enemies.filter(e => e.alive).length;
+    if (aliveCount === 0) return null;
+
+    const healthLostRatio = Math.min(1 - playerHp / playerMaxHp, 1);
+    const inaccuracy = shotsFired > 0 ? Math.max(0, 1 - shotsHit / shotsFired) : 0.5;
+    const { tactic, idx } = this.nn.selectTactic(healthLostRatio, inaccuracy, 0.5);
+
+    if (tactic === this._tactic) return null; // no change
+
+    this._tactic    = tactic;
+    this._tacticIdx = idx;
+    // Switch still-alive enemies to the new tactic
+    for (const e of this.enemies) {
+      if (e.alive && !e.isBoss) e.setTactic(tactic);
+    }
     return tactic;
   }
 

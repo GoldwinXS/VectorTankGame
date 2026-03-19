@@ -2,56 +2,155 @@ import * as THREE from "three";
 import { Projectile } from "./projectile.js";
 import { OBSTACLES } from "./scene.js";
 
+// ── Tank explosion effect ──────────────────────────────────────────────────
+function _spawnTankExplosion(scene, pos, isBoss = false) {
+  const s = isBoss ? 2.6 : 1.0; // scale multiplier for boss explosions
+
+  // 1. Instant white flash
+  const flash = new THREE.PointLight(0xffffff, 35 * s, 16 * s);
+  flash.position.copy(pos);
+  scene.add(flash);
+
+  // 2. Shockwave ring (flat, expands outward)
+  const rGeo = new THREE.RingGeometry(0.1, 0.55, 14);
+  rGeo.rotateX(-Math.PI / 2);
+  const rMat = new THREE.MeshBasicMaterial({ color: 0xff8833, transparent: true, opacity: 0.92, side: THREE.DoubleSide });
+  const ring = new THREE.Mesh(rGeo, rMat);
+  ring.position.copy(pos);
+  scene.add(ring);
+
+  // 3. Fireball sphere — expands and shifts orange → dark smoke
+  const fbGeo = new THREE.SphereGeometry(0.55 * s, 8, 6);
+  const fbMat = new THREE.MeshBasicMaterial({ color: 0xff5500, transparent: true, opacity: 0.94 });
+  const fireball = new THREE.Mesh(fbGeo, fbMat);
+  fireball.position.copy(pos);
+  fireball.position.y += 0.3;
+  scene.add(fireball);
+
+  // 4. Debris chunks — boxes tumbling outward with gravity
+  const debris = [];
+  const debrisCount = isBoss ? 14 : 7;
+  for (let i = 0; i < debrisCount; i++) {
+    const dGeo = new THREE.BoxGeometry(
+      (0.1 + Math.random() * 0.28) * s,
+      (0.05 + Math.random() * 0.14) * s,
+      (0.1 + Math.random() * 0.28) * s,
+    );
+    const col = i % 3 === 0 ? 0xff4400 : i % 3 === 1 ? 0x334455 : 0x886644;
+    const dMat = new THREE.MeshBasicMaterial({ color: col });
+    const chunk = new THREE.Mesh(dGeo, dMat);
+    chunk.position.copy(pos);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = (3 + Math.random() * 6) * (isBoss ? 1.5 : 1);
+    chunk._v  = new THREE.Vector3(Math.cos(angle) * speed, 2.5 + Math.random() * 5, Math.sin(angle) * speed);
+    chunk._rx = (Math.random() - 0.5) * 12;
+    chunk._ry = (Math.random() - 0.5) * 12;
+    chunk._rz = (Math.random() - 0.5) * 12;
+    scene.add(chunk);
+    debris.push(chunk);
+  }
+
+  // 5. Lingering orange glow
+  const glow = new THREE.PointLight(0xff4400, 12 * s, 11 * s);
+  glow.position.copy(pos);
+  glow.position.y += 0.5;
+  scene.add(glow);
+
+  const DUR = isBoss ? 950 : 580;
+  let t = 0;
+  const iv = setInterval(() => {
+    t += 18;
+    const pct = Math.min(t / DUR, 1);
+
+    flash.intensity = (35 * s) * Math.max(0, 1 - pct * 8);
+
+    ring.scale.setScalar(1 + pct * 14 * s);
+    rMat.opacity = 0.92 * Math.max(0, 1 - pct * 2.2);
+
+    fireball.scale.setScalar(1 + pct * 5 * s);
+    fbMat.opacity = 0.94 * Math.max(0, 1 - pct * 1.6);
+    if      (pct < 0.35) fbMat.color.setHex(0xff5500);
+    else if (pct < 0.65) fbMat.color.setHex(0x884400);
+    else                 fbMat.color.setHex(0x221100);
+
+    glow.intensity = (12 * s) * Math.max(0, 1 - pct * 1.3);
+
+    const dt = 0.018;
+    for (const c of debris) {
+      c.position.addScaledVector(c._v, dt);
+      c._v.y -= 14 * dt;
+      c.rotation.x += c._rx * dt;
+      c.rotation.y += c._ry * dt;
+      c.rotation.z += c._rz * dt;
+    }
+
+    if (pct >= 1) {
+      clearInterval(iv);
+      scene.remove(flash); scene.remove(ring); scene.remove(fireball); scene.remove(glow);
+      rGeo.dispose(); rMat.dispose(); fbGeo.dispose(); fbMat.dispose();
+      for (const c of debris) { scene.remove(c); c.geometry.dispose(); c.material.dispose(); }
+    }
+  }, 18);
+}
+
 // ── Enemy type definitions ──────────────────────────────────────────────────
 // leadFactor: 0 = no predictive aim, 1 = full ballistic intercept
 export const TYPES = {
   fast: {
     color: 0x00ff88, emissive: 0x00ff88, scale: 0.75,
-    speed: 1.5, hp: 40, damage: 12, shootRange: 30, shootCd: 1.6,
-    bulletSpeed: 16, preferDist: 10, traverseSpeed: 2.5, baseSpread: 0.22,
+    speed: 1.5, hp: 40, damage: 12, shootRange: 42, shootCd: 1.6,
+    bulletSpeed: 22, preferDist: 14, traverseSpeed: 2.5, baseSpread: 0.22,
     leadFactor: 0.3,
   },
   tanky: {
     color: 0xff3300, emissive: 0xff2200, scale: 1.3,
-    speed: 1.8, hp: 160, damage: 30, shootRange: 40, shootCd: 3.0,
-    bulletSpeed: 10, preferDist: 15, traverseSpeed: 0.7, baseSpread: 0.10,
+    speed: 1.8, hp: 160, damage: 30, shootRange: 55, shootCd: 3.0,
+    bulletSpeed: 16, preferDist: 22, traverseSpeed: 0.7, baseSpread: 0.10,
     leadFactor: 0.6,
   },
   swarm: {
     color: 0xff00ff, emissive: 0xcc00cc, scale: 0.5,
-    speed: 1.5, hp: 18, damage: 8, shootRange: 20, shootCd: 1.8,
-    bulletSpeed: 17, preferDist: 7, traverseSpeed: 3.5, baseSpread: 0.28,
+    speed: 1.5, hp: 18, damage: 8, shootRange: 28, shootCd: 1.8,
+    bulletSpeed: 22, preferDist: 10, traverseSpeed: 3.5, baseSpread: 0.28,
     leadFactor: 0.0,
   },
   boss: {
     color: 0xff5500, emissive: 0xff3300, scale: 2.8,
-    speed: 1.4, hp: 600, damage: 50, shootRange: 50, shootCd: 1.8,
-    bulletSpeed: 11, preferDist: 18, traverseSpeed: 0.9, baseSpread: 0.05,
+    speed: 1.4, hp: 600, damage: 50, shootRange: 65, shootCd: 1.8,
+    bulletSpeed: 18, preferDist: 24, traverseSpeed: 0.9, baseSpread: 0.05,
     leadFactor: 0.9,
   },
   gunner: {
     color: 0x88ff00, emissive: 0x44bb00, scale: 0.9,
-    speed: 1.4, hp: 55, damage: 6, shootRange: 30, shootCd: 0.1,
-    bulletSpeed: 24, preferDist: 16, traverseSpeed: 2.2, baseSpread: 0.12,
+    speed: 1.4, hp: 55, damage: 6, shootRange: 42, shootCd: 0.1,
+    bulletSpeed: 30, preferDist: 22, traverseSpeed: 2.2, baseSpread: 0.12,
     isMG: true, leadFactor: 0.0,
   },
   scout: {
     color: 0x44ffaa, emissive: 0x22cc77, scale: 0.6,
-    speed: 2.5, hp: 22, damage: 3, shootRange: 22, shootCd: 0.12,
-    bulletSpeed: 26, preferDist: 10, traverseSpeed: 3.5, baseSpread: 0.20,
+    speed: 2.5, hp: 22, damage: 3, shootRange: 32, shootCd: 0.12,
+    bulletSpeed: 32, preferDist: 14, traverseSpeed: 3.5, baseSpread: 0.20,
     isMG: true, leadFactor: 0.0,
   },
   stug: {
     color: 0xaa8855, emissive: 0x775533, scale: 1.1,
-    speed: 1.0, hp: 130, damage: 45, shootRange: 45, shootCd: 3.2,
-    bulletSpeed: 28, preferDist: 28, traverseSpeed: 0, turnSpeed: 0.65,
+    speed: 1.0, hp: 130, damage: 45, shootRange: 60, shootCd: 3.2,
+    bulletSpeed: 36, preferDist: 36, traverseSpeed: 0, turnSpeed: 0.65,
     baseSpread: 0.04, leadFactor: 1.0,
   },
   hover: {
     color: 0xcc33ff, emissive: 0xaa22dd, scale: 0.9,
-    speed: 2.2, hp: 80, damage: 22, shootRange: 34, shootCd: 1.5,
-    bulletSpeed: 22, preferDist: 14, traverseSpeed: 4.0, baseSpread: 0.17,
+    speed: 2.2, hp: 80, damage: 22, shootRange: 46, shootCd: 1.5,
+    bulletSpeed: 28, preferDist: 20, traverseSpeed: 4.0, baseSpread: 0.17,
     isHover: true, leadFactor: 0.5,
+  },
+  lancer: {
+    // Long-range artillery that fires arcing shells like the player.
+    // High damage, very accurate, holds maximum range. Introduced at wave 7.
+    color: 0x1a0033, emissive: 0xbb00ff, scale: 1.05,
+    speed: 1.6, hp: 75, damage: 50, shootRange: 58, shootCd: 4.2,
+    bulletSpeed: 22, preferDist: 34, traverseSpeed: 1.3, baseSpread: 0.05,
+    leadFactor: 0.85, hasGravity: true,
   },
 };
 
@@ -141,8 +240,9 @@ export class Enemy {
   // ── Mesh builders ────────────────────────────────────────────────────────
 
   _buildMesh() {
-    if (this.type === 'stug')  { this._buildStugMesh();  return; }
-    if (this.type === 'hover') { this._buildHoverMesh(); return; }
+    if (this.type === 'stug')   { this._buildStugMesh();   return; }
+    if (this.type === 'hover')  { this._buildHoverMesh();  return; }
+    if (this.type === 'lancer') { this._buildLancerMesh(); return; }
 
     this.group = new THREE.Group();
     this.group.scale.setScalar(this.def.scale);
@@ -324,6 +424,74 @@ export class Enemy {
 
     this.turretGroup = new THREE.Group();
     this.group.add(this.turretGroup);
+
+    if (this.isBoss) this._buildBossExtras();
+  }
+
+  _buildLancerMesh() {
+    this.group = new THREE.Group();
+    this.group.scale.setScalar(this.def.scale);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.30, roughness: 0.3, metalness: 0.90,
+    });
+    const edgeMat = new THREE.LineBasicMaterial({ color: this.def.emissive, opacity: 0.65, transparent: true });
+
+    // Long narrow hull — far more elongated than a standard tank
+    const hullGeo = new THREE.BoxGeometry(0.95, 0.6, 2.8);
+    this.group.add(new THREE.Mesh(hullGeo, mat));
+    this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), edgeMat));
+
+    // Swept-back side sponsons — wing-like, low and angular
+    [-0.62, 0.62].forEach(xOff => {
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.1, 1.6), mat.clone());
+      fin.position.set(xOff, -0.22, -0.3);
+      this.group.add(fin);
+    });
+
+    // Angled glacis nose
+    const nose = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 0.55), mat.clone());
+    nose.position.set(0, 0.04, 1.55);
+    nose.rotation.x = -0.4;
+    this.group.add(nose);
+
+    // Rear exhaust vents — two small rectangular slots
+    [-0.28, 0.28].forEach(xOff => {
+      const vent = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.28),
+        new THREE.MeshStandardMaterial({ color: this.def.emissive, emissive: this.def.emissive, emissiveIntensity: 1.2, roughness: 0.1, metalness: 1 }));
+      vent.position.set(xOff, 0.25, -1.5);
+      this.group.add(vent);
+    });
+
+    // Turret — narrow and low, optimised for the long barrel
+    this.turretGroup = new THREE.Group();
+    this.turretGroup.position.y = 0.45;
+    this.group.add(this.turretGroup);
+
+    const turretMat = new THREE.MeshStandardMaterial({
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.45, roughness: 0.2, metalness: 0.95,
+    });
+    this.turretGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.32, 0.9), turretMat));
+
+    // Very long barrel — the lancer's signature feature
+    const barrelMat = new THREE.MeshStandardMaterial({
+      color: this.def.emissive, emissive: this.def.emissive, emissiveIntensity: 1.0,
+    });
+    const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 2.0), barrelMat);
+    barrel.position.z = 1.1;
+    this.turretGroup.add(barrel);
+
+    // Rangefinder prism — a small box offset to the right of the turret
+    const prism = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 0.32), turretMat.clone());
+    prism.position.set(0.44, 0.08, 0.1);
+    this.turretGroup.add(prism);
+
+    // Signature glow from barrel tip
+    const barrelGlow = new THREE.PointLight(this.def.emissive, 2.5, 5);
+    barrelGlow.position.set(0, 0.45, 2.15);
+    this.turretGroup.add(barrelGlow);
 
     if (this.isBoss) this._buildBossExtras();
   }
@@ -605,7 +773,9 @@ export class Enemy {
 
     const turretWorldAngle = this.group.rotation.y + this.turretGroup.rotation.y;
     const dir = new THREE.Vector3(Math.sin(turretWorldAngle), 0, Math.cos(turretWorldAngle));
-    const spread = this.def.baseSpread * (1 - this.aimCharge * 0.75);
+    // Accuracy improves with difficulty: wave 1 = full spread, wave 10+ = ~35% tighter
+    const accuracyMult = Math.max(0.35, 1.0 - (this._difficulty - 0.5) * 0.32);
+    const spread = this.def.baseSpread * (1 - this.aimCharge * 0.75) * accuracyMult;
     dir.x += (Math.random() - 0.5) * spread;
     dir.z += (Math.random() - 0.5) * spread;
     dir.normalize();
@@ -618,7 +788,7 @@ export class Enemy {
     const proj = new Projectile(
       this.scene, barrelLocal, dir,
       this.def.bulletSpeed, this.damage, false,
-      this.def.color, undefined, this.def.isMG ?? false,
+      this.def.color, this.def.hasGravity ?? false, this.def.isMG ?? false,
     );
     proj._enemyType = this.type;
     this.projectiles.push(proj);
@@ -631,13 +801,8 @@ export class Enemy {
   }
 
   _die() {
-    this.group.children.forEach(c => {
-      if (c.material?.emissive) {
-        c.material.emissive.setHex(0xffffff);
-        c.material.emissiveIntensity = 1;
-      }
-    });
-    setTimeout(() => this.group.parent?.remove(this.group), 150);
+    _spawnTankExplosion(this.scene, this.group.position.clone(), this.isBoss);
+    setTimeout(() => this.group.parent?.remove(this.group), 60);
   }
 
   get position() { return this.group.position; }

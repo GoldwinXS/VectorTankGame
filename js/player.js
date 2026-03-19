@@ -3,9 +3,9 @@ import { Projectile } from "./projectile.js";
 import { audio } from "./audio.js";
 
 const BASE_SPEED = 2;
-const TURN_SPEED = 1.3;
-const SHOOT_CD = 0.5;
-const BULLET_SPEED = 22;
+const TURN_SPEED = 0.75;
+const SHOOT_CD = 1.8;
+const BULLET_SPEED = 32;
 const BASE_DAMAGE = 25;
 const MAX_HP = 100;
 const MAX_PITCH = 0.5; // ~31° max barrel elevation
@@ -26,9 +26,10 @@ const MG_RELOAD = 2.2; // seconds
 const MG_SPREAD = 0.16; // nerfed — less accurate by default
 
 export class Player {
-  constructor(scene, projectiles) {
+  constructor(scene, projectiles, hullType = 'vanguard') {
     this.scene = scene;
     this.projectiles = projectiles;
+    this.hullType = hullType;
     this.hp = MAX_HP;
     this.maxHp = MAX_HP;
     this.alive = true;
@@ -84,9 +85,17 @@ export class Player {
     this.group = new THREE.Group();
     this.group.rotation.order = 'YXZ'; // YXZ = yaw first, then local pitch/roll
 
+    // Hull-type colour palette
+    const PALETTES = {
+      vanguard: { body: 0x003344, body2: 0x002233, emissive: 0x00ffff, edge: 0x00ffff, barrel: 0x00ffff, glow: 0x00ffff },
+      blitzer:  { body: 0x1a3300, body2: 0x0d1a00, emissive: 0x88ff00, edge: 0x88ff00, barrel: 0x88ff00, glow: 0x88ff00 },
+      bastion:  { body: 0x331100, body2: 0x1a0a00, emissive: 0xff5500, edge: 0xff6600, barrel: 0xff5500, glow: 0xff4400 },
+    };
+    const c = PALETTES[this.hullType] ?? PALETTES.vanguard;
+
     const hullMat = new THREE.MeshStandardMaterial({
-      color: 0x003344,
-      emissive: 0x00ffff,
+      color: c.body,
+      emissive: c.emissive,
       emissiveIntensity: 0.15,
       roughness: 0.4,
       metalness: 0.8,
@@ -97,7 +106,7 @@ export class Player {
     this.group.add(hull);
 
     const edgeMat = new THREE.LineBasicMaterial({
-      color: 0x00ffff,
+      color: c.edge,
       opacity: 0.7,
       transparent: true,
     });
@@ -107,8 +116,8 @@ export class Player {
 
     // Track sponsons — widen the lower hull
     const sponsonMat = new THREE.MeshStandardMaterial({
-      color: 0x002233,
-      emissive: 0x00ffff,
+      color: c.body2,
+      emissive: c.emissive,
       emissiveIntensity: 0.08,
       roughness: 0.6,
       metalness: 0.7,
@@ -152,8 +161,8 @@ export class Player {
     this.group.add(this.turret);
 
     const turretMat = new THREE.MeshStandardMaterial({
-      color: 0x002233,
-      emissive: 0x00ffff,
+      color: c.body2,
+      emissive: c.emissive,
       emissiveIntensity: 0.2,
       roughness: 0.3,
       metalness: 0.9,
@@ -198,8 +207,8 @@ export class Player {
     const barrel = new THREE.Mesh(
       new THREE.BoxGeometry(0.18, 0.18, 1.1),
       new THREE.MeshStandardMaterial({
-        color: 0x00ffff,
-        emissive: 0x00ffff,
+        color: c.barrel,
+        emissive: c.barrel,
         emissiveIntensity: 0.5,
       }),
     );
@@ -218,7 +227,7 @@ export class Player {
     mgBarrel.position.set(0.22, -0.04, 0.72);
     this.barrelPivot.add(mgBarrel);
 
-    const glow = new THREE.PointLight(0x00ffff, 3, 5);
+    const glow = new THREE.PointLight(c.glow, 3, 5);
     glow.position.y = -0.5;
     this.group.add(glow);
   }
@@ -388,9 +397,24 @@ export class Player {
 
     const spread = MAX_SPREAD * (1 - this.aimCharge);
     const speed = BULLET_SPEED * this.bulletSpeedMult;
-    const dmg = Math.round(
-      BASE_DAMAGE * this.damageMult * (this._buffs.damage?.mult ?? 1),
-    );
+    const totalDmgMult = this.damageMult * (this._buffs.damage?.mult ?? 1);
+    const dmg = Math.round(BASE_DAMAGE * totalDmgMult);
+
+    // Shell colour: warm orange (slow) → white → cool blue (fast)
+    const ct = Math.min(1, (this.bulletSpeedMult - 1.0) / 1.5);
+    let shellR, shellG, shellB;
+    if (ct < 0.5) {
+      const tt = ct * 2;
+      shellR = 255; shellG = Math.round(120 + 135 * tt); shellB = Math.round(30 + 225 * tt);
+    } else {
+      const tt = (ct - 0.5) * 2;
+      shellR = Math.round(255 - 155 * tt); shellG = Math.round(255 - 75 * tt); shellB = 255;
+    }
+    const shellColor = (shellR << 16) | (shellG << 8) | shellB;
+
+    // Shell size: larger with higher damage multiplier
+    const visualScale = Math.min(2.0, 0.7 + totalDmgMult * 0.3);
+
     for (let i = 0; i < this.multiShot; i++) {
       const dir = baseDir.clone();
       dir.x += (Math.random() - 0.5) * spread;
@@ -400,11 +424,11 @@ export class Player {
       const spawnPos = this.group.position.clone().addScaledVector(dir, 1.5);
       spawnPos.y = this.group.position.y + 0.75; // barrel height above terrain
       this.projectiles.push(
-        new Projectile(this.scene, spawnPos, dir, speed, dmg, true, 0xffffff),
+        new Projectile(this.scene, spawnPos, dir, speed, dmg, true, shellColor, undefined, false, visualScale),
       );
     }
 
-    this._muzzleFlash(0xffffff);
+    this._muzzleFlash(shellColor);
     audio.playCannon();
     this.shotsFired++;
     this._totalAimChargeOnFire += this.aimCharge;
