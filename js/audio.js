@@ -166,39 +166,59 @@ class AudioEngine {
   // Track 2: F minor (waves 12+)  — up a semitone from E, most intense
   // 5 tracks — one per boss kill. Boss 1 → track 1, boss 2 → track 2, etc.
   // Each is a distinct musical key so the run feels fresh throughout.
+  // ── Music theory notes ──────────────────────────────────────────────────────
+  // All 5 tracks use the same i–VI–III–VII minor progression with smooth voice
+  // leading: two voices are held as common tones, one moves by half or whole step.
+  // Chord voicings are in first or second inversion so the bass note isn't always
+  // the root — this gives a characteristic minor key "floating" quality.
+  //
+  // Chord frequencies (Hz) per track:
+  //   Track 0  Em → C(2nd inv) → G → D(1st inv)   [E min]
+  //   Track 1  Dm → Bb(2nd)    → F → C(1st)        [D min]
+  //   Track 2  Fm → Db(2nd)    → Ab → Eb(1st)      [F min]
+  //   Track 3  Gm → Eb(2nd)    → Bb → F(1st)       [G min]
+  //   Track 4  Bbm → Gb(2nd)   → Db → Ab(1st)      [Bb min]
+  //
+  // Gentle arp outlines the tonic minor-7 arpeggio (root–m3–5–m7) then descends
+  // through scale degrees 6 and 5 back to root — a classic melodic minor gesture.
   _TRACKS = [
-    { // Track 0 — E minor (start of run)
+    { // Track 0 — E minor
       bass:      [40, 40, 43, 47, 40, 38, 40, 43, 40, 40, 45, 47, 38, 38, 43, 45],
-      chords:    [[220, 262, 330], [196, 233, 294], [175, 220, 277], [208, 247, 311]],
-      gentleArp: [60, 64, 67, 71, 69, 65, 62, 60],
+      //          Em(G3,B3,E4)  C(G3,C4,E4) G(G3,B3,D4)  D(F#3,A3,D4)
+      chords:    [[196, 247, 330], [196, 262, 330], [196, 247, 294], [185, 220, 294]],
+      gentleArp: [64, 67, 71, 74, 71, 69, 67, 64], // E4 G4 B4 D5 B4 A4 G4 E4
       acid:      [52, 55, 52, 57, 50, 52, 55, 50],
       arp:       [64, 67, 71, 74, 67, 71, 76, 74, 72, 69, 67, 64, 67, 71, 72, 74],
     },
-    { // Track 1 — D minor (boss 1 killed, down a tone — darker)
+    { // Track 1 — D minor (boss 1 — down a tone, darker)
       bass:      [38, 38, 41, 45, 38, 36, 38, 41, 38, 38, 43, 45, 36, 36, 41, 43],
-      chords:    [[196, 233, 294], [175, 208, 262], [156, 185, 233], [185, 220, 277]],
-      gentleArp: [58, 62, 65, 69, 67, 63, 60, 58],
+      //          Dm(F3,A3,D4)  Bb(F3,Bb3,D4) F(F3,A3,C4)  C(E3,G3,C4)
+      chords:    [[175, 220, 294], [175, 233, 294], [175, 220, 262], [165, 196, 262]],
+      gentleArp: [62, 65, 69, 72, 69, 67, 65, 62], // D4 F4 A4 C5 A4 G4 F4 D4
       acid:      [50, 53, 50, 55, 48, 50, 53, 48],
       arp:       [62, 65, 69, 72, 65, 69, 74, 72, 70, 67, 65, 62, 65, 69, 70, 72],
     },
-    { // Track 2 — F minor (boss 2 killed, up a semitone from E — tenser)
+    { // Track 2 — F minor (boss 2 — up a minor 3rd, tenser)
       bass:      [41, 41, 44, 48, 41, 39, 41, 44, 41, 41, 46, 48, 39, 39, 44, 46],
-      chords:    [[233, 277, 349], [208, 247, 311], [185, 220, 277], [220, 262, 330]],
-      gentleArp: [61, 65, 68, 72, 70, 66, 63, 61],
+      //          Fm(Ab3,C4,F4)  Db(Ab3,Db4,F4) Ab(Ab3,C4,Eb4) Eb(G3,Bb3,Eb4)
+      chords:    [[208, 262, 349], [208, 277, 349], [208, 262, 311], [196, 233, 311]],
+      gentleArp: [65, 68, 72, 75, 72, 70, 68, 65], // F4 Ab4 C5 Eb5 C5 Bb4 Ab4 F4
       acid:      [53, 56, 53, 58, 51, 53, 56, 51],
       arp:       [65, 68, 72, 75, 68, 72, 77, 75, 73, 70, 68, 65, 68, 72, 73, 75],
     },
-    { // Track 3 — G minor (boss 3 killed, +3 from E — higher, more urgent)
+    { // Track 3 — G minor (boss 3 — higher, more urgent)
       bass:      [43, 43, 46, 50, 43, 41, 43, 46, 43, 43, 48, 50, 41, 41, 46, 48],
-      chords:    [[262, 311, 392], [233, 277, 349], [208, 262, 330], [247, 294, 370]],
-      gentleArp: [63, 67, 70, 74, 72, 68, 65, 63],
+      //          Gm(Bb3,D4,G4)  Eb(Bb3,Eb4,G4) Bb(Bb3,D4,F4) F(A3,C4,F4)
+      chords:    [[233, 294, 392], [233, 311, 392], [233, 294, 349], [220, 262, 349]],
+      gentleArp: [67, 70, 74, 77, 74, 72, 70, 67], // G4 Bb4 D5 F5 D5 C5 Bb4 G4
       acid:      [55, 58, 55, 60, 53, 55, 58, 53],
       arp:       [67, 70, 74, 77, 70, 74, 79, 77, 75, 72, 70, 67, 70, 74, 75, 77],
     },
-    { // Track 4 — Bb minor (boss 4+ killed, +6 from E — full danger zone)
+    { // Track 4 — Bb minor (boss 4+ — full danger zone)
       bass:      [46, 46, 49, 53, 46, 44, 46, 49, 46, 46, 51, 53, 44, 44, 49, 51],
-      chords:    [[311, 370, 466], [277, 330, 416], [247, 311, 392], [294, 349, 440]],
-      gentleArp: [66, 70, 73, 77, 75, 71, 68, 66],
+      //          Bbm(Db4,F4,Bb4)  Gb(Db4,Gb4,Bb4) Db(Db4,F4,Ab4) Ab(C4,Eb4,Ab4)
+      chords:    [[277, 349, 466], [277, 370, 466], [277, 349, 415], [262, 311, 415]],
+      gentleArp: [70, 73, 77, 80, 77, 75, 73, 70], // Bb4 Db5 F5 Ab5 F5 Eb5 Db5 Bb4
       acid:      [58, 61, 58, 63, 56, 58, 61, 56],
       arp:       [70, 73, 77, 80, 73, 77, 82, 80, 78, 75, 73, 70, 73, 77, 78, 80],
     },
@@ -225,6 +245,12 @@ class AudioEngine {
   // Advance to the next track — called on each boss kill
   nextTrack() {
     this._trackIdx = Math.min(this._trackIdx + 1, this._TRACKS.length - 1);
+    this._applyTrack(this._trackIdx);
+  }
+
+  // Cycle to next track manually (skip button in pause menu)
+  skipTrack() {
+    this._trackIdx = (this._trackIdx + 1) % this._TRACKS.length;
     this._applyTrack(this._trackIdx);
   }
 
@@ -308,20 +334,25 @@ class AudioEngine {
   ];
 
   _pad(t, bar) {
-    const chord = this._CHORDS[bar % this._CHORDS.length];
+    const chord   = this._CHORDS[bar % this._CHORDS.length];
     const beatDur = 60 / this._BPM;
-    const dur = beatDur * 7.5;
+    const dur     = beatDur * 7.5;
     for (const freq of chord) {
-      const osc = this.ctx.createOscillator();
-      osc.type  = 'sine';
-      osc.frequency.value = freq;
-      const g = this.ctx.createGain();
-      g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.04, t + 0.08);
-      g.gain.setValueAtTime(0.04, t + dur - 0.12);
-      g.gain.linearRampToValueAtTime(0, t + dur);
-      osc.connect(g); g.connect(this._musicBus);
-      osc.start(t); osc.stop(t + dur);
+      // Two slightly detuned triangle oscillators per note — creates a warm
+      // chorus/beating effect that makes the pad sound much fuller than sine.
+      for (const detuneCents of [0, 6]) {
+        const osc = this.ctx.createOscillator();
+        osc.type  = 'triangle';
+        osc.frequency.value = freq;
+        osc.detune.value    = detuneCents;
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.022, t + 0.15); // slow attack — pad swell
+        g.gain.setValueAtTime(0.022, t + dur - 0.18);
+        g.gain.linearRampToValueAtTime(0, t + dur);
+        osc.connect(g); g.connect(this._musicBus);
+        osc.start(t); osc.stop(t + dur);
+      }
     }
   }
 

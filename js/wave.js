@@ -1,5 +1,5 @@
 import { Enemy, TYPES } from "./enemy.js";
-import { TACTICS } from "./nn.js";
+import { TACTICS, compBucketOf } from "./nn.js";
 
 const TARGET_CLEAR_TIME = 25;
 
@@ -17,6 +17,7 @@ export class WaveManager {
     this._tacticIdx = 0;
     this._waveStartTime = 0;
     this._waveStartHp = 100;
+    this._compBucket = 0; // 0=mobile-heavy, 1=firepower-heavy
   }
 
   initTactic() {
@@ -36,30 +37,30 @@ export class WaveManager {
     this._waveStartHp = playerHp;
     this.enemies = [];
     this._pendingBoss = false;
-    // Tell the NN the starting conditions for this wave's first tactic session
-    this.nn.beginSession(playerHp / playerMaxHp, this._tacticIdx);
 
     // Difficulty: starts gentle, ramps hard — 0.5 at wave 1, ~2.4 at wave 20
     const difficulty = 0.5 + (waveNum - 1) * 0.1;
     const probs = tacticProbs || [0.7, 0.1, 0.1, 0.1];
+    const hpRatio = playerMaxHp > 0 ? playerHp / playerMaxHp : 1.0;
 
     if (this.isBossWave) {
       this._bossNum++;
       this._pendingBoss = true;
-      // Fewer normal enemies on boss waves
       const normalCount = 2 + Math.min(this._bossNum - 1, 3);
       const composition = this._buildComposition(normalCount, waveNum);
+      this._compBucket = compBucketOf(composition);
+      this.nn.beginSession(hpRatio, this._compBucket, this._tacticIdx);
       this._spawnWave(composition, probs, bounds, difficulty, playerPos);
-      // Boss arrives last with dramatic delay
       const delay = normalCount * 250 + 900;
       setTimeout(() => {
         this._spawnBoss(bounds, difficulty, playerPos);
         this._pendingBoss = false;
       }, delay);
     } else {
-      // Slower ramp: wave 1=2, 2=2, 3=3, 4=4, 6=5 ... capped at 14
       const count = Math.min(2 + Math.floor((waveNum - 1) * 0.65), 18);
       const composition = this._buildComposition(count, waveNum);
+      this._compBucket = compBucketOf(composition);
+      this.nn.beginSession(hpRatio, this._compBucket, this._tacticIdx);
       this._spawnWave(composition, probs, bounds, difficulty, playerPos);
     }
   }
@@ -277,7 +278,7 @@ export class WaveManager {
 
     // Record the last tactic session's outcome, then pick the next wave's tactic
     const hpRatio = playerHp / playerMaxHp;
-    const { tactic, idx } = this.nn.selectNext(hpRatio);
+    const { tactic, idx } = this.nn.selectNext(hpRatio, this._compBucket);
     // End-of-wave bonus reinforcement on top of the session reward
     this.nn.train(idx, challenge);
 
@@ -294,7 +295,7 @@ export class WaveManager {
     if (aliveCount === 0) return null;
 
     const hpRatio = playerHp / playerMaxHp;
-    const { tactic, idx } = this.nn.selectNext(hpRatio);
+    const { tactic, idx } = this.nn.selectNext(hpRatio, this._compBucket);
 
     if (tactic === this._tactic) return null; // Q updated, no switch needed
 

@@ -1620,6 +1620,10 @@ _wireAudio("menu-btn-mute", "menu-vol-master");
   }
 });
 
+document.getElementById("btn-skip-track")?.addEventListener("click", () => {
+  audio.skipTrack();
+});
+
 // Pause → main menu
 document.getElementById("btn-pause-menu")?.addEventListener("click", () => {
   ui.hidePause();
