@@ -114,10 +114,12 @@ function showMainMenu() {
   ui.setFpv(false);
   document.getElementById("game-over-screen")?.classList.add("hidden");
   document.getElementById("controls-hint")?.classList.add("hidden");
+  document.getElementById("training-banner")?.classList.add("hidden");
   document.getElementById("hull-select-screen").classList.add("hidden");
   document.getElementById("start-screen").classList.add("hidden");
   document.getElementById("main-menu-screen").classList.remove("hidden");
   showMenuPanel("main");
+  trainingMode = false;
   state = STATE.IDLE;
   paused = false;
 }
@@ -528,7 +530,8 @@ function updateCrosshair() {
     crosshairEl.style.left = "50%";
     crosshairEl.style.top = "50%";
     const charge = player.aimCharge;
-    const size = Math.round(44 - charge * 32);
+    const movePenVis = Math.min(1, player._velMag / 2) * (player.movementSpreadMult ?? 1);
+    const size = Math.round(44 - charge * 32 + movePenVis * 22);
     const r = Math.round(charge * 255);
     crosshairEl.style.width = size + "px";
     crosshairEl.style.height = size + "px";
@@ -560,7 +563,8 @@ function updateCrosshair() {
   crosshairEl.style.top = sy + "px";
 
   const charge = player.aimCharge;
-  const size = Math.round(44 - charge * 32);
+  const movePenVis = Math.min(1, player._velMag / 2) * (player.movementSpreadMult ?? 1);
+  const size = Math.round(44 - charge * 32 + movePenVis * 22);
   const r = Math.round(charge * 255);
   crosshairEl.style.width = size + "px";
   crosshairEl.style.height = size + "px";
@@ -651,6 +655,22 @@ function init() {
   ui.updateProtocol("—", [0.25, 0.25, 0.25, 0.25]);
 }
 
+// ── Training mode ─────────────────────────────────────────────────────────────
+let trainingMode = false;
+
+async function _restartTrainingWave() {
+  if (!trainingMode) return;
+  state = STATE.WAVE_TRANSITION;
+  waveManager.clearEnemies();
+  clearPickups();
+  await ui.showWaveMessage("WAVE CLEARED", 600);
+  player.hp = player.maxHp;
+  player.resetWaveStats();
+  audio.setWave(1);
+  waveManager.startWave(1, gameBounds, player.hp, [0.7, 0.1, 0.1, 0.1]);
+  state = STATE.PLAYING;
+}
+
 // ── Wave flow ─────────────────────────────────────────────────────────────────
 async function startNextWave() {
   state = STATE.WAVE_TRANSITION;
@@ -717,13 +737,24 @@ async function startNextWave() {
   if (waveNum === 1) _startIntroShot();
   await ui.showWaveMessage(`WAVE  ${waveNum}`, 800);
   state = STATE.PLAYING;
-  if (waveNum === 1) {
-    if (!isMobile && !localStorage.getItem("vec_hint_shown")) {
-      document.getElementById("controls-hint")?.classList.remove("hidden");
-      setTimeout(
-        () => document.getElementById("controls-hint")?.classList.add("hidden"),
-        8000,
-      );
+  if (waveNum === 1 && !localStorage.getItem("vec_hint_shown")) {
+    const hintEl = document.getElementById("controls-hint");
+    if (hintEl) {
+      if (isMobile) {
+        // Replace hint content with touch controls
+        const rows = [
+          ["JOYSTICK", "Move / steer hull"],
+          ["DRAG RIGHT", "Aim camera / orbit"],
+          ["CANNON", "Main gun — hold still to improve aim"],
+          ["MG", "Coax MG — limited ammo, auto-reload"],
+          ["FPV", "Toggle first-person view"],
+          ["≡ HUD", "Toggle stats panel"],
+        ];
+        hintEl.innerHTML = `<div class="hint-header">CONTROLS <span class="hint-close" id="btn-hint-close">✕</span></div>` +
+          rows.map(([k, d]) => `<div class="hint-row"><span class="hint-key">${k}</span><span>${d}</span></div>`).join("");
+      }
+      hintEl.classList.remove("hidden");
+      setTimeout(() => hintEl.classList.add("hidden"), isMobile ? 12000 : 8000);
     }
   }
 }
@@ -1114,21 +1145,31 @@ function loop(ts) {
       if (newTactic) ui.updateProtocol(newTactic, nn.probs);
     }
 
-    if (waveManager.isWaveComplete()) startNextWave();
+    if (waveManager.isWaveComplete()) {
+      if (trainingMode) _restartTrainingWave();
+      else startNextWave();
+    }
 
     if (!player.alive) {
-      state = STATE.GAME_OVER;
-      safeExitPointerLock();
-      saveScore(score, waveNum - 1, chosenHull);
-      document.getElementById("controls-hint")?.classList.add("hidden");
-      setTimeout(() => {
-        ui.showGameOver(
-          score,
-          waveNum - 1,
-          nn.summary(waveNum - 1),
-          showMainMenu,
-        );
-      }, 600);
+      if (trainingMode) {
+        // In training: respawn instead of game over
+        player.hp = player.maxHp;
+        player.alive = true;
+        player._invincTimer = 3.0;
+      } else {
+        state = STATE.GAME_OVER;
+        safeExitPointerLock();
+        saveScore(score, waveNum - 1, chosenHull);
+        document.getElementById("controls-hint")?.classList.add("hidden");
+        setTimeout(() => {
+          ui.showGameOver(
+            score,
+            waveNum - 1,
+            nn.summary(waveNum - 1),
+            showMainMenu,
+          );
+        }, 600);
+      }
     }
   }
 
@@ -1177,8 +1218,7 @@ if (!isMobile) {
   _hudEl.classList.add("hud-hidden");
   document.getElementById("hud-key-hint")?.classList.remove("hidden");
 } else {
-  // On mobile: hide heading overlay (buttons overlap it) and hide HUD sidebar by default
-  document.getElementById("heading-overlay")?.style.setProperty("display", "none");
+  // On mobile: hide HUD sidebar by default (heading overlay repositioned via CSS)
   _hudEl.classList.add("hud-hidden");
 }
 
@@ -1464,6 +1504,21 @@ document.getElementById("btn-menu-engage")?.addEventListener("click", () => {
   document.getElementById("hull-select-screen").classList.remove("hidden");
 });
 
+document.getElementById("btn-menu-training")?.addEventListener("click", () => {
+  trainingMode = true;
+  chosenHull = "vanguard";
+  document.getElementById("main-menu-screen").classList.add("hidden");
+  document.getElementById("training-banner")?.classList.remove("hidden");
+  audio.start();
+  lockPointer();
+  init();
+  startNextWave();
+});
+
+document.getElementById("btn-training-exit")?.addEventListener("click", () => {
+  showMainMenu();
+});
+
 document.getElementById("btn-menu-settings")?.addEventListener("click", () => {
   // Sync current audio state to sliders before showing
   const mmv = document.getElementById("menu-vol-master");
@@ -1520,10 +1575,12 @@ document.getElementById("btn-pause-menu")?.addEventListener("click", () => {
   showMainMenu();
 });
 
-// Controls hint close button — mark seen so it never shows again
-document.getElementById("btn-hint-close")?.addEventListener("click", () => {
-  document.getElementById("controls-hint")?.classList.add("hidden");
-  localStorage.setItem("vec_hint_shown", "1");
+// Controls hint close — event delegation so it survives mobile innerHTML replacement
+document.getElementById("controls-hint")?.addEventListener("click", (e) => {
+  if (e.target.closest(".hint-close")) {
+    document.getElementById("controls-hint")?.classList.add("hidden");
+    localStorage.setItem("vec_hint_shown", "1");
+  }
 });
 
 // ── Settings button wiring ────────────────────────────────────────────────────

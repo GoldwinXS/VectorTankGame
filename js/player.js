@@ -427,10 +427,10 @@ export class Player {
       Math.cos(barrelAngle) * cp,
     );
 
-    // Movement accuracy penalty: moving at full speed adds up to 0.28 extra spread.
+    // Movement accuracy penalty: moving at full speed adds significant spread.
     // Upgrade (movementSpreadMult) scales this down toward 0.
-    const moveNorm = Math.min(1, this._velMag / (BASE_SPEED * 2.5));
-    const movePenalty = 0.28 * moveNorm * this.movementSpreadMult;
+    const moveNorm = Math.min(1, this._velMag / BASE_SPEED);
+    const movePenalty = 0.5 * moveNorm * this.movementSpreadMult;
     const spread = MAX_SPREAD * (1 - this.aimCharge) + movePenalty;
     const speed = BULLET_SPEED * this.bulletSpeedMult;
     const totalDmgMult = this.damageMult * (this._buffs.damage?.mult ?? 1);
@@ -497,8 +497,8 @@ export class Player {
       sp,
       Math.cos(barrelAngle) * cp,
     );
-    const moveNorm = Math.min(1, this._velMag / (BASE_SPEED * 2.5));
-    const spread = MG_SPREAD * (this.mgSpreadMult ?? 1) + 0.14 * moveNorm * this.movementSpreadMult;
+    const moveNorm = Math.min(1, this._velMag / BASE_SPEED);
+    const spread = MG_SPREAD * (this.mgSpreadMult ?? 1) + 0.25 * moveNorm * this.movementSpreadMult;
     dir.x += (Math.random() - 0.5) * spread;
     dir.z += (Math.random() - 0.5) * spread;
     dir.normalize();

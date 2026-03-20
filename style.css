@@ -1067,6 +1067,40 @@ button:hover {
   margin-top: 4px;
 }
 
+/* ── Training mode banner ── */
+#training-banner {
+  position: fixed;
+  top: 38px; left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(0, 20, 5, 0.88);
+  border: 1px solid rgba(0, 255, 100, 0.35);
+  padding: 5px 14px;
+  pointer-events: all;
+  z-index: 20;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #00ff88;
+  white-space: nowrap;
+}
+#training-banner.hidden { display: none; }
+#training-banner button {
+  font-size: 9px;
+  letter-spacing: 3px;
+  padding: 3px 10px;
+  margin-top: 0;
+  border-color: rgba(0, 255, 100, 0.45);
+  color: rgba(0, 255, 100, 0.85);
+}
+#training-banner button:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  background: rgba(0, 255, 100, 0.08);
+  box-shadow: 0 0 10px rgba(0, 255, 100, 0.18);
+}
+
 @media (max-width: 600px) {
   #hud { gap: 5px; }
   .hud-block { padding: 5px 8px; min-width: 130px; }
@@ -1077,7 +1111,11 @@ button:hover {
   .shop-grid { max-height: 45vh; }
   /* Push boss bar below mobile status strip; narrower on small screens */
   #boss-bar-container { top: 38px; width: min(300px, 58vw); }
-  /* Heading overlay and desk-only items hidden on mobile */
-  #heading-overlay { display: none; }
+  /* Heading overlay: move above the bottom buttons instead of hiding */
+  #heading-overlay { bottom: 52px; right: 20px; padding: 4px 8px 5px; }
+  #heading-canvas { width: 60px; height: 60px; }
+  /* Controls hint: show at top-center on mobile */
+  #controls-hint { bottom: auto; top: 44px; right: auto; left: 50%; transform: translateX(-50%); min-width: 260px; }
+  /* Desk-only items hidden on mobile */
   .desk-only { display: none !important; }
 }
