@@ -129,6 +129,7 @@
           <div class="menu-btns">
             <button id="btn-menu-engage">ENGAGE</button>
             <button id="btn-menu-training" class="btn-secondary">TRAINING</button>
+            <button id="btn-menu-howto" class="btn-secondary">HOW TO PLAY</button>
             <button id="btn-menu-settings" class="btn-secondary">SETTINGS</button>
             <button id="btn-menu-leaderboard" class="btn-secondary">LEADERBOARD</button>
           </div>
@@ -185,6 +186,61 @@
           <h2 class="panel-title">LEADERBOARD</h2>
           <div id="leaderboard-entries"></div>
           <button id="btn-menu-leaderboard-back" class="btn-back">← BACK</button>
+        </div>
+
+        <!-- How to Play sub-panel -->
+        <div id="menu-howto-panel" class="hidden menu-sub-panel">
+          <h2 class="panel-title">HOW TO PLAY</h2>
+          <div class="howto-sections">
+            <div class="howto-section">
+              <div class="howto-title">OBJECTIVE</div>
+              <p>Survive endless waves of enemy tanks. Destroy all enemies to advance. Your score and kills carry between waves.</p>
+            </div>
+            <div class="howto-section">
+              <div class="howto-title">WEAPONS</div>
+              <p><strong>CANNON</strong> — High damage, arcing shell. Hold still and wait for the aim circle to shrink before firing for maximum accuracy. Moving and swinging the turret widens spread.</p>
+              <p><strong>COAX MG</strong> — Rapid fire, 30 rounds, auto-reloads. Good for suppressing fast enemies at close range.</p>
+            </div>
+            <div class="howto-section">
+              <div class="howto-title">COMPONENT DAMAGE</div>
+              <p>Taking hits can disable systems. Watch for alerts at screen center:</p>
+              <ul class="howto-list">
+                <li><strong>TRACK DAMAGED</strong> — Hull rotation blocked until repaired</li>
+                <li><strong>ENGINE HIT</strong> — Speed heavily reduced</li>
+                <li><strong>TURRET LOCKED</strong> — Turret traverse blocked</li>
+              </ul>
+              <p>Damage clears after a short time, or grab a repair pickup to restore systems immediately.</p>
+            </div>
+            <div class="howto-section">
+              <div class="howto-title">PICKUPS</div>
+              <p>Destroyed enemies sometimes drop crates. Drive over them to collect:</p>
+              <ul class="howto-list">
+                <li><strong>REPAIR</strong> — Restores hull HP and clears component damage</li>
+                <li><strong>AMMO</strong> — Reloads MG and restores cannon charges</li>
+                <li><strong>SHIELD</strong> — Temporary damage reduction</li>
+                <li><strong>SPEED</strong> — Temporary speed boost</li>
+              </ul>
+            </div>
+            <div class="howto-section">
+              <div class="howto-title">UPGRADES &amp; SHOP</div>
+              <p>After each wave you choose one upgrade (damage, armor, reload speed, etc.). Every 5 waves a shop opens — spend score credits on hull repairs, extra lives, or permanent boosts.</p>
+            </div>
+            <div class="howto-section">
+              <div class="howto-title">THE AI</div>
+              <p>Enemy tactics adapt to your play style. If you're accurate the AI flanks. If you're slow it encircles. Watch the AI PROTOCOL panel in the HUD to see what strategy the enemy is running. Every 5 waves a boss appears — significantly tougher than normal enemies.</p>
+            </div>
+            <div class="howto-section">
+              <div class="howto-title">TIPS</div>
+              <ul class="howto-list">
+                <li>Stop moving before firing the cannon — spread shrinks fast when still</li>
+                <li>Use MG to finish low-HP enemies and save cannon charges</li>
+                <li>Stay near the center — the map boundary expands each wave</li>
+                <li>Rear hits deal 1.5× damage — protect your flanks</li>
+                <li>Front armor reduces incoming damage from direct frontal fire</li>
+              </ul>
+            </div>
+          </div>
+          <button id="btn-menu-howto-back" class="btn-back">← BACK</button>
         </div>
       </div>
     </div>
@@ -361,6 +417,7 @@
           <span class="ctrl-key">C (HOLD)</span>   <span class="ctrl-desc">Free-look — gun stays locked</span>
           <span class="ctrl-key">P</span>          <span class="ctrl-desc">Pause</span>
         </div>
+        <div id="upgrade-log" class="upgrade-log hidden"></div>
         <button id="btn-resume">RESUME</button>
         <button id="btn-pause-menu" class="btn-secondary" style="margin-top:4px">MAIN MENU</button>
       </div>
@@ -384,8 +441,7 @@
 
     <!-- Training mode banner — visible during practice sessions -->
     <div id="training-banner" class="hidden">
-      TRAINING MODE — NO PENALTY
-      <button id="btn-training-exit">EXIT</button>
+      TRAINING MODE — NO PENALTY &nbsp;·&nbsp; <span class="training-exit-hint">P / II TO EXIT</span>
     </div>
 
     <!-- Heading indicator — always visible at bottom-right -->

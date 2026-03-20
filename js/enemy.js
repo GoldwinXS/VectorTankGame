@@ -163,7 +163,7 @@ export const TYPES = {
     speed: 0.5, hp: 65, damage: 45, shootRange: 58, shootCd: 5.5,
     bulletSpeed: 20, preferDist: 44, traverseSpeed: 0.6, baseSpread: 0.02,
     hasGravity: true, hasSplash: true, splashRadius: 4.0,
-    leadFactor: 0.7, turnRate: 0.7,
+    leadFactor: 1.0, leadTimeSec: 6.5, turnRate: 0.7,
   },
 };
 
@@ -666,7 +666,8 @@ export class Enemy {
     let aimTarget = playerPos.clone();
     const leadFactor = this.def.leadFactor ?? 0;
     if (leadFactor > 0 && this._playerVel.lengthSq() > 0.04) {
-      const tof  = dist / Math.max(this.def.bulletSpeed, 1);
+      // Use leadTimeSec if defined (mortar: actual arc TOF ~7.3s), else estimate from dist/speed
+      const tof  = this.def.leadTimeSec ?? (dist / Math.max(this.def.bulletSpeed, 1));
       const lead = this._playerVel.clone().multiplyScalar(tof * leadFactor);
       lead.y = 0;
       aimTarget.add(lead);

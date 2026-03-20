@@ -86,6 +86,9 @@ function showMenuPanel(name) {
   document
     .getElementById("menu-leaderboard-panel")
     .classList.toggle("hidden", name !== "leaderboard");
+  document
+    .getElementById("menu-howto-panel")
+    .classList.toggle("hidden", name !== "howto");
 }
 
 function showMainMenu() {
@@ -358,6 +361,28 @@ const aimTarget = new THREE.Vector3();
 const raycaster = new THREE.Raycaster();
 const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
+const TAG_COLORS_LOG = { firepower: "#ff8800", defense: "#8844ff", speed: "#00ffff", utility: "#00ff88" };
+
+function _renderUpgradeLog() {
+  const el = document.getElementById("upgrade-log");
+  if (!el) return;
+  const waveHistory = upgrades.getHistory();   // [{label, tag}]
+  const shopHistory = shop.getHistory();        // [{label, count}]
+  const total = waveHistory.length + shopHistory.reduce((s, h) => s + h.count, 0);
+  if (total === 0) { el.classList.add("hidden"); return; }
+  el.classList.remove("hidden");
+  const rows = [
+    ...waveHistory.map((h) => {
+      const col = TAG_COLORS_LOG[h.tag] || "#aaa";
+      return `<div class="upgrade-log-row"><span class="upgrade-log-src">WAVE</span><span style="color:${col};flex:1">${h.label}</span><span class="upgrade-log-tag">${h.tag.toUpperCase()}</span></div>`;
+    }),
+    ...shopHistory.map((h) =>
+      `<div class="upgrade-log-row"><span class="upgrade-log-src">SHOP</span><span style="flex:1">${h.label}</span>${h.count > 1 ? `<span class="upgrade-log-tag">×${h.count}</span>` : ""}</div>`
+    ),
+  ];
+  el.innerHTML = `<div class="upgrade-log-title">UPGRADES (${total})</div>` + rows.join("");
+}
+
 window.addEventListener("keydown", (e) => {
   keys[e.code] = true;
   if (e.code === "KeyC") freeLook = true;
@@ -371,6 +396,7 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyP" && state === STATE.PLAYING) {
     paused = !paused;
     if (paused) {
+      _renderUpgradeLog();
       safeExitPointerLock();
       // Sync pause-screen audio controls to current state
       const pv = document.getElementById("pause-vol-master");
@@ -531,7 +557,8 @@ function updateCrosshair() {
     crosshairEl.style.top = "50%";
     const charge = player.aimCharge;
     const movePenVis = Math.min(1, player._velMag / 2) * (player.movementSpreadMult ?? 1);
-    const size = Math.round(44 - charge * 32 + movePenVis * 22);
+    const turretPenVis = Math.min(1, player._turretVelMag / 0.6) * (player.movementSpreadMult ?? 1);
+    const size = Math.round(44 - charge * 32 + (movePenVis + turretPenVis * 0.7) * 22);
     const r = Math.round(charge * 255);
     crosshairEl.style.width = size + "px";
     crosshairEl.style.height = size + "px";
@@ -564,7 +591,8 @@ function updateCrosshair() {
 
   const charge = player.aimCharge;
   const movePenVis = Math.min(1, player._velMag / 2) * (player.movementSpreadMult ?? 1);
-  const size = Math.round(44 - charge * 32 + movePenVis * 22);
+  const turretPenVis = Math.min(1, player._turretVelMag / 0.6) * (player.movementSpreadMult ?? 1);
+  const size = Math.round(44 - charge * 32 + (movePenVis + turretPenVis * 0.7) * 22);
   const r = Math.round(charge * 255);
   crosshairEl.style.width = size + "px";
   crosshairEl.style.height = size + "px";
@@ -642,11 +670,20 @@ function init() {
   updateBoundary(boundaryGeo, gameBounds);
 
   upgrades.resetRun();
+  shop.resetHistory();
   audio.startRun();
   player = new Player(scene, projectiles, chosenHull);
   _applyHullChoice(player);
-  // Wire component damage notifications back to UI
-  player._compCb = (comp) => ui.showComponentDamage(comp);
+  // Wire component damage notifications back to UI (visible feedback on all devices)
+  const COMP_ALERTS = {
+    track: 'TRACK DAMAGED — TURNING BLOCKED',
+    engine: 'ENGINE HIT — SPEED REDUCED',
+    turret: 'TURRET LOCKED — AIM BLOCKED',
+  };
+  player._compCb = (comp) => {
+    ui.showComponentDamage(comp);
+    ui.showHitFeedback(COMP_ALERTS[comp] ?? 'COMPONENT DAMAGED', '#ff4444');
+  };
   waveManager = new WaveManager(scene, projectiles, nn);
   waveManager.initTactic();
 
@@ -667,7 +704,7 @@ async function _restartTrainingWave() {
   player.hp = player.maxHp;
   player.resetWaveStats();
   audio.setWave(1);
-  waveManager.startWave(1, gameBounds, player.hp, [0.7, 0.1, 0.1, 0.1]);
+  waveManager.startWave(1, gameBounds, player.hp, [0.7, 0.1, 0.1, 0.1], player.position);
   state = STATE.PLAYING;
 }
 
@@ -731,7 +768,7 @@ async function startNextWave() {
   player.resetWaveStats();
   audio.setWave(waveNum);
   // Pass nn.probs so each enemy draws its own tactic from the distribution
-  waveManager.startWave(waveNum, gameBounds, player.hp, nn.probs);
+  waveManager.startWave(waveNum, gameBounds, player.hp, nn.probs, player.position);
   // Start intro fly-in BEFORE the wave message await so camera transitions
   // smoothly from wherever the idle orbit left it — no jarring snap.
   if (waveNum === 1) _startIntroShot();
@@ -1424,6 +1461,7 @@ if (isMobile) {
         if (state !== STATE.PLAYING) return;
         paused = !paused;
         if (paused) {
+          _renderUpgradeLog();
           safeExitPointerLock();
           const pv = document.getElementById("pause-vol-master");
           if (pv) pv.value = String(audio.masterVol);
@@ -1515,8 +1553,11 @@ document.getElementById("btn-menu-training")?.addEventListener("click", () => {
   startNextWave();
 });
 
-document.getElementById("btn-training-exit")?.addEventListener("click", () => {
-  showMainMenu();
+document.getElementById("btn-menu-howto")?.addEventListener("click", () => {
+  showMenuPanel("howto");
+});
+document.getElementById("btn-menu-howto-back")?.addEventListener("click", () => {
+  showMenuPanel("main");
 });
 
 document.getElementById("btn-menu-settings")?.addEventListener("click", () => {

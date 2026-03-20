@@ -143,6 +143,17 @@ const UPGRADE_POOL = [
     },
   },
 
+  {
+    id: "battle_focus",
+    tag: "firepower",
+    maxTier: 3,
+    label: (t) => `BATTLE FOCUS ${ROMAN[t - 1]}`,
+    desc: (t) => `Cannon aim charges ${[40, 70, 110][t - 1]}% faster when stationary`,
+    apply: (p, t) => {
+      p.aimChargeMult = Math.min(4.0, (p.aimChargeMult ?? 1) * (1 + [0.40, 0.70, 1.10][t - 1]));
+    },
+  },
+
   // ── Speed (tiered) ───────────────────────────────────────────────────────
   {
     id: "speed",
@@ -273,6 +284,30 @@ const UPGRADE_POOL = [
     },
   },
 
+  {
+    id: "crew_aptitude",
+    tag: "utility",
+    maxTier: 1,
+    label: () => "CREW APTITUDE",
+    desc: () => "+15% damage, speed and traverse",
+    apply: (p) => {
+      p.damageMult   = Math.min(5.0, p.damageMult * 1.15);
+      p.speedMult    = Math.min(2.5, p.speedMult * 1.15);
+      p.traverseMult = Math.min(3.0, (p.traverseMult ?? 1) * 1.15);
+    },
+  },
+
+  {
+    id: "last_stand",
+    tag: "defense",
+    maxTier: 1,
+    label: () => "LAST STAND",
+    desc: () => "Below 30% hull: −35% dmg taken, +30% fire rate",
+    apply: (p) => {
+      p.lastStand = true;
+    },
+  },
+
   // ── MG upgrades (tiered) ─────────────────────────────────────────────────
   {
     id: "mg_drum",
@@ -319,13 +354,13 @@ const UPGRADE_POOL = [
   {
     id: "mg_precision",
     tag: "firepower",
-    maxTier: 5,
+    maxTier: 4,
     label: (t) => `RANGEFINDER ${ROMAN[t - 1]}`,
-    desc: (t) => `-${Math.round((0.3 + (t - 1) * 0.2) * 100)}% MG spread`,
+    desc: (t) => `-${Math.round((0.20 + (t - 1) * 0.10) * 100)}% MG spread`,
     apply: (p, t) => {
       p.mgSpreadMult = Math.max(
         0.08,
-        (p.mgSpreadMult ?? 1) * (1.3 + (t - 1) * 0.2),
+        (p.mgSpreadMult ?? 1) * (1 - (0.20 + (t - 1) * 0.10)),
       );
     },
   },
@@ -346,11 +381,16 @@ export class UpgradePicker {
     this._choicesEl = document.getElementById("upgrade-choices");
     this._resolve = null;
     this._taken = new Map(); // id → tier count taken this run
+    this._history = [];      // ordered list of picks for display
   }
 
   resetRun() {
     this._taken.clear();
+    this._history = [];
   }
+
+  // Returns ordered array of {label, tag} for all wave upgrades taken this run
+  getHistory() { return this._history; }
 
   open(player, waveNum, stats) {
     this._player = player;
@@ -367,6 +407,7 @@ export class UpgradePicker {
       const tier = (this._taken.get(upgrade.id) ?? 0) + 1;
       upgrade.apply(this._player, tier);
       this._taken.set(upgrade.id, tier);
+      this._history.push({ label: resolveStr(upgrade.label, tier), tag: upgrade.tag });
     }
     this._el.classList.add("hidden");
     if (this._resolve) {

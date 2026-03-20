@@ -47,6 +47,18 @@ const ITEMS = [
     desc: "+20% turret traverse speed",
     cost: 300,
   },
+  {
+    id: "stabilizer",
+    label: "GYRO STABILIZER",
+    desc: "−25% aim penalty while moving",
+    cost: 480,
+  },
+  {
+    id: "regen",
+    label: "HULL REGEN CELL",
+    desc: "+1 HP/sec passive regeneration",
+    cost: 420,
+  },
 ];
 
 export class Shop {
@@ -56,11 +68,17 @@ export class Shop {
     this._livesEl = document.getElementById("shop-lives");
     this._itemsEl = document.getElementById("shop-items");
     this._resolve = null;
+    this._history = []; // {label, count} for each item bought across the run
 
     document
       .getElementById("btn-shop-skip")
       .addEventListener("click", () => this._close());
   }
+
+  resetHistory() { this._history = []; }
+
+  // Returns ordered purchase log: [{label, count}]
+  getHistory() { return this._history; }
 
   open(player, scoreRef) {
     this._player = player;
@@ -120,7 +138,17 @@ export class Shop {
       case "traverse":
         p.traverseMult = Math.min(3.0, p.traverseMult * 1.2);
         break;
+      case "stabilizer":
+        p.movementSpreadMult = Math.max(0.0, (p.movementSpreadMult ?? 1) * 0.75);
+        break;
+      case "regen":
+        p.regenRate = Math.min(8, (p.regenRate || 0) + 1);
+        break;
     }
+    // Track for upgrade log
+    const existing = this._history.find((h) => h.label === item.label);
+    if (existing) existing.count++;
+    else this._history.push({ label: item.label, count: 1 });
     this._scoreRef.value -= item.cost;
   }
 

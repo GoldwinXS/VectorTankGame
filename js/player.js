@@ -59,9 +59,12 @@ export class Player {
     this._compCb = null; // callback set by main.js to show component damage UI
 
     this._invincTimer = 0; // seconds of post-respawn invincibility remaining
-    this._recoilT = 0; // barrel recoil animation (0–1, decays to 0)
-    this._velMag = 0;   // movement speed this frame (units/sec), for spread penalty
-    this.movementSpreadMult = 1.0; // 0 = no penalty, 1 = full penalty (upgrade reduces)
+    this._recoilT = 0;              // barrel recoil animation (0–1, decays to 0)
+    this._velMag = 0;               // hull movement speed this frame (units/sec)
+    this._turretVelMag = 0;         // world-space turret angular speed (rad/sec)
+    this._prevTurretWorldAngle = 0; // previous frame world turret angle
+    this.movementSpreadMult = 1.0;  // 0 = no penalty, 1 = full penalty (upgrade reduces)
+    this.aimChargeMult = 1.0;       // multiplier on how fast aim charge builds when stationary
 
     this.aimCharge = 0;
     this.barrelPitch = 0; // current barrel elevation in radians (0 = flat)
@@ -371,9 +374,19 @@ export class Player {
       }
     }
 
+    // Track world-space turret angular velocity (for spread penalty)
+    {
+      const worldAngle = this.group.rotation.y + this.turret.rotation.y;
+      let dAngle = worldAngle - this._prevTurretWorldAngle;
+      if (dAngle > Math.PI) dAngle -= Math.PI * 2;
+      if (dAngle < -Math.PI) dAngle += Math.PI * 2;
+      this._turretVelMag = Math.abs(dAngle) / Math.max(delta, 0.001);
+      this._prevTurretWorldAngle = worldAngle;
+    }
+
     // Aim charge — builds when barrel is horizontally aligned with target
     if (aimDelta < AIM_LOCK_THRESH) {
-      this.aimCharge = Math.min(1, this.aimCharge + delta * AIM_CHARGE_RATE);
+      this.aimCharge = Math.min(1, this.aimCharge + delta * AIM_CHARGE_RATE * (this.aimChargeMult ?? 1));
     } else {
       this.aimCharge = Math.max(0, this.aimCharge - delta * AIM_DECAY_RATE);
     }
@@ -382,7 +395,7 @@ export class Player {
     this.shootCd -= delta;
     if (!freeLook && mouseDown && this.shootCd <= 0) {
       this._shoot();
-      this.shootCd = SHOOT_CD * this.reloadMult;
+      this.shootCd = SHOOT_CD * this.reloadMult * (this.lastStand && this.hp < this.maxHp * 0.3 ? 0.65 : 1);
     }
 
     // Barrel recoil decay — only moves cannon barrel, not MG
@@ -431,7 +444,9 @@ export class Player {
     // Upgrade (movementSpreadMult) scales this down toward 0.
     const moveNorm = Math.min(1, this._velMag / BASE_SPEED);
     const movePenalty = 0.5 * moveNorm * this.movementSpreadMult;
-    const spread = MAX_SPREAD * (1 - this.aimCharge) + movePenalty;
+    const turretNorm = Math.min(1, this._turretVelMag / TURRET_TRAVERSE);
+    const turretPenalty = 0.32 * turretNorm * this.movementSpreadMult;
+    const spread = MAX_SPREAD * (1 - this.aimCharge) + movePenalty + turretPenalty;
     const speed = BULLET_SPEED * this.bulletSpeedMult;
     const totalDmgMult = this.damageMult * (this._buffs.damage?.mult ?? 1);
     const dmg = Math.round(BASE_DAMAGE * totalDmgMult);
@@ -498,7 +513,10 @@ export class Player {
       Math.cos(barrelAngle) * cp,
     );
     const moveNorm = Math.min(1, this._velMag / BASE_SPEED);
-    const spread = MG_SPREAD * (this.mgSpreadMult ?? 1) + 0.25 * moveNorm * this.movementSpreadMult;
+    const turretNorm = Math.min(1, this._turretVelMag / TURRET_TRAVERSE);
+    const spread = MG_SPREAD * (this.mgSpreadMult ?? 1)
+      + 0.25 * moveNorm * this.movementSpreadMult
+      + 0.18 * turretNorm * this.movementSpreadMult;
     dir.x += (Math.random() - 0.5) * spread;
     dir.z += (Math.random() - 0.5) * spread;
     dir.normalize();
@@ -543,9 +561,10 @@ export class Player {
   }
 
   takeDamage(amount) {
+    const lastStandMult = (this.lastStand && this.hp < this.maxHp * 0.3) ? 0.65 : 1;
     const reduced = Math.max(
       1,
-      Math.round(amount * this.armorMult * (this._buffs.armor?.mult ?? 1)),
+      Math.round(amount * this.armorMult * (this._buffs.armor?.mult ?? 1) * lastStandMult),
     );
     this.hp = Math.max(0, this.hp - reduced);
 

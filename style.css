@@ -716,6 +716,89 @@ button:hover {
 }
 .menu-sub-panel.hidden { display: none; }
 
+/* ── Upgrade log (pause screen) ── */
+.upgrade-log {
+  width: 400px;
+  max-height: 160px;
+  overflow-y: auto;
+  margin: 8px 0 4px;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(0,200,255,0.15);
+  text-align: left;
+}
+.upgrade-log-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: rgba(0,200,255,0.6);
+  margin-bottom: 6px;
+}
+.upgrade-log-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.75);
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.upgrade-log-row:last-child { border-bottom: none; }
+.upgrade-log-src {
+  font-size: 8px;
+  letter-spacing: 2px;
+  margin-right: 8px;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+.upgrade-log-tag {
+  font-size: 8px;
+  letter-spacing: 1px;
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+.upgrade-log.hidden { display: none; }
+
+/* ── How to Play ── */
+#menu-howto-panel {
+  max-width: 520px;
+  width: 90vw;
+}
+.howto-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 8px;
+  text-align: left;
+}
+.howto-section { border-left: 2px solid rgba(0,200,255,0.25); padding-left: 12px; }
+.howto-title {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--cyan);
+  margin-bottom: 5px;
+}
+.howto-sections p {
+  font-size: 11px;
+  color: rgba(255,255,255,0.75);
+  margin: 3px 0;
+  line-height: 1.6;
+  letter-spacing: 0.5px;
+}
+.howto-sections strong { color: rgba(255,255,255,0.95); }
+.howto-list {
+  font-size: 11px;
+  color: rgba(255,255,255,0.75);
+  margin: 4px 0 4px 14px;
+  padding: 0;
+  line-height: 1.7;
+  letter-spacing: 0.5px;
+}
+.howto-list li { margin-bottom: 2px; }
+.howto-list strong { color: rgba(255,255,255,0.95); }
+
 /* ── Leaderboard ── */
 #leaderboard-entries {
   min-width: 380px;
@@ -1086,23 +1169,10 @@ button:hover {
   white-space: nowrap;
 }
 #training-banner.hidden { display: none; }
-#training-banner button {
-  font-size: 9px;
-  letter-spacing: 3px;
-  padding: 3px 10px;
-  margin-top: 0;
-  border-color: rgba(0, 255, 100, 0.45);
-  color: rgba(0, 255, 100, 0.85);
-}
-#training-banner button:hover {
-  border-color: #00ff88;
-  color: #00ff88;
-  background: rgba(0, 255, 100, 0.08);
-  box-shadow: 0 0 10px rgba(0, 255, 100, 0.18);
-}
+.training-exit-hint { opacity: 0.6; font-size: 9px; letter-spacing: 2px; }
 
 @media (max-width: 600px) {
-  #hud { gap: 5px; }
+  #hud { gap: 5px; max-height: calc(100vh - 255px); overflow-y: auto; }
   .hud-block { padding: 5px 8px; min-width: 130px; }
   /* AI protocol is too dense for mobile — hide it from the toggle HUD */
   #nn-panel { display: none; }

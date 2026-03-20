@@ -30,7 +30,7 @@ export class WaveManager {
   }
 
   // tacticProbs: [p_rush, p_flank, p_suppress, p_encircle] from nn.probs
-  startWave(waveNum, bounds, playerHp, tacticProbs) {
+  startWave(waveNum, bounds, playerHp, tacticProbs, playerPos = null) {
     this.waveNum = waveNum;
     this._waveStartTime = performance.now() / 1000;
     this._waveStartHp = playerHp;
@@ -47,22 +47,22 @@ export class WaveManager {
       // Fewer normal enemies on boss waves
       const normalCount = 2 + Math.min(this._bossNum - 1, 3);
       const composition = this._buildComposition(normalCount, waveNum);
-      this._spawnWave(composition, probs, bounds, difficulty);
+      this._spawnWave(composition, probs, bounds, difficulty, playerPos);
       // Boss arrives last with dramatic delay
       const delay = normalCount * 250 + 900;
       setTimeout(() => {
-        this._spawnBoss(bounds, difficulty);
+        this._spawnBoss(bounds, difficulty, playerPos);
         this._pendingBoss = false;
       }, delay);
     } else {
       // Slower ramp: wave 1=2, 2=2, 3=3, 4=4, 6=5 ... capped at 14
       const count = Math.min(2 + Math.floor((waveNum - 1) * 0.65), 18);
       const composition = this._buildComposition(count, waveNum);
-      this._spawnWave(composition, probs, bounds, difficulty);
+      this._spawnWave(composition, probs, bounds, difficulty, playerPos);
     }
   }
 
-  _spawnBoss(bounds, difficulty) {
+  _spawnBoss(bounds, difficulty, playerPos = null) {
     const maxR =
       Math.max(
         Math.abs(bounds.maxX),
@@ -70,12 +70,20 @@ export class WaveManager {
         Math.abs(bounds.maxZ),
         Math.abs(bounds.minZ),
       ) + 8;
-    const spawnAngle = Math.random() * Math.PI * 2;
-    const pos = {
-      x: Math.cos(spawnAngle) * maxR,
-      y: 0,
-      z: Math.sin(spawnAngle) * maxR,
-    };
+    let spawnAngle = Math.random() * Math.PI * 2;
+    let bx = Math.cos(spawnAngle) * maxR;
+    let bz = Math.sin(spawnAngle) * maxR;
+    // Keep boss at least 14 units from player
+    if (playerPos) {
+      for (let a = 0; a < 8; a++) {
+        const dx = bx - playerPos.x, dz = bz - playerPos.z;
+        if (Math.sqrt(dx * dx + dz * dz) >= 14) break;
+        spawnAngle = Math.random() * Math.PI * 2;
+        bx = Math.cos(spawnAngle) * maxR;
+        bz = Math.sin(spawnAngle) * maxR;
+      }
+    }
+    const pos = { x: bx, y: 0, z: bz };
 
     // Boss archetype cycles through wave encounters — each boss looks different
     const archetypes = ["tanky", "fast", "hover", "stug", "swarm"];
@@ -182,7 +190,7 @@ export class WaveManager {
   }
 
   // Each enemy independently draws a tactic from the probability distribution
-  _spawnWave(composition, tacticProbs, bounds, difficulty) {
+  _spawnWave(composition, tacticProbs, bounds, difficulty, playerPos = null) {
     const maxR =
       Math.max(
         Math.abs(bounds.maxX),
@@ -210,14 +218,19 @@ export class WaveManager {
         }
       }
 
-      // Spawn position
-      const spawnAngle = Math.random() * Math.PI * 2;
-      const r = maxR + Math.random() * 4;
-      const pos = {
-        x: Math.cos(spawnAngle) * r,
-        y: 0,
-        z: Math.sin(spawnAngle) * r,
-      };
+      // Spawn position — retry up to 6 times to stay ≥12 units from player
+      const MIN_PLAYER_DIST = 12;
+      let sx, sz;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const a = Math.random() * Math.PI * 2;
+        const r = maxR + Math.random() * 4 + attempt * 2; // widen radius on retries
+        sx = Math.cos(a) * r;
+        sz = Math.sin(a) * r;
+        if (!playerPos) break;
+        const dx = sx - playerPos.x, dz = sz - playerPos.z;
+        if (Math.sqrt(dx * dx + dz * dz) >= MIN_PLAYER_DIST) break;
+      }
+      const pos = { x: sx, y: 0, z: sz };
 
       // Formation data (encircle orbit angle is unique per enemy)
       const formationData = {};
