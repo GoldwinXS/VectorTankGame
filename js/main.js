@@ -835,7 +835,7 @@ function checkCollisions() {
           proj.mesh.position.distanceTo(e.position) <
           proj.radius + e.radius
         ) {
-          // Directional armour: front 0.65x, side 1.0x, rear 1.5x
+          // Directional armour: front 0.65×, flank 1.2×, rear 1.5×
           const projDir = proj.vel.clone().normalize();
           const eFwd = new THREE.Vector3(
             Math.sin(e.group.rotation.y),
@@ -843,12 +843,11 @@ function checkCollisions() {
             Math.cos(e.group.rotation.y),
           );
           const dot = projDir.dot(eFwd);
-          const dirMult = dot > 0.5 ? 1.5 : dot < -0.5 ? 0.65 : 1.0;
+          const dirMult = dot > 0.5 ? 1.5 : dot < -0.5 ? 0.65 : 1.2;
           e.takeDamage(Math.round(proj.damage * dirMult));
-          // Hit feedback text for non-standard angles
-          if (dot > 0.5) ui.showHitFeedback("REAR HIT  ×1.5", "#ff8800");
-          else if (dot < -0.5)
-            ui.showHitFeedback("FRONT ARMOR  ×0.65", "#44aaff");
+          if (dot > 0.5)       ui.showHitFeedback("REAR HIT  ×1.5",     "#ff8800");
+          else if (dot < -0.5) ui.showHitFeedback("FRONT ARMOR  ×0.65", "#44aaff");
+          else                 ui.showHitFeedback("FLANK HIT  ×1.2",    "#ffcc44");
           if (proj.isMG) audio.playHit(); else audio.playCannonImpact();
           if (!e.alive) {
             audio.playExplosion();

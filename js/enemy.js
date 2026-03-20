@@ -163,7 +163,8 @@ export const TYPES = {
     speed: 0.5, hp: 65, damage: 45, shootRange: 58, shootCd: 5.5,
     bulletSpeed: 20, preferDist: 44, traverseSpeed: 0.6, baseSpread: 0.02,
     hasGravity: true, hasSplash: true, splashRadius: 4.0,
-    leadFactor: 1.0, leadTimeSec: 6.5, turnRate: 0.7,
+    // leadFactor: 0 — mortar computes its own TOF-accurate lead inside _shootMortar
+    leadFactor: 0, turnRate: 0.7,
   },
 };
 
@@ -658,8 +659,12 @@ export class Enemy {
 
     // ── Player velocity tracking for predictive aim ──────────────────────
     if (!this._prevPlayerPos) this._prevPlayerPos = playerPos.clone();
-    this._playerVel.subVectors(playerPos, this._prevPlayerPos).divideScalar(Math.max(delta, 0.001));
-    if (this._playerVel.lengthSq() > 225) this._playerVel.setLength(15); // clamp spike
+    const _rawVel = new THREE.Vector3()
+      .subVectors(playerPos, this._prevPlayerPos)
+      .divideScalar(Math.max(delta, 0.001));
+    if (_rawVel.lengthSq() > 225) _rawVel.setLength(15); // clamp spikes
+    // EMA smoothing — removes one-frame jitter so lead predictions are stable
+    this._playerVel.lerp(_rawVel, 0.15);
     this._prevPlayerPos.copy(playerPos);
 
     // ── Compute lead-adjusted aim target ────────────────────────────────
@@ -931,17 +936,35 @@ export class Enemy {
     this.projectiles.push(proj);
   }
 
-  _shootMortar(aimTarget) {
+  _shootMortar(targetPos) {
     if (this.projectiles.filter(p => !p.isPlayer).length > 75) return;
     const _GRAV = 4.5;
-    const dx = aimTarget.x - this.group.position.x;
-    const dz = aimTarget.z - this.group.position.z;
+
+    // Distance to player's current position
+    const dx0 = targetPos.x - this.group.position.x;
+    const dz0 = targetPos.z - this.group.position.z;
+    const hDist0 = Math.max(4, Math.sqrt(dx0 * dx0 + dz0 * dz0));
+
+    // TOF between 2.0–3.2 s — fast enough to demand evasion, slow enough to dodge
+    // Formula: at bulletSpeed * 0.6 horizontal, derive how long it takes to cross hDist0
+    const tof = Math.max(2.0, Math.min(3.2, hDist0 / (this.def.bulletSpeed * 0.6)));
+
+    // Apply lead using the ACTUAL TOF — more accurate than the pre-computed aimTarget
+    const aim = targetPos.clone();
+    if (this._playerVel.lengthSq() > 0.04) {
+      aim.x += this._playerVel.x * tof;
+      aim.z += this._playerVel.z * tof;
+    }
+
+    const dx = aim.x - this.group.position.x;
+    const dz = aim.z - this.group.position.z;
     const hDist = Math.max(4, Math.sqrt(dx * dx + dz * dz));
-    // High-arc launch: fixed vertical speed, horizontal scaled to reach target
-    const vy = this.def.bulletSpeed * 0.82;
-    const tof = (2 * vy) / _GRAV;
-    const vh = Math.min(hDist / tof, this.def.bulletSpeed * 0.7);
+
+    // Derive launch components that exactly reach aim at time tof
+    const vy = (_GRAV * tof) / 2;   // vertical: rises then falls, lands at t=tof
+    const vh = hDist / tof;          // horizontal: exact to cover hDist in tof seconds
     const hx = dx / hDist, hz = dz / hDist;
+
     const vel = new THREE.Vector3(hx * vh, vy, hz * vh);
     const speed = vel.length();
     const dir = vel.clone().normalize();
@@ -955,9 +978,9 @@ export class Enemy {
     );
     proj._enemyType = this.type;
     proj.splashRadius = this.def.splashRadius ?? 4.0;
-    // Predicted landing position for warning ring
-    proj._warnX = this.group.position.x + hx * hDist;
-    proj._warnZ = this.group.position.z + hz * hDist;
+    // Predicted landing position for the warning ring
+    proj._warnX = aim.x;
+    proj._warnZ = aim.z;
     this.projectiles.push(proj);
   }
 
