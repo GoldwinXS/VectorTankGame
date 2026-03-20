@@ -275,16 +275,16 @@ button:hover {
   inset: auto;
   right: 0;
   top: 0;
-  width: 420px;
+  width: 500px;
   height: 100vh;
-  background: linear-gradient(90deg, transparent 0%, rgba(2, 11, 24, 0.97) 30%);
+  background: linear-gradient(90deg, transparent 0%, rgba(2, 11, 24, 0.97) 25%);
   align-items: flex-end;
   justify-content: center;
   padding: 0;
 }
 #game-over-screen .screen-content {
-  width: 360px;
-  padding: 40px 32px 40px 60px;
+  width: 440px;
+  padding: 40px 32px 40px 28px;
   align-items: flex-start;
   text-align: left;
   margin: auto 0;

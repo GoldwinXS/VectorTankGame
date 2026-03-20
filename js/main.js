@@ -24,6 +24,23 @@ import { UpgradePicker } from "./upgrade.js";
 import { spawnPickups, spawnPickupsAt } from "./pickup.js";
 import { audio } from "./audio.js";
 
+// Shared soft circular sprite for smoke particles
+let _smokeTexMain = null;
+function _getSmokeTex() {
+  if (_smokeTexMain) return _smokeTexMain;
+  const c = document.createElement("canvas");
+  c.width = c.height = 32;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0,   "rgba(255,255,255,0.9)");
+  g.addColorStop(0.4, "rgba(255,255,255,0.5)");
+  g.addColorStop(1,   "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 32, 32);
+  _smokeTexMain = new THREE.CanvasTexture(c);
+  return _smokeTexMain;
+}
+
 function safeExitPointerLock() {
   try {
     document.exitPointerLock?.();
@@ -119,8 +136,7 @@ function showMainMenu() {
     ?.classList.add("selected");
   ui.hidePause();
   _introCam = null;
-  fpvMode = false;
-  ui.setFpv(false);
+  viewMode = 1;
   document.getElementById("game-over-screen")?.classList.add("hidden");
   document.getElementById("controls-hint")?.classList.add("hidden");
   document.getElementById("training-banner")?.classList.add("hidden");
@@ -326,13 +342,15 @@ const CAM_SENSITIVITY = 0.0025;
 const PITCH_SENSITIVITY = 0.0012;
 const CAM_DIST = 12;
 const CAM_H = 5.5;
+const CAM_DIST_MID = 5.5;
+const CAM_H_MID = 3.0;
 
 // ── Input ─────────────────────────────────────────────────────────────────────
 const keys = {};
 let mouseDown = false;
 let rightMouseDown = false;
 let freeLook = false;
-let fpvMode = false;
+let viewMode = 1; // 0 = FPV, 1 = mid (over-shoulder), 2 = far
 let paused = false;
 let pitchDelta = 0;
 let _introCam = null; // intro fly-in sequence state
@@ -397,8 +415,7 @@ window.addEventListener("keydown", (e) => {
   keys[e.code] = true;
   if (e.code === "KeyC") freeLook = true;
   if (e.code === "KeyV" && !_introCam) {
-    fpvMode = !fpvMode;
-    ui.setFpv(fpvMode);
+    viewMode = (viewMode + 1) % 3;
   }
   if (e.code === "KeyH" && !isMobile) {
     document.getElementById("hud")?.classList.toggle("hud-hidden");
@@ -562,7 +579,7 @@ function updateCrosshair() {
   }
 
   // In FPV mode: crosshair stays at screen center
-  if (fpvMode) {
+  if (viewMode === 0) {
     crosshairEl.style.left = "50%";
     crosshairEl.style.top = "50%";
     const charge = player.aimCharge;
@@ -667,8 +684,7 @@ function init() {
   camMouseDelta = 0;
   _currentStage = 0;
   _introCam = null;
-  fpvMode = false;
-  ui.setFpv(false);
+  viewMode = 1;
   applyStageVibe(0, false);
 
   gameBounds = {
@@ -954,14 +970,11 @@ function _startIntroShot() {
     progress: 0,
     dur: 3.8,
     fromPos: camera.position.clone(), // capture current idle orbit position — no jarring cut
-    // End at the normal 3rd-person position (behind the tank) to avoid clipping through the turret
-    toPos: new THREE.Vector3(
-      px - Math.sin(camYaw) * CAM_DIST,
-      py + CAM_H,
-      pz - Math.cos(camYaw) * CAM_DIST,
-    ),
+    // Land directly above the tank — avoids clipping through turret geometry
+    // When the intro ends the camera snaps down ~1.8 units into FPV, barely noticeable
+    toPos: new THREE.Vector3(px, py + 3.0, pz),
     fromLook: new THREE.Vector3(0, 0, 0), // idle orbit always looks at origin
-    toLook: new THREE.Vector3(px + Math.sin(camYaw) * 5, 0.5, pz + Math.cos(camYaw) * 5),
+    toLook: new THREE.Vector3(px + Math.sin(camYaw) * 20, py + 1.2, pz + Math.cos(camYaw) * 20),
   };
 }
 
@@ -1102,7 +1115,7 @@ function updateCamera(delta) {
     camMouseDelta = 0;
     if (_introCam.progress >= 1) {
       _introCam = null;
-      // Drop into normal 3rd-person — player can press V for FPV
+      viewMode = 1; // start in mid view after intro
     }
     return;
   }
@@ -1111,8 +1124,8 @@ function updateCamera(delta) {
   camYaw += camMouseDelta;
   camMouseDelta = 0;
 
-  if (fpvMode) {
-    // First-person: camera sits above player center, looks along camYaw+pitch
+  if (viewMode === 0) {
+    // FPV: camera sits above player center, looks along camYaw+pitch
     const pitch = player.barrelPitch;
     camera.position.set(
       player.position.x,
@@ -1124,6 +1137,30 @@ function updateCamera(delta) {
       player.position.y + 1.2 + Math.sin(pitch) * 20,
       player.position.z + Math.cos(camYaw) * Math.cos(pitch) * 20,
     );
+    if (shakeIntensity > 0) {
+      if (_shakeEnabled) {
+        camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+        camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+      }
+      shakeIntensity = Math.max(0, shakeIntensity - delta * 4);
+    }
+    return;
+  }
+
+  if (viewMode === 1) {
+    // Mid view: close over-the-shoulder — shows tank orientation clearly
+    _camPos.set(
+      player.position.x - Math.sin(camYaw) * CAM_DIST_MID,
+      player.position.y + CAM_H_MID,
+      player.position.z - Math.cos(camYaw) * CAM_DIST_MID,
+    );
+    camera.position.lerp(_camPos, Math.min(1, delta * 5));
+    _camLook.set(
+      player.position.x + Math.sin(camYaw) * 5,
+      0.5,
+      player.position.z + Math.cos(camYaw) * 5,
+    );
+    camera.lookAt(_camLook);
     if (shakeIntensity > 0) {
       if (_shakeEnabled) {
         camera.position.x += (Math.random() - 0.5) * shakeIntensity;
@@ -1172,7 +1209,7 @@ function loop(ts) {
 
   // Raycast from screen center to get world aim target (frozen during free-look)
   if (player && !freeLook) {
-    if (fpvMode) {
+    if (viewMode === 0) {
       // In FPV, aim target is directly ahead along camYaw on the ground plane
       aimTarget.set(
         player.position.x + Math.sin(camYaw) * 30,
@@ -1382,9 +1419,8 @@ if (isMobile) {
     "touchstart",
     (e) => {
       e.preventDefault();
-      fpvMode = !fpvMode;
-      ui.setFpv(fpvMode);
-      btnFpvMob.classList.toggle("mob-btn-active", fpvMode);
+      viewMode = (viewMode + 1) % 3;
+      btnFpvMob.classList.toggle("mob-btn-active", viewMode === 0);
     },
     { passive: false },
   );
