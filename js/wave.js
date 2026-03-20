@@ -316,6 +316,7 @@ export class WaveManager {
   clearEnemies() {
     this._pendingBoss = false;
     this.enemies.forEach((e) => {
+      e._cleanupSmoke?.();
       e.alive = false;
       e.group.parent?.remove(e.group);
     });

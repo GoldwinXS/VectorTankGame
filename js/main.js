@@ -90,6 +90,15 @@ function showMenuPanel(name) {
 
 function showMainMenu() {
   safeExitPointerLock();
+  // Clean up game-over cinematic
+  if (_smokeParticles) {
+    scene.remove(_smokeParticles);
+    _smokeParticles.geometry.dispose();
+    _smokeParticles.material.dispose();
+    _smokeParticles = null;
+    _smokeData = null;
+  }
+  _gameOverOrbit = null;
   // Tear down any running game
   if (player) scene.remove(player.group);
   if (waveManager) waveManager.clearEnemies();
@@ -945,13 +954,14 @@ function _startIntroShot() {
     progress: 0,
     dur: 3.8,
     fromPos: camera.position.clone(), // capture current idle orbit position — no jarring cut
-    toPos: new THREE.Vector3(px, py + 1.2, pz),
-    fromLook: new THREE.Vector3(0, 0, 0), // idle orbit always looks at origin
-    toLook: new THREE.Vector3(
-      px + Math.sin(camYaw) * 20,
-      py + 1.2,
-      pz + Math.cos(camYaw) * 20,
+    // End at the normal 3rd-person position (behind the tank) to avoid clipping through the turret
+    toPos: new THREE.Vector3(
+      px - Math.sin(camYaw) * CAM_DIST,
+      py + CAM_H,
+      pz - Math.cos(camYaw) * CAM_DIST,
     ),
+    fromLook: new THREE.Vector3(0, 0, 0), // idle orbit always looks at origin
+    toLook: new THREE.Vector3(px + Math.sin(camYaw) * 5, 0.5, pz + Math.cos(camYaw) * 5),
   };
 }
 
@@ -960,6 +970,94 @@ const _camPos = new THREE.Vector3();
 const _camLook = new THREE.Vector3();
 
 let _idleOrbitAngle = 0;
+
+// ── Game-over cinematic state ──────────────────────────────────────────────────
+let _gameOverOrbit = null; // { angle, cx, cz, radius, height }
+let _smokeParticles = null;
+let _smokeData = null;
+const _SMOKE_N = 90;
+
+function _startGameOverCinematic(playerPos) {
+  _gameOverOrbit = {
+    angle: camYaw + Math.PI,
+    cx: playerPos.x,
+    cz: playerPos.z,
+    radius: 14,
+    height: 6,
+  };
+
+  const N = _SMOKE_N;
+  const positions = new Float32Array(N * 3);
+  const colors = new Float32Array(N * 3);
+  const ages = new Float32Array(N);
+  const lifetimes = new Float32Array(N);
+  const vx = new Float32Array(N), vy = new Float32Array(N), vz = new Float32Array(N);
+  const ox = new Float32Array(N), oy = new Float32Array(N), oz = new Float32Array(N);
+  const baseY = terrainH(playerPos.x, playerPos.z);
+
+  for (let i = 0; i < N; i++) {
+    const lt = 3 + Math.random() * 4;
+    lifetimes[i] = lt;
+    ages[i] = Math.random() * lt; // stagger so particles don't all appear at once
+    const ang = Math.random() * Math.PI * 2;
+    const r = Math.random() * 1.8;
+    ox[i] = playerPos.x + Math.cos(ang) * r;
+    oy[i] = baseY + 0.5 + Math.random() * 1.0;
+    oz[i] = playerPos.z + Math.sin(ang) * r;
+    vx[i] = (Math.random() - 0.5) * 0.9;
+    vy[i] = 0.7 + Math.random() * 1.6;
+    vz[i] = (Math.random() - 0.5) * 0.9;
+    const t = ages[i] / lt;
+    positions[i * 3 + 0] = ox[i] + vx[i] * ages[i];
+    positions[i * 3 + 1] = oy[i] + vy[i] * ages[i];
+    positions[i * 3 + 2] = oz[i] + vz[i] * ages[i];
+    const b = 0.65 * Math.pow(1 - t, 1.5);
+    colors[i * 3] = b; colors[i * 3 + 1] = b; colors[i * 3 + 2] = b;
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  const mat = new THREE.PointsMaterial({
+    size: 1.1, map: _getSmokeTex(), alphaTest: 0.01,
+    sizeAttenuation: true, vertexColors: true,
+    transparent: true, opacity: 0.55, depthWrite: false,
+  });
+  _smokeParticles = new THREE.Points(geo, mat);
+  scene.add(_smokeParticles);
+  _smokeData = { ages, lifetimes, vx, vy, vz, ox, oy, oz, positions, colors };
+}
+
+function _updateSmoke(delta) {
+  if (!_smokeParticles || !_smokeData || !_gameOverOrbit) return;
+  const { ages, lifetimes, vx, vy, vz, ox, oy, oz, positions, colors } = _smokeData;
+  const N = _SMOKE_N;
+  const baseY = terrainH(_gameOverOrbit.cx, _gameOverOrbit.cz);
+  for (let i = 0; i < N; i++) {
+    ages[i] += delta;
+    if (ages[i] >= lifetimes[i]) {
+      ages[i] = 0;
+      const ang = Math.random() * Math.PI * 2;
+      const r = Math.random() * 1.8;
+      ox[i] = _gameOverOrbit.cx + Math.cos(ang) * r;
+      oy[i] = baseY + 0.5 + Math.random() * 1.0;
+      oz[i] = _gameOverOrbit.cz + Math.sin(ang) * r;
+      vx[i] = (Math.random() - 0.5) * 0.9;
+      vy[i] = 0.7 + Math.random() * 1.6;
+      vz[i] = (Math.random() - 0.5) * 0.9;
+      lifetimes[i] = 3 + Math.random() * 4;
+    }
+    const t = ages[i] / lifetimes[i];
+    positions[i * 3 + 0] = ox[i] + vx[i] * ages[i];
+    positions[i * 3 + 1] = oy[i] + vy[i] * ages[i];
+    positions[i * 3 + 2] = oz[i] + vz[i] * ages[i];
+    const b = 0.65 * Math.pow(1 - t, 1.5);
+    colors[i * 3] = b; colors[i * 3 + 1] = b; colors[i * 3 + 2] = b;
+  }
+  _smokeParticles.geometry.attributes.position.needsUpdate = true;
+  _smokeParticles.geometry.attributes.color.needsUpdate = true;
+}
+
 function updateCamera(delta) {
   // Idle: slow orbit over terrain for main menu background
   if (state === STATE.IDLE) {
@@ -971,6 +1069,18 @@ function updateCamera(delta) {
       Math.cos(_idleOrbitAngle) * r,
     );
     camera.lookAt(0, 0, 0);
+    return;
+  }
+
+  // Game-over cinematic: slow orbit around the destroyed tank
+  if (state === STATE.GAME_OVER && _gameOverOrbit) {
+    _gameOverOrbit.angle += delta * 0.22;
+    camera.position.set(
+      _gameOverOrbit.cx + Math.sin(_gameOverOrbit.angle) * _gameOverOrbit.radius,
+      _gameOverOrbit.height,
+      _gameOverOrbit.cz + Math.cos(_gameOverOrbit.angle) * _gameOverOrbit.radius,
+    );
+    camera.lookAt(_gameOverOrbit.cx, 1.5, _gameOverOrbit.cz);
     return;
   }
 
@@ -992,8 +1102,7 @@ function updateCamera(delta) {
     camMouseDelta = 0;
     if (_introCam.progress >= 1) {
       _introCam = null;
-      fpvMode = true;
-      ui.setFpv(true);
+      // Drop into normal 3rd-person — player can press V for FPV
     }
     return;
   }
@@ -1127,7 +1236,8 @@ function loop(ts) {
 
     resolveObstacles(player.position, player.radius);
 
-    waveManager.update(delta, player.position, gameBounds);
+    // Skip enemy simulation during intro fly-in — unfair to take damage before having control
+    if (!_introCam) waveManager.update(delta, player.position, gameBounds);
     for (const e of waveManager.enemies) {
       if (e.alive) {
         resolveObstacles(e.group.position, e.radius);
@@ -1199,6 +1309,7 @@ function loop(ts) {
         safeExitPointerLock();
         saveScore(score, waveNum - 1, chosenHull);
         document.getElementById("controls-hint")?.classList.add("hidden");
+        _startGameOverCinematic(player.position.clone());
         setTimeout(() => {
           ui.showGameOver(
             score,
@@ -1206,10 +1317,12 @@ function loop(ts) {
             nn.summary(waveNum - 1),
             showMainMenu,
           );
-        }, 600);
+        }, 1400);
       }
     }
   }
+
+  if (state === STATE.GAME_OVER) _updateSmoke(delta);
 
   updateCrosshair();
   updateHeadingArrow();

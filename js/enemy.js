@@ -2,6 +2,23 @@ import * as THREE from "three";
 import { Projectile } from "./projectile.js";
 import { OBSTACLES } from "./scene.js";
 
+// Lazy-created soft circular sprite for smoke particles (shared across all enemies)
+let _smokeTexCache = null;
+function _getSmokeTex() {
+  if (_smokeTexCache) return _smokeTexCache;
+  const c = document.createElement("canvas");
+  c.width = c.height = 32;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0,   "rgba(255,255,255,0.9)");
+  g.addColorStop(0.4, "rgba(255,255,255,0.5)");
+  g.addColorStop(1,   "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 32, 32);
+  _smokeTexCache = new THREE.CanvasTexture(c);
+  return _smokeTexCache;
+}
+
 // ── Tank explosion effect ──────────────────────────────────────────────────
 function _spawnTankExplosion(scene, pos, isBoss = false) {
   const s = isBoss ? 2.6 : 1.0; // scale multiplier for boss explosions
@@ -240,6 +257,10 @@ export class Enemy {
     this._losCheckTimer = 0;
     this._hitFlash      = 0; // seconds of red hit-flash remaining
 
+    // Damage smoke
+    this._smokeParticles = null;
+    this._smokeData      = null;
+
     this._buildMesh();
     this.group.rotation.order = 'YXZ'; // YXZ = yaw first, then local pitch/roll
     this.group.position.set(spawnPos.x, 0, spawnPos.z);
@@ -250,6 +271,69 @@ export class Enemy {
     this._tactic = tactic;
     this._encircleAngle = formationData.angle ?? Math.random() * Math.PI * 2;
     this._encircleElapsed = 0;
+  }
+
+  // ── Damage smoke ─────────────────────────────────────────────────────────
+
+  _initSmoke() {
+    const N = 28;
+    const positions = new Float32Array(N * 3);
+    const colors    = new Float32Array(N * 3);
+    const ages      = new Float32Array(N);
+    const lifetimes = new Float32Array(N);
+    const vx = new Float32Array(N), vy = new Float32Array(N), vz = new Float32Array(N);
+    const ox = new Float32Array(N), oy = new Float32Array(N), oz = new Float32Array(N);
+    const ex = this.group.position.x, ey = this.group.position.y, ez = this.group.position.z;
+    for (let i = 0; i < N; i++) {
+      const lt = 1.5 + Math.random() * 2.5;
+      lifetimes[i] = lt;
+      ages[i] = Math.random() * lt;
+      const a = Math.random() * Math.PI * 2, r = Math.random() * 0.45;
+      ox[i] = ex + Math.cos(a) * r; oy[i] = ey + 0.4 + Math.random() * 0.6; oz[i] = ez + Math.sin(a) * r;
+      vx[i] = (Math.random() - 0.5) * 0.5; vy[i] = 0.5 + Math.random() * 1.1; vz[i] = (Math.random() - 0.5) * 0.5;
+      const t = ages[i] / lt;
+      positions[i*3] = ox[i] + vx[i]*ages[i]; positions[i*3+1] = oy[i] + vy[i]*ages[i]; positions[i*3+2] = oz[i] + vz[i]*ages[i];
+      const b = 0.55 * Math.pow(1 - t, 1.5);
+      colors[i*3] = b; colors[i*3+1] = b; colors[i*3+2] = b;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute("color",    new THREE.BufferAttribute(colors,    3));
+    const mat = new THREE.PointsMaterial({ size: 0.9, map: _getSmokeTex(), alphaTest: 0.01, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.45, depthWrite: false });
+    this._smokeParticles = new THREE.Points(geo, mat);
+    this.scene.add(this._smokeParticles);
+    this._smokeData = { ages, lifetimes, vx, vy, vz, ox, oy, oz, positions, colors, N };
+  }
+
+  _updateSmoke(delta) {
+    if (!this._smokeParticles || !this._smokeData) return;
+    const { ages, lifetimes, vx, vy, vz, ox, oy, oz, positions, colors, N } = this._smokeData;
+    const ex = this.group.position.x, ey = this.group.position.y, ez = this.group.position.z;
+    for (let i = 0; i < N; i++) {
+      ages[i] += delta;
+      if (ages[i] >= lifetimes[i]) {
+        ages[i] = 0;
+        const a = Math.random() * Math.PI * 2, r = Math.random() * 0.45;
+        ox[i] = ex + Math.cos(a) * r; oy[i] = ey + 0.4 + Math.random() * 0.6; oz[i] = ez + Math.sin(a) * r;
+        vx[i] = (Math.random() - 0.5) * 0.5; vy[i] = 0.5 + Math.random() * 1.1; vz[i] = (Math.random() - 0.5) * 0.5;
+        lifetimes[i] = 1.5 + Math.random() * 2.5;
+      }
+      const t = ages[i] / lifetimes[i];
+      positions[i*3] = ox[i] + vx[i]*ages[i]; positions[i*3+1] = oy[i] + vy[i]*ages[i]; positions[i*3+2] = oz[i] + vz[i]*ages[i];
+      const b = 0.55 * Math.pow(1 - t, 1.5);
+      colors[i*3] = b; colors[i*3+1] = b; colors[i*3+2] = b;
+    }
+    this._smokeParticles.geometry.attributes.position.needsUpdate = true;
+    this._smokeParticles.geometry.attributes.color.needsUpdate    = true;
+  }
+
+  _cleanupSmoke() {
+    if (!this._smokeParticles) return;
+    this.scene.remove(this._smokeParticles);
+    this._smokeParticles.geometry.dispose();
+    this._smokeParticles.material.dispose();
+    this._smokeParticles = null;
+    this._smokeData = null;
   }
 
   // ── Mesh builders ────────────────────────────────────────────────────────
@@ -884,6 +968,12 @@ export class Enemy {
     // ── Visual damage update ──────────────────────────────────────────────
     if (this._hitFlash > 0) this._hitFlash -= delta;
     this._updateDamageVisuals();
+
+    // ── Damage smoke at low HP ────────────────────────────────────────────
+    if (this.hp / this._maxHp < 0.28) {
+      if (!this._smokeParticles) this._initSmoke();
+      this._updateSmoke(delta);
+    }
   }
 
   _shoot() {
@@ -992,6 +1082,7 @@ export class Enemy {
   }
 
   _die() {
+    this._cleanupSmoke();
     _spawnTankExplosion(this.scene, this.group.position.clone(), this.isBoss);
     setTimeout(() => this.group.parent?.remove(this.group), 60);
   }

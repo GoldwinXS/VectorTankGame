@@ -269,14 +269,40 @@ button:hover {
   box-shadow: 0 0 24px rgba(0,255,255,0.3);
 }
 
+/* ── Game-over panel — right-side cinematic layout ── */
+#game-over-screen {
+  position: fixed;
+  inset: auto;
+  right: 0;
+  top: 0;
+  width: 420px;
+  height: 100vh;
+  background: linear-gradient(90deg, transparent 0%, rgba(2, 11, 24, 0.97) 30%);
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+#game-over-screen .screen-content {
+  width: 360px;
+  padding: 40px 32px 40px 60px;
+  align-items: flex-start;
+  text-align: left;
+  margin: auto 0;
+}
+#game-over-screen h1 {
+  font-size: 52px;
+  letter-spacing: 10px;
+}
+
 #final-score   { font-size: 52px; color: var(--cyan); letter-spacing: 4px; }
 #waves-survived { font-size: 36px; color: var(--cyan); letter-spacing: 2px; }
 
 #ai-insight {
   background: var(--panel);
   border: 1px solid var(--border);
-  padding: 16px 28px;
-  min-width: 300px;
+  padding: 16px 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 #ai-insight-text {
   margin-top: 10px;
@@ -294,8 +320,8 @@ button:hover {
   font-size: 9px;
   letter-spacing: 1.5px;
   opacity: 0.55;
-  width: 110px;
-  text-align: right;
+  flex: 1;
+  text-align: left;
 }
 .ai-tactic-pill {
   font-size: 10px;
