@@ -105,8 +105,8 @@ export const TYPES = {
   tanky: {
     color: 0xff3300, emissive: 0xff2200, scale: 1.3,
     speed: 1.8, hp: 160, damage: 30, shootRange: 55, shootCd: 3.0,
-    bulletSpeed: 16, preferDist: 22, traverseSpeed: 0.7, baseSpread: 0.10,
-    leadFactor: 0.6, turnRate: 1.2,
+    bulletSpeed: 22, preferDist: 22, traverseSpeed: 0.7, baseSpread: 0.10,
+    leadFactor: 0.6, turnRate: 1.2, hasGravity: true, arcShot: true,
   },
   swarm: {
     color: 0xff00ff, emissive: 0xcc00cc, scale: 0.5,
@@ -894,14 +894,37 @@ export class Enemy {
     dir.z += (Math.random() - 0.5) * spread;
     dir.normalize();
 
-    const barrelZ    = this.type === 'stug' ? 2.4 : 1.5;
-    const barrelLocal = new THREE.Vector3(0, 0.65, barrelZ);
-    this.group.localToWorld(barrelLocal);
-    // barrelLocal.y is now correct world-space height (terrain + scale + slope).
+    // Spawn from actual barrel tip in world space — fixes bullets appearing at hull center
+    let spawnPos;
+    if (this.type === 'stug') {
+      spawnPos = new THREE.Vector3(0, 0.6, 2.55);
+      this.group.localToWorld(spawnPos);
+    } else {
+      spawnPos = new THREE.Vector3(0, 0, 1.3);
+      this.turretGroup.localToWorld(spawnPos);
+    }
+
+    // Arc shot — lob shell on a ballistic trajectory (tanky and other arcShot types)
+    let launchDir = dir;
+    let launchSpeed = this.def.bulletSpeed;
+    if (this.def.arcShot) {
+      const toPlayer = new THREE.Vector3().subVectors(spawnPos, this.group.position);
+      toPlayer.y = 0;
+      const hDist = Math.max(6, toPlayer.length());
+      const spd = this.def.bulletSpeed;
+      const sinTwo = Math.min(0.98, (4.5 * hDist) / (spd * spd));
+      const arcAngle = Math.asin(sinTwo) / 2; // low-angle arc
+      launchDir = dir.clone();
+      launchDir.y = Math.sin(arcAngle);
+      launchDir.x *= Math.cos(arcAngle);
+      launchDir.z *= Math.cos(arcAngle);
+      launchSpeed = spd; // magnitude preserved
+      launchDir = launchDir.normalize();
+    }
 
     const proj = new Projectile(
-      this.scene, barrelLocal, dir,
-      this.def.bulletSpeed, this.damage, false,
+      this.scene, spawnPos, launchDir,
+      launchSpeed, this.damage, false,
       this.def.color, this.def.hasGravity ?? false, this.def.isMG ?? false,
     );
     proj._enemyType = this.type;

@@ -102,6 +102,7 @@
       <!-- Secondary controls -->
       <div id="btn-fpv-mob">FPV</div>
       <div id="btn-hud-mob">≡ HUD</div>
+      <div id="btn-reload-mob">⟳ MG</div>
       <div id="btn-pause-mob">II</div>
     </div>
 
@@ -123,125 +124,143 @@
       <div class="screen-content">
         <h1>VECTOR</h1>
         <p class="subtitle">THE AI ADAPTS TO YOUR WEAKNESSES</p>
+        <div class="menu-btns">
+          <button id="btn-menu-engage">ENGAGE</button>
+          <button id="btn-menu-training" class="btn-secondary">TRAINING</button>
+          <button id="btn-menu-howto" class="btn-secondary">HOW TO PLAY</button>
+          <button id="btn-menu-settings" class="btn-secondary">SETTINGS</button>
+          <button id="btn-menu-leaderboard" class="btn-secondary">LEADERBOARD</button>
+        </div>
+      </div>
+    </div>
 
-        <!-- Main buttons panel -->
-        <div id="menu-main-panel">
-          <div class="menu-btns">
-            <button id="btn-menu-engage">ENGAGE</button>
-            <button id="btn-menu-training" class="btn-secondary">TRAINING</button>
-            <button id="btn-menu-howto" class="btn-secondary">HOW TO PLAY</button>
-            <button id="btn-menu-settings" class="btn-secondary">SETTINGS</button>
-            <button id="btn-menu-leaderboard" class="btn-secondary">LEADERBOARD</button>
+    <!-- ── Settings screen ───────────────────────────────────────────── -->
+    <div id="settings-screen" class="screen hidden">
+      <div class="screen-content">
+        <h1>SETTINGS</h1>
+        <div class="settings-section">
+          <div class="settings-section-title">GRAPHICS</div>
+          <div class="settings-row">
+            <span class="settings-label">QUALITY</span>
+            <button class="preset-btn" id="btn-gfx-low">LOW</button>
+            <button class="preset-btn" id="btn-gfx-med">MED</button>
+            <button class="preset-btn" id="btn-gfx-high">HIGH</button>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">SCREEN SHAKE</span>
+            <button class="preset-btn" id="btn-settings-shake">ON</button>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">DISPLAY</span>
+            <button class="preset-btn" id="btn-settings-fullscreen">FULLSCREEN</button>
           </div>
         </div>
-
-        <!-- Settings sub-panel -->
-        <div id="menu-settings-panel" class="hidden menu-sub-panel">
-          <h2 class="panel-title">SETTINGS</h2>
-          <div class="settings-section">
-            <div class="settings-section-title">GRAPHICS</div>
-            <div class="settings-row">
-              <span class="settings-label">QUALITY</span>
-              <button class="preset-btn" id="btn-gfx-low">LOW</button>
-              <button class="preset-btn" id="btn-gfx-med">MED</button>
-              <button class="preset-btn" id="btn-gfx-high">HIGH</button>
-            </div>
-            <div class="settings-row">
-              <span class="settings-label">SCREEN SHAKE</span>
-              <button class="preset-btn" id="btn-settings-shake">ON</button>
-            </div>
-            <div class="settings-row">
-              <span class="settings-label">DISPLAY</span>
-              <button class="preset-btn" id="btn-settings-fullscreen">FULLSCREEN</button>
-            </div>
+        <div class="settings-section">
+          <div class="settings-section-title">AUDIO</div>
+          <div class="audio-row">
+            <button class="inline-mute" id="menu-btn-mute">♪</button>
+            <span class="audio-label">MASTER</span>
+            <input type="range" class="inline-vol" id="menu-vol-master" min="0" max="1" step="0.05" value="0.5">
           </div>
-          <div class="settings-section">
-            <div class="settings-section-title">AUDIO</div>
-            <div class="audio-row">
-              <button class="inline-mute" id="menu-btn-mute">♪</button>
-              <span class="audio-label">MASTER</span>
-              <input type="range" class="inline-vol" id="menu-vol-master" min="0" max="1" step="0.05" value="0.5">
-            </div>
-            <div class="audio-row">
-              <span class="audio-label" style="margin-left:44px">MUSIC</span>
-              <input type="range" class="inline-vol" id="menu-vol-music" min="0" max="1" step="0.05" value="0.35">
-            </div>
-            <div class="audio-row">
-              <span class="audio-label" style="margin-left:44px">SFX</span>
-              <input type="range" class="inline-vol" id="menu-vol-sfx" min="0" max="1" step="0.05" value="0.65">
-            </div>
+          <div class="audio-row">
+            <span class="audio-label" style="margin-left:44px">MUSIC</span>
+            <input type="range" class="inline-vol" id="menu-vol-music" min="0" max="1" step="0.05" value="0.35">
           </div>
-          <div class="settings-section">
-            <div class="settings-section-title">DEVICE</div>
-            <div class="settings-row">
-              <span class="settings-label">UI MODE</span>
-              <button class="preset-btn" id="btn-settings-mobile">AUTO</button>
-            </div>
+          <div class="audio-row">
+            <span class="audio-label" style="margin-left:44px">SFX</span>
+            <input type="range" class="inline-vol" id="menu-vol-sfx" min="0" max="1" step="0.05" value="0.65">
           </div>
-          <button id="btn-menu-settings-back" class="btn-back">← BACK</button>
         </div>
-
-        <!-- Leaderboard sub-panel -->
-        <div id="menu-leaderboard-panel" class="hidden menu-sub-panel">
-          <h2 class="panel-title">LEADERBOARD</h2>
-          <div id="leaderboard-entries"></div>
-          <button id="btn-menu-leaderboard-back" class="btn-back">← BACK</button>
-        </div>
-
-        <!-- How to Play sub-panel -->
-        <div id="menu-howto-panel" class="hidden menu-sub-panel">
-          <h2 class="panel-title">HOW TO PLAY</h2>
-          <div class="howto-sections">
-            <div class="howto-section">
-              <div class="howto-title">OBJECTIVE</div>
-              <p>Survive endless waves of enemy tanks. Destroy all enemies to advance. Your score and kills carry between waves.</p>
-            </div>
-            <div class="howto-section">
-              <div class="howto-title">WEAPONS</div>
-              <p><strong>CANNON</strong> — High damage, arcing shell. Hold still and wait for the aim circle to shrink before firing for maximum accuracy. Moving and swinging the turret widens spread.</p>
-              <p><strong>COAX MG</strong> — Rapid fire, 30 rounds, auto-reloads. Good for suppressing fast enemies at close range.</p>
-            </div>
-            <div class="howto-section">
-              <div class="howto-title">COMPONENT DAMAGE</div>
-              <p>Taking hits can disable systems. Watch for alerts at screen center:</p>
-              <ul class="howto-list">
-                <li><strong>TRACK DAMAGED</strong> — Hull rotation blocked until repaired</li>
-                <li><strong>ENGINE HIT</strong> — Speed heavily reduced</li>
-                <li><strong>TURRET LOCKED</strong> — Turret traverse blocked</li>
-              </ul>
-              <p>Damage clears after a short time, or grab a repair pickup to restore systems immediately.</p>
-            </div>
-            <div class="howto-section">
-              <div class="howto-title">PICKUPS</div>
-              <p>Destroyed enemies sometimes drop crates. Drive over them to collect:</p>
-              <ul class="howto-list">
-                <li><strong>REPAIR</strong> — Restores hull HP and clears component damage</li>
-                <li><strong>AMMO</strong> — Reloads MG and restores cannon charges</li>
-                <li><strong>SHIELD</strong> — Temporary damage reduction</li>
-                <li><strong>SPEED</strong> — Temporary speed boost</li>
-              </ul>
-            </div>
-            <div class="howto-section">
-              <div class="howto-title">UPGRADES &amp; SHOP</div>
-              <p>After each wave you choose one upgrade (damage, armor, reload speed, etc.). Every 5 waves a shop opens — spend score credits on hull repairs, extra lives, or permanent boosts.</p>
-            </div>
-            <div class="howto-section">
-              <div class="howto-title">THE AI</div>
-              <p>Enemy tactics adapt to your play style. If you're accurate the AI flanks. If you're slow it encircles. Watch the AI PROTOCOL panel in the HUD to see what strategy the enemy is running. Every 5 waves a boss appears — significantly tougher than normal enemies.</p>
-            </div>
-            <div class="howto-section">
-              <div class="howto-title">TIPS</div>
-              <ul class="howto-list">
-                <li>Stop moving before firing the cannon — spread shrinks fast when still</li>
-                <li>Use MG to finish low-HP enemies and save cannon charges</li>
-                <li>Stay near the center — the map boundary expands each wave</li>
-                <li>Rear hits deal 1.5× damage — protect your flanks</li>
-                <li>Front armor reduces incoming damage from direct frontal fire</li>
-              </ul>
-            </div>
+        <div class="settings-section">
+          <div class="settings-section-title">DEVICE</div>
+          <div class="settings-row">
+            <span class="settings-label">UI MODE</span>
+            <button class="preset-btn" id="btn-settings-mobile">AUTO</button>
           </div>
-          <button id="btn-menu-howto-back" class="btn-back">← BACK</button>
         </div>
+        <div class="settings-section">
+          <div class="settings-section-title">AI MEMORY</div>
+          <div class="settings-row">
+            <span class="settings-label">TACTIC WEIGHTS</span>
+            <button class="preset-btn" id="btn-settings-reset-ai">RESET</button>
+          </div>
+          <div class="settings-row" style="font-size:9px;opacity:0.55;letter-spacing:1px">Resets AI learning — it will re-learn from scratch</div>
+        </div>
+        <button id="btn-menu-settings-back" class="btn-back">← BACK</button>
+      </div>
+    </div>
+
+    <!-- ── Leaderboard screen ────────────────────────────────────────── -->
+    <div id="leaderboard-screen" class="screen hidden">
+      <div class="screen-content">
+        <h1>LEADERBOARD</h1>
+        <div id="leaderboard-entries"></div>
+        <button id="btn-menu-leaderboard-back" class="btn-back">← BACK</button>
+      </div>
+    </div>
+
+    <!-- ── How to Play screen ────────────────────────────────────────── -->
+    <div id="howto-screen" class="screen hidden">
+      <div class="screen-content">
+        <h1>HOW TO PLAY</h1>
+        <div class="howto-sections">
+          <div class="howto-section">
+            <div class="howto-title">OBJECTIVE</div>
+            <p>Survive endless waves of enemy tanks. Destroy all enemies to advance. Your score and kills carry between waves.</p>
+          </div>
+          <div class="howto-section">
+            <div class="howto-title">WEAPONS</div>
+            <p><strong>CANNON</strong> — High damage, arcing shell. Hold still and wait for the aim circle to shrink before firing for maximum accuracy. Moving and swinging the turret widens spread.</p>
+            <p><strong>COAX MG</strong> — Rapid fire, 30 rounds, auto-reloads. Good for suppressing fast enemies at close range.</p>
+          </div>
+          <div class="howto-section">
+            <div class="howto-title">COMPONENT DAMAGE</div>
+            <p>Taking hits can disable systems. Watch for alerts at screen center:</p>
+            <ul class="howto-list">
+              <li><strong>TRACK DAMAGED</strong> — Hull rotation blocked until repaired</li>
+              <li><strong>ENGINE HIT</strong> — Speed heavily reduced</li>
+              <li><strong>TURRET LOCKED</strong> — Turret traverse blocked</li>
+            </ul>
+            <p>Damage clears after a short time, or grab a repair pickup to restore systems immediately.</p>
+          </div>
+          <div class="howto-section">
+            <div class="howto-title">PICKUPS</div>
+            <p>Destroyed enemies sometimes drop crates. Drive over them to collect:</p>
+            <ul class="howto-list">
+              <li><strong>REPAIR</strong> — Restores hull HP and clears component damage</li>
+              <li><strong>AMMO</strong> — Reloads MG and restores cannon charges</li>
+              <li><strong>SHIELD</strong> — Temporary damage reduction</li>
+              <li><strong>SPEED</strong> — Temporary speed boost</li>
+            </ul>
+          </div>
+          <div class="howto-section">
+            <div class="howto-title">UPGRADES &amp; SHOP</div>
+            <p>After each wave you choose one upgrade (damage, armor, reload speed, etc.). Every 5 waves a shop opens — spend score credits on hull repairs, extra lives, or permanent boosts.</p>
+          </div>
+          <div class="howto-section">
+            <div class="howto-title">HULL DIFFERENCES</div>
+            <ul class="howto-list">
+              <li><strong>VANGUARD</strong> — Balanced in every stat. Good for learning the game.</li>
+              <li><strong>BLITZER</strong> — Fragile but fast with a lightning-quick turret. Aim charges very fast when stationary, but fires poorly on the move. Reward: stop, snap-aim, fire.</li>
+              <li><strong>BASTION</strong> — Armoured and powerful. Better stabilisation means you can fire while moving with less penalty, but aim charges slowly. Reward: methodical, deliberate play.</li>
+            </ul>
+          </div>
+          <div class="howto-section">
+            <div class="howto-title">THE AI</div>
+            <p>Enemy tactics adapt across sessions — the AI remembers your weaknesses between runs. If you're accurate it flanks. If you're slow it encircles. Watch the AI PROTOCOL panel in the HUD. Reset AI memory in Settings if you want a fresh start. Every 5 waves a boss appears.</p>
+          </div>
+          <div class="howto-section">
+            <div class="howto-title">TIPS</div>
+            <ul class="howto-list">
+              <li>Stop moving before firing the cannon — spread shrinks fast when still</li>
+              <li>Use MG to finish low-HP enemies and save cannon charges</li>
+              <li>Stay near the center — the map boundary expands each wave</li>
+              <li>Rear hits deal 1.5× damage — protect your flanks</li>
+              <li>Front armor reduces incoming damage from direct frontal fire</li>
+            </ul>
+          </div>
+        </div>
+        <button id="btn-menu-howto-back" class="btn-back">← BACK</button>
       </div>
     </div>
 
@@ -261,7 +280,7 @@
               <div class="hstat"><span>RELOAD</span><span>100%</span></div>
               <div class="hstat"><span>TRV SPD</span><span>100%</span></div>
             </div>
-            <div class="hull-desc">The standard battle tank. Strong in every role.</div>
+            <div class="hull-desc">The standard battle tank. Strong in every role. Balanced aim penalty and charge rate.</div>
           </div>
           <div class="hull-choice" data-hull="blitzer">
             <div class="hull-name">BLITZER</div>
@@ -273,7 +292,7 @@
               <div class="hstat"><span>RELOAD</span><span>80%</span></div>
               <div class="hstat"><span>TRV SPD</span><span>140%</span></div>
             </div>
-            <div class="hull-desc">Fast and fragile. Quick turret lets you snap shots on the move.</div>
+            <div class="hull-desc">Fast and fragile. Aim charges very fast when stationary, but moving hurts accuracy more. Stop, aim fast, fire.</div>
           </div>
           <div class="hull-choice" data-hull="bastion">
             <div class="hull-name">BASTION</div>
@@ -285,7 +304,7 @@
               <div class="hstat"><span>RELOAD</span><span>+25%</span></div>
               <div class="hstat"><span>TRV SPD</span><span>65%</span></div>
             </div>
-            <div class="hull-desc">Slow heavy hitter with a sluggish turret. Plan your shots.</div>
+            <div class="hull-desc">Slow heavy hitter. Better accuracy while moving due to stabilisation, but aim charges slowly. Methodical play rewarded.</div>
           </div>
         </div>
         <button id="btn-hull-confirm">CONFIRM &amp; CONTINUE</button>

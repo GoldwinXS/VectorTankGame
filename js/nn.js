@@ -8,9 +8,18 @@ export const TACTICS = ['RUSH', 'FLANK', 'SUPPRESS', 'ENCIRCLE'];
 
 export class TacticSelector {
   constructor() {
-    this._weights = [1.0, 1.0, 1.0, 1.0]; // one weight per tactic
+    // Persist weights across sessions so the AI keeps learning the player
+    const saved = localStorage.getItem('vec_nn_weights');
+    this._weights = saved ? JSON.parse(saved) : [1.0, 1.0, 1.0, 1.0];
     this._probs   = [0.25, 0.25, 0.25, 0.25];
     this._lastIdx = 0;
+    this._refreshProbs();
+  }
+
+  resetWeights() {
+    this._weights = [1.0, 1.0, 1.0, 1.0];
+    this._refreshProbs();
+    localStorage.removeItem('vec_nn_weights');
   }
 
   _refreshProbs() {
@@ -45,6 +54,7 @@ export class TacticSelector {
       if (i !== chosenIdx) this._weights[i] = Math.max(0.4, this._weights[i] * 0.92);
     }
     this._refreshProbs();
+    localStorage.setItem('vec_nn_weights', JSON.stringify(this._weights));
   }
 
   get probs() { return [...this._probs]; }

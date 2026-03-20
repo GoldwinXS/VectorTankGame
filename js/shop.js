@@ -54,6 +54,12 @@ const ITEMS = [
     cost: 480,
   },
   {
+    id: "mg_precision",
+    label: "MG RANGEFINDER",
+    desc: "−20% MG spread",
+    cost: 320,
+  },
+  {
     id: "regen",
     label: "HULL REGEN CELL",
     desc: "+1 HP/sec passive regeneration",
@@ -150,6 +156,9 @@ export class Shop {
         break;
       case "regen":
         p.regenRate = Math.min(8, (p.regenRate || 0) + 1);
+        break;
+      case "mg_precision":
+        p.mgSpreadMult = Math.max(0.08, (p.mgSpreadMult ?? 1) * 0.80);
         break;
     }
     // Track for upgrade log

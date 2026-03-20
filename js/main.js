@@ -78,16 +78,13 @@ function renderLeaderboard() {
 // ── Menu helpers ──────────────────────────────────────────────────────────────
 function showMenuPanel(name) {
   document
-    .getElementById("menu-main-panel")
-    .classList.toggle("hidden", name !== "main");
-  document
-    .getElementById("menu-settings-panel")
+    .getElementById("settings-screen")
     .classList.toggle("hidden", name !== "settings");
   document
-    .getElementById("menu-leaderboard-panel")
+    .getElementById("leaderboard-screen")
     .classList.toggle("hidden", name !== "leaderboard");
   document
-    .getElementById("menu-howto-panel")
+    .getElementById("howto-screen")
     .classList.toggle("hidden", name !== "howto");
 }
 
@@ -219,7 +216,9 @@ function _applyHullChoice(p) {
     p.speedMult = 1.35;
     p.damageMult = 0.85;
     p.reloadMult = 0.8;
-    p.traverseMult = 1.4; // fast light turret
+    p.traverseMult = 1.4;       // fast light turret
+    p.movementSpreadMult = 1.4; // harder to stabilize — reward stopping to fire
+    p.aimChargeMult = 1.6;      // but charges aim fast when stationary
   } else if (chosenHull === "bastion") {
     p.maxHp = 145;
     p.hp = 145;
@@ -227,9 +226,11 @@ function _applyHullChoice(p) {
     p.damageMult = 1.3;
     p.reloadMult = 1.25;
     p.armorMult = 0.85;
-    p.traverseMult = 0.65; // heavy slow turret
+    p.traverseMult = 0.65;      // heavy slow turret
+    p.movementSpreadMult = 0.65; // heavier chassis = better stabilizer
+    p.aimChargeMult = 0.75;     // but sluggish mechanisms mean slower aim charge
   }
-  // vanguard = defaults (traverseMult = 1.0)
+  // vanguard = defaults (movementSpreadMult 1.0, aimChargeMult 1.0)
 }
 
 // ── Game objects ──────────────────────────────────────────────────────────────
@@ -848,7 +849,7 @@ function checkCollisions() {
           if (dot > 0.5) ui.showHitFeedback("REAR HIT  ×1.5", "#ff8800");
           else if (dot < -0.5)
             ui.showHitFeedback("FRONT ARMOR  ×0.65", "#44aaff");
-          audio.playHit();
+          if (proj.isMG) audio.playHit(); else audio.playCannonImpact();
           if (!e.alive) {
             audio.playExplosion();
             const baseScore = e.isBoss ? 2000 : 100;
@@ -895,6 +896,7 @@ function checkCollisions() {
           player.takeDamage(proj.damage);
           ui.flashDamage();
           shakeIntensity = 0.3;
+          if (proj.isMG) audio.playHit(); else audio.playCannonImpact();
         }
         proj.destroy();
         projectiles.splice(pi, 1);
@@ -1452,6 +1454,14 @@ if (isMobile) {
     );
   }
 
+  const btnReloadMob = document.getElementById("btn-reload-mob");
+  if (btnReloadMob) {
+    btnReloadMob.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      if (player) player.triggerReload();
+    }, { passive: false });
+  }
+
   const btnPauseMob = document.getElementById("btn-pause-mob");
   if (btnPauseMob) {
     btnPauseMob.addEventListener(
@@ -1670,6 +1680,15 @@ document
     mobBtn.addEventListener("click", () => {
       localStorage.setItem("vec_force_mobile", String(!forceMobile));
       location.reload();
+    });
+  }
+
+  const resetAiBtn = document.getElementById("btn-settings-reset-ai");
+  if (resetAiBtn) {
+    resetAiBtn.addEventListener("click", () => {
+      nn.resetWeights();
+      resetAiBtn.textContent = "DONE";
+      setTimeout(() => { resetAiBtn.textContent = "RESET"; }, 1500);
     });
   }
 }

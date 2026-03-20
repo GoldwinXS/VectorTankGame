@@ -629,4 +629,11 @@ export class Player {
   get position() {
     return this.group.position;
   }
+
+  triggerReload() {
+    if (!this.mgReloading && this.mgAmmo < this.mgMaxAmmo) {
+      this.mgReloading = true;
+      this.mgReloadTimer = MG_RELOAD * (this.mgReloadMult ?? 1);
+    }
+  }
 }

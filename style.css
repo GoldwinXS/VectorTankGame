@@ -613,7 +613,7 @@ button:hover {
 }
 
 /* Bottom-right mobile buttons */
-#btn-fpv-mob, #btn-hud-mob {
+#btn-fpv-mob, #btn-hud-mob, #btn-reload-mob {
   position: absolute;
   width: 110px;
   background: rgba(0,10,30,0.72);
@@ -634,8 +634,9 @@ button:hover {
   font-size: 10px;
   opacity: 0.85;
 }
-#btn-fpv-mob { right: 140px; }
-#btn-hud-mob { right: 20px; }
+#btn-fpv-mob    { right: 260px; }
+#btn-reload-mob { right: 140px; color: #ffee44; border-color: rgba(255,238,68,0.45); }
+#btn-hud-mob    { right: 20px; }
 
 /* Active state for toggle buttons */
 .mob-btn-active {
@@ -1172,7 +1173,7 @@ button:hover {
 .training-exit-hint { opacity: 0.6; font-size: 9px; letter-spacing: 2px; }
 
 @media (max-width: 600px) {
-  #hud { gap: 5px; max-height: calc(100vh - 255px); overflow-y: auto; }
+  #hud { gap: 5px; max-height: calc(100vh - 275px); overflow-y: auto; }
   .hud-block { padding: 5px 8px; min-width: 130px; }
   /* AI protocol is too dense for mobile — hide it from the toggle HUD */
   #nn-panel { display: none; }
