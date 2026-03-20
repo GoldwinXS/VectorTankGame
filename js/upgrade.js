@@ -13,9 +13,9 @@ const UPGRADE_POOL = [
     tag: "defense",
     maxTier: 1,
     label: () => "HULL REPAIR",
-    desc: () => "Restore 40 hull points",
+    desc: () => "Restore 100 hull points",
     apply: (p) => {
-      p.hp = Math.min(p.maxHp, p.hp + 40);
+      p.hp = Math.min(p.maxHp, p.hp + 100);
     },
   },
 
@@ -137,9 +137,14 @@ const UPGRADE_POOL = [
     tag: "firepower",
     maxTier: 3,
     label: (t) => `GYRO-STABILIZER ${ROMAN[t - 1]}`,
-    desc: (t) => [`-40% accuracy penalty while moving`, `-70% penalty while moving`, `No accuracy penalty while moving`][t - 1],
+    desc: (t) =>
+      [
+        `-40% accuracy penalty while moving`,
+        `-70% penalty while moving`,
+        `No accuracy penalty while moving`,
+      ][t - 1],
     apply: (p, t) => {
-      p.movementSpreadMult = [0.60, 0.30, 0.0][t - 1];
+      p.movementSpreadMult = [0.6, 0.3, 0.0][t - 1];
     },
   },
 
@@ -148,9 +153,13 @@ const UPGRADE_POOL = [
     tag: "firepower",
     maxTier: 3,
     label: (t) => `BATTLE FOCUS ${ROMAN[t - 1]}`,
-    desc: (t) => `Cannon aim charges ${[40, 70, 110][t - 1]}% faster when stationary`,
+    desc: (t) =>
+      `Cannon aim charges ${[40, 70, 110][t - 1]}% faster when stationary`,
     apply: (p, t) => {
-      p.aimChargeMult = Math.min(4.0, (p.aimChargeMult ?? 1) * (1 + [0.40, 0.70, 1.10][t - 1]));
+      p.aimChargeMult = Math.min(
+        4.0,
+        (p.aimChargeMult ?? 1) * (1 + [0.4, 0.7, 1.1][t - 1]),
+      );
     },
   },
 
@@ -291,8 +300,8 @@ const UPGRADE_POOL = [
     label: () => "CREW APTITUDE",
     desc: () => "+15% damage, speed and traverse",
     apply: (p) => {
-      p.damageMult   = Math.min(5.0, p.damageMult * 1.15);
-      p.speedMult    = Math.min(2.5, p.speedMult * 1.15);
+      p.damageMult = Math.min(5.0, p.damageMult * 1.15);
+      p.speedMult = Math.min(2.5, p.speedMult * 1.15);
       p.traverseMult = Math.min(3.0, (p.traverseMult ?? 1) * 1.15);
     },
   },
@@ -356,11 +365,11 @@ const UPGRADE_POOL = [
     tag: "firepower",
     maxTier: 4,
     label: (t) => `RANGEFINDER ${ROMAN[t - 1]}`,
-    desc: (t) => `-${Math.round((0.20 + (t - 1) * 0.10) * 100)}% MG spread`,
+    desc: (t) => `-${Math.round((0.2 + (t - 1) * 0.1) * 100)}% MG spread`,
     apply: (p, t) => {
       p.mgSpreadMult = Math.max(
         0.08,
-        (p.mgSpreadMult ?? 1) * (1 - (0.20 + (t - 1) * 0.10)),
+        (p.mgSpreadMult ?? 1) * (1 - (0.2 + (t - 1) * 0.1)),
       );
     },
   },
@@ -381,7 +390,7 @@ export class UpgradePicker {
     this._choicesEl = document.getElementById("upgrade-choices");
     this._resolve = null;
     this._taken = new Map(); // id → tier count taken this run
-    this._history = [];      // ordered list of picks for display
+    this._history = []; // ordered list of picks for display
   }
 
   resetRun() {
@@ -390,7 +399,9 @@ export class UpgradePicker {
   }
 
   // Returns ordered array of {label, tag} for all wave upgrades taken this run
-  getHistory() { return this._history; }
+  getHistory() {
+    return this._history;
+  }
 
   open(player, waveNum, stats) {
     this._player = player;
@@ -407,7 +418,10 @@ export class UpgradePicker {
       const tier = (this._taken.get(upgrade.id) ?? 0) + 1;
       upgrade.apply(this._player, tier);
       this._taken.set(upgrade.id, tier);
-      this._history.push({ label: resolveStr(upgrade.label, tier), tag: upgrade.tag });
+      this._history.push({
+        label: resolveStr(upgrade.label, tier),
+        tag: upgrade.tag,
+      });
     }
     this._el.classList.add("hidden");
     if (this._resolve) {

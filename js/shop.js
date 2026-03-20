@@ -50,14 +50,14 @@ const ITEMS = [
   {
     id: "stabilizer",
     label: "GYRO STABILIZER",
-    desc: "−25% aim penalty while moving",
+    desc: "−12% aim penalty while moving",
     cost: 480,
   },
   {
     id: "regen",
     label: "HULL REGEN CELL",
     desc: "+1 HP/sec passive regeneration",
-    cost: 420,
+    cost: 1500,
   },
 ];
 
@@ -75,10 +75,14 @@ export class Shop {
       .addEventListener("click", () => this._close());
   }
 
-  resetHistory() { this._history = []; }
+  resetHistory() {
+    this._history = [];
+  }
 
   // Returns ordered purchase log: [{label, count}]
-  getHistory() { return this._history; }
+  getHistory() {
+    return this._history;
+  }
 
   open(player, scoreRef) {
     this._player = player;
@@ -139,7 +143,10 @@ export class Shop {
         p.traverseMult = Math.min(3.0, p.traverseMult * 1.2);
         break;
       case "stabilizer":
-        p.movementSpreadMult = Math.max(0.0, (p.movementSpreadMult ?? 1) * 0.75);
+        p.movementSpreadMult = Math.max(
+          0.0,
+          (p.movementSpreadMult ?? 1) * 0.88,
+        );
         break;
       case "regen":
         p.regenRate = Math.min(8, (p.regenRate || 0) + 1);
