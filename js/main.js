@@ -32,9 +32,9 @@ function _getSmokeTex() {
   c.width = c.height = 32;
   const ctx = c.getContext("2d");
   const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-  g.addColorStop(0,   "rgba(255,255,255,0.9)");
+  g.addColorStop(0, "rgba(255,255,255,0.9)");
   g.addColorStop(0.4, "rgba(255,255,255,0.5)");
-  g.addColorStop(1,   "rgba(255,255,255,0)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 32, 32);
   _smokeTexMain = new THREE.CanvasTexture(c);
@@ -168,38 +168,73 @@ const { scene, camera, renderer, boundaryGeo, fog, ambientLight, dirLight } =
 const STAGE_VIBES = [
   {
     // Stage 0 — standard ops (waves 1-4)
-    fogColor: 0x020b18, clearColor: 0x010810,
-    ambientHex: 0x112244, ambientInt: 6, dirHex: 0x4488ff, dirInt: 3,
-    fogDensity: 0.040, terrainHex: 0x004466, wireHex: 0x005577,
-    starHex: 0x88bbff, crystalHex: 0x00aadd,
+    fogColor: 0x020b18,
+    clearColor: 0x010810,
+    ambientHex: 0x112244,
+    ambientInt: 6,
+    dirHex: 0x4488ff,
+    dirInt: 3,
+    fogDensity: 0.04,
+    terrainHex: 0x004466,
+    wireHex: 0x005577,
+    starHex: 0x88bbff,
+    crystalHex: 0x00aadd,
   },
   {
     // Stage 1 — deep navy (boss wave 5)
-    fogColor: 0x020e22, clearColor: 0x010a1c,
-    ambientHex: 0x0a1840, ambientInt: 5, dirHex: 0x1166cc, dirInt: 2.5,
-    fogDensity: 0.046, terrainHex: 0x002255, wireHex: 0x003388,
-    starHex: 0x5588cc, crystalHex: 0x0066ff,
+    fogColor: 0x020e22,
+    clearColor: 0x010a1c,
+    ambientHex: 0x0a1840,
+    ambientInt: 5,
+    dirHex: 0x1166cc,
+    dirInt: 2.5,
+    fogDensity: 0.046,
+    terrainHex: 0x002255,
+    wireHex: 0x003388,
+    starHex: 0x5588cc,
+    crystalHex: 0x0066ff,
   },
   {
     // Stage 2 — purple void (boss wave 10)
-    fogColor: 0x0d0230, clearColor: 0x080120,
-    ambientHex: 0x1e0850, ambientInt: 4.5, dirHex: 0x9933cc, dirInt: 2.2,
-    fogDensity: 0.054, terrainHex: 0x1a0055, wireHex: 0x660099,
-    starHex: 0xaa44ff, crystalHex: 0x8833ff,
+    fogColor: 0x0d0230,
+    clearColor: 0x080120,
+    ambientHex: 0x1e0850,
+    ambientInt: 4.5,
+    dirHex: 0x9933cc,
+    dirInt: 2.2,
+    fogDensity: 0.054,
+    terrainHex: 0x1a0055,
+    wireHex: 0x660099,
+    starHex: 0xaa44ff,
+    crystalHex: 0x8833ff,
   },
   {
     // Stage 3 — blood ember (boss wave 15)
-    fogColor: 0x300808, clearColor: 0x1e0404,
-    ambientHex: 0x420c0c, ambientInt: 4, dirHex: 0xdd3322, dirInt: 2.0,
-    fogDensity: 0.062, terrainHex: 0x440800, wireHex: 0x991100,
-    starHex: 0xff7733, crystalHex: 0xff4400,
+    fogColor: 0x300808,
+    clearColor: 0x1e0404,
+    ambientHex: 0x420c0c,
+    ambientInt: 4,
+    dirHex: 0xdd3322,
+    dirInt: 2.0,
+    fogDensity: 0.062,
+    terrainHex: 0x440800,
+    wireHex: 0x991100,
+    starHex: 0xff7733,
+    crystalHex: 0xff4400,
   },
   {
     // Stage 4 — crimson endgame (boss wave 20+)
-    fogColor: 0x3d0404, clearColor: 0x220101,
-    ambientHex: 0x440606, ambientInt: 3.5, dirHex: 0xff2200, dirInt: 1.8,
-    fogDensity: 0.072, terrainHex: 0x5c0500, wireHex: 0xbb1100,
-    starHex: 0xff2200, crystalHex: 0xff1100,
+    fogColor: 0x3d0404,
+    clearColor: 0x220101,
+    ambientHex: 0x440606,
+    ambientInt: 3.5,
+    dirHex: 0xff2200,
+    dirInt: 1.8,
+    fogDensity: 0.072,
+    terrainHex: 0x5c0500,
+    wireHex: 0xbb1100,
+    starHex: 0xff2200,
+    crystalHex: 0xff1100,
   },
 ];
 let _currentStage = 0;
@@ -241,9 +276,9 @@ function _applyHullChoice(p) {
     p.speedMult = 1.35;
     p.damageMult = 0.85;
     p.reloadMult = 0.8;
-    p.traverseMult = 1.4;       // fast light turret
+    p.traverseMult = 1.4; // fast light turret
     p.movementSpreadMult = 1.4; // harder to stabilize — reward stopping to fire
-    p.aimChargeMult = 1.6;      // but charges aim fast when stationary
+    p.aimChargeMult = 1.6; // but charges aim fast when stationary
   } else if (chosenHull === "bastion") {
     p.maxHp = 145;
     p.hp = 145;
@@ -251,9 +286,9 @@ function _applyHullChoice(p) {
     p.damageMult = 1.3;
     p.reloadMult = 1.25;
     p.armorMult = 0.85;
-    p.traverseMult = 0.65;      // heavy slow turret
+    p.traverseMult = 0.65; // heavy slow turret
     p.movementSpreadMult = 0.65; // heavier chassis = better stabilizer
-    p.aimChargeMult = 0.75;     // but sluggish mechanisms mean slower aim charge
+    p.aimChargeMult = 0.75; // but sluggish mechanisms mean slower aim charge
   }
   // vanguard = defaults (movementSpreadMult 1.0, aimChargeMult 1.0)
 }
@@ -342,8 +377,8 @@ const CAM_SENSITIVITY = 0.0025;
 const PITCH_SENSITIVITY = 0.0012;
 const CAM_DIST = 12;
 const CAM_H = 5.5;
-const CAM_DIST_MID = 5.5;
-const CAM_H_MID = 3.0;
+const CAM_DIST_MID = 3.5;
+const CAM_H_MID = 1.5;
 
 // ── Input ─────────────────────────────────────────────────────────────────────
 const keys = {};
@@ -389,26 +424,37 @@ const aimTarget = new THREE.Vector3();
 const raycaster = new THREE.Raycaster();
 const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
-const TAG_COLORS_LOG = { firepower: "#ff8800", defense: "#8844ff", speed: "#00ffff", utility: "#00ff88" };
+const TAG_COLORS_LOG = {
+  firepower: "#ff8800",
+  defense: "#8844ff",
+  speed: "#00ffff",
+  utility: "#00ff88",
+};
 
 function _renderUpgradeLog() {
   const el = document.getElementById("upgrade-log");
   if (!el) return;
-  const waveHistory = upgrades.getHistory();   // [{label, tag}]
-  const shopHistory = shop.getHistory();        // [{label, count}]
-  const total = waveHistory.length + shopHistory.reduce((s, h) => s + h.count, 0);
-  if (total === 0) { el.classList.add("hidden"); return; }
+  const waveHistory = upgrades.getHistory(); // [{label, tag}]
+  const shopHistory = shop.getHistory(); // [{label, count}]
+  const total =
+    waveHistory.length + shopHistory.reduce((s, h) => s + h.count, 0);
+  if (total === 0) {
+    el.classList.add("hidden");
+    return;
+  }
   el.classList.remove("hidden");
   const rows = [
     ...waveHistory.map((h) => {
       const col = TAG_COLORS_LOG[h.tag] || "#aaa";
       return `<div class="upgrade-log-row"><span class="upgrade-log-src">WAVE</span><span style="color:${col};flex:1">${h.label}</span><span class="upgrade-log-tag">${h.tag.toUpperCase()}</span></div>`;
     }),
-    ...shopHistory.map((h) =>
-      `<div class="upgrade-log-row"><span class="upgrade-log-src">SHOP</span><span style="flex:1">${h.label}</span>${h.count > 1 ? `<span class="upgrade-log-tag">×${h.count}</span>` : ""}</div>`
+    ...shopHistory.map(
+      (h) =>
+        `<div class="upgrade-log-row"><span class="upgrade-log-src">SHOP</span><span style="flex:1">${h.label}</span>${h.count > 1 ? `<span class="upgrade-log-tag">×${h.count}</span>` : ""}</div>`,
     ),
   ];
-  el.innerHTML = `<div class="upgrade-log-title">UPGRADES (${total})</div>` + rows.join("");
+  el.innerHTML =
+    `<div class="upgrade-log-title">UPGRADES (${total})</div>` + rows.join("");
 }
 
 window.addEventListener("keydown", (e) => {
@@ -555,18 +601,19 @@ function updateBuffDisplay() {
     )
     .join("");
   // Also update top-bar buff chip
-  const chipEl = document.getElementById('mob-buff-chip');
+  const chipEl = document.getElementById("mob-buff-chip");
   if (chipEl) {
     if (keys.length === 0) {
-      chipEl.classList.add('hidden');
+      chipEl.classList.add("hidden");
     } else {
       const k = keys[0];
       const name = BUFF_NAMES[k] ?? k.toUpperCase();
       const timer = Math.ceil(buffs[k].timer);
-      chipEl.textContent = keys.length > 1
-        ? `${name} ${timer}s +${keys.length - 1}`
-        : `${name} ${timer}s`;
-      chipEl.classList.remove('hidden');
+      chipEl.textContent =
+        keys.length > 1
+          ? `${name} ${timer}s +${keys.length - 1}`
+          : `${name} ${timer}s`;
+      chipEl.classList.remove("hidden");
     }
   }
 }
@@ -583,9 +630,14 @@ function updateCrosshair() {
     crosshairEl.style.left = "50%";
     crosshairEl.style.top = "50%";
     const charge = player.aimCharge;
-    const movePenVis = Math.min(1, player._velMag / 2) * (player.movementSpreadMult ?? 1);
-    const turretPenVis = Math.min(1, player._turretVelMag / 0.6) * (player.movementSpreadMult ?? 1);
-    const size = Math.round(44 - charge * 32 + (movePenVis + turretPenVis * 0.7) * 22);
+    const movePenVis =
+      Math.min(1, player._velMag / 2) * (player.movementSpreadMult ?? 1);
+    const turretPenVis =
+      Math.min(1, player._turretVelMag / 0.6) *
+      (player.movementSpreadMult ?? 1);
+    const size = Math.round(
+      44 - charge * 32 + (movePenVis + turretPenVis * 0.7) * 22,
+    );
     const r = Math.round(charge * 255);
     crosshairEl.style.width = size + "px";
     crosshairEl.style.height = size + "px";
@@ -617,9 +669,13 @@ function updateCrosshair() {
   crosshairEl.style.top = sy + "px";
 
   const charge = player.aimCharge;
-  const movePenVis = Math.min(1, player._velMag / 2) * (player.movementSpreadMult ?? 1);
-  const turretPenVis = Math.min(1, player._turretVelMag / 0.6) * (player.movementSpreadMult ?? 1);
-  const size = Math.round(44 - charge * 32 + (movePenVis + turretPenVis * 0.7) * 22);
+  const movePenVis =
+    Math.min(1, player._velMag / 2) * (player.movementSpreadMult ?? 1);
+  const turretPenVis =
+    Math.min(1, player._turretVelMag / 0.6) * (player.movementSpreadMult ?? 1);
+  const size = Math.round(
+    44 - charge * 32 + (movePenVis + turretPenVis * 0.7) * 22,
+  );
   const r = Math.round(charge * 255);
   crosshairEl.style.width = size + "px";
   crosshairEl.style.height = size + "px";
@@ -702,13 +758,13 @@ function init() {
   _applyHullChoice(player);
   // Wire component damage notifications back to UI (visible feedback on all devices)
   const COMP_ALERTS = {
-    track: 'TRACK DAMAGED — TURNING BLOCKED',
-    engine: 'ENGINE HIT — SPEED REDUCED',
-    turret: 'TURRET LOCKED — AIM BLOCKED',
+    track: "TRACK DAMAGED — TURNING BLOCKED",
+    engine: "ENGINE HIT — SPEED REDUCED",
+    turret: "TURRET LOCKED — AIM BLOCKED",
   };
   player._compCb = (comp) => {
     ui.showComponentDamage(comp);
-    ui.showHitFeedback(COMP_ALERTS[comp] ?? 'COMPONENT DAMAGED', '#ff4444');
+    ui.showHitFeedback(COMP_ALERTS[comp] ?? "COMPONENT DAMAGED", "#ff4444");
   };
   waveManager = new WaveManager(scene, projectiles, nn);
   waveManager.initTactic();
@@ -730,7 +786,14 @@ async function _restartTrainingWave() {
   player.hp = player.maxHp;
   player.resetWaveStats();
   audio.setWave(1);
-  waveManager.startWave(1, gameBounds, player.hp, player.maxHp, [0.7, 0.1, 0.1, 0.1], player.position);
+  waveManager.startWave(
+    1,
+    gameBounds,
+    player.hp,
+    player.maxHp,
+    [0.7, 0.1, 0.1, 0.1],
+    player.position,
+  );
   state = STATE.PLAYING;
 }
 
@@ -794,7 +857,14 @@ async function startNextWave() {
   player.resetWaveStats();
   audio.setWave(waveNum);
   // Pass nn.probs so each enemy draws its own tactic from the distribution
-  waveManager.startWave(waveNum, gameBounds, player.hp, player.maxHp, nn.probs, player.position);
+  waveManager.startWave(
+    waveNum,
+    gameBounds,
+    player.hp,
+    player.maxHp,
+    nn.probs,
+    player.position,
+  );
   // Start intro fly-in BEFORE the wave message await so camera transitions
   // smoothly from wherever the idle orbit left it — no jarring snap.
   if (waveNum === 1) _startIntroShot();
@@ -813,8 +883,14 @@ async function startNextWave() {
           ["FPV", "Toggle first-person view"],
           ["≡ HUD", "Toggle stats panel"],
         ];
-        hintEl.innerHTML = `<div class="hint-header">CONTROLS <span class="hint-close" id="btn-hint-close">✕</span></div>` +
-          rows.map(([k, d]) => `<div class="hint-row"><span class="hint-key">${k}</span><span>${d}</span></div>`).join("");
+        hintEl.innerHTML =
+          `<div class="hint-header">CONTROLS <span class="hint-close" id="btn-hint-close">✕</span></div>` +
+          rows
+            .map(
+              ([k, d]) =>
+                `<div class="hint-row"><span class="hint-key">${k}</span><span>${d}</span></div>`,
+            )
+            .join("");
       }
       hintEl.classList.remove("hidden");
       setTimeout(() => hintEl.classList.add("hidden"), isMobile ? 12000 : 8000);
@@ -870,10 +946,12 @@ function checkCollisions() {
           const dot = projDir.dot(eFwd);
           const dirMult = dot > 0.5 ? 1.5 : dot < -0.5 ? 0.65 : 1.2;
           e.takeDamage(Math.round(proj.damage * dirMult));
-          if (dot > 0.5)       ui.showHitFeedback("REAR HIT  ×1.5",     "#ff8800");
-          else if (dot < -0.5) ui.showHitFeedback("FRONT ARMOR  ×0.65", "#44aaff");
-          else                 ui.showHitFeedback("FLANK HIT  ×1.2",    "#ffcc44");
-          if (proj.isMG) audio.playHit(); else audio.playCannonImpact();
+          if (dot > 0.5) ui.showHitFeedback("REAR HIT  ×1.5", "#ff8800");
+          else if (dot < -0.5)
+            ui.showHitFeedback("FRONT ARMOR  ×0.65", "#44aaff");
+          else ui.showHitFeedback("FLANK HIT  ×1.2", "#ffcc44");
+          if (proj.isMG) audio.playHit();
+          else audio.playCannonImpact();
           if (!e.alive) {
             audio.playExplosion();
             const baseScore = e.isBoss ? 2000 : 100;
@@ -920,7 +998,8 @@ function checkCollisions() {
           player.takeDamage(proj.damage);
           ui.flashDamage();
           shakeIntensity = 0.3;
-          if (proj.isMG) audio.playHit(); else audio.playCannonImpact();
+          if (proj.isMG) audio.playHit();
+          else audio.playCannonImpact();
         }
         proj.destroy();
         projectiles.splice(pi, 1);
@@ -932,7 +1011,12 @@ function checkCollisions() {
 function _spawnSplashExplosion(scene, pos) {
   const rGeo = new THREE.RingGeometry(0.1, 0.6, 16);
   rGeo.rotateX(-Math.PI / 2);
-  const rMat = new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+  const rMat = new THREE.MeshBasicMaterial({
+    color: 0xff6600,
+    transparent: true,
+    opacity: 0.9,
+    side: THREE.DoubleSide,
+  });
   const ring = new THREE.Mesh(rGeo, rMat);
   ring.position.copy(pos);
   scene.add(ring);
@@ -951,8 +1035,10 @@ function _spawnSplashExplosion(scene, pos) {
     glow.intensity = 20 * Math.max(0, 1 - pct * 1.6);
     if (pct >= 1) {
       clearInterval(iv);
-      scene.remove(ring); scene.remove(glow);
-      rGeo.dispose(); rMat.dispose();
+      scene.remove(ring);
+      scene.remove(glow);
+      rGeo.dispose();
+      rMat.dispose();
     }
   }, 18);
 }
@@ -974,7 +1060,11 @@ function _startIntroShot() {
     // When the intro ends the camera snaps down ~1.8 units into FPV, barely noticeable
     toPos: new THREE.Vector3(px, py + 3.0, pz),
     fromLook: new THREE.Vector3(0, 0, 0), // idle orbit always looks at origin
-    toLook: new THREE.Vector3(px + Math.sin(camYaw) * 20, py + 1.2, pz + Math.cos(camYaw) * 20),
+    toLook: new THREE.Vector3(
+      px + Math.sin(camYaw) * 20,
+      py + 1.2,
+      pz + Math.cos(camYaw) * 20,
+    ),
   };
 }
 
@@ -1004,8 +1094,12 @@ function _startGameOverCinematic(playerPos) {
   const colors = new Float32Array(N * 3);
   const ages = new Float32Array(N);
   const lifetimes = new Float32Array(N);
-  const vx = new Float32Array(N), vy = new Float32Array(N), vz = new Float32Array(N);
-  const ox = new Float32Array(N), oy = new Float32Array(N), oz = new Float32Array(N);
+  const vx = new Float32Array(N),
+    vy = new Float32Array(N),
+    vz = new Float32Array(N);
+  const ox = new Float32Array(N),
+    oy = new Float32Array(N),
+    oz = new Float32Array(N);
   const baseY = terrainH(playerPos.x, playerPos.z);
 
   for (let i = 0; i < N; i++) {
@@ -1025,16 +1119,23 @@ function _startGameOverCinematic(playerPos) {
     positions[i * 3 + 1] = oy[i] + vy[i] * ages[i];
     positions[i * 3 + 2] = oz[i] + vz[i] * ages[i];
     const b = 0.65 * Math.pow(1 - t, 1.5);
-    colors[i * 3] = b; colors[i * 3 + 1] = b; colors[i * 3 + 2] = b;
+    colors[i * 3] = b;
+    colors[i * 3 + 1] = b;
+    colors[i * 3 + 2] = b;
   }
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   const mat = new THREE.PointsMaterial({
-    size: 1.1, map: _getSmokeTex(), alphaTest: 0.01,
-    sizeAttenuation: true, vertexColors: true,
-    transparent: true, opacity: 0.55, depthWrite: false,
+    size: 1.1,
+    map: _getSmokeTex(),
+    alphaTest: 0.01,
+    sizeAttenuation: true,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: false,
   });
   _smokeParticles = new THREE.Points(geo, mat);
   scene.add(_smokeParticles);
@@ -1043,7 +1144,8 @@ function _startGameOverCinematic(playerPos) {
 
 function _updateSmoke(delta) {
   if (!_smokeParticles || !_smokeData || !_gameOverOrbit) return;
-  const { ages, lifetimes, vx, vy, vz, ox, oy, oz, positions, colors } = _smokeData;
+  const { ages, lifetimes, vx, vy, vz, ox, oy, oz, positions, colors } =
+    _smokeData;
   const N = _SMOKE_N;
   const baseY = terrainH(_gameOverOrbit.cx, _gameOverOrbit.cz);
   for (let i = 0; i < N; i++) {
@@ -1065,7 +1167,9 @@ function _updateSmoke(delta) {
     positions[i * 3 + 1] = oy[i] + vy[i] * ages[i];
     positions[i * 3 + 2] = oz[i] + vz[i] * ages[i];
     const b = 0.65 * Math.pow(1 - t, 1.5);
-    colors[i * 3] = b; colors[i * 3 + 1] = b; colors[i * 3 + 2] = b;
+    colors[i * 3] = b;
+    colors[i * 3 + 1] = b;
+    colors[i * 3 + 2] = b;
   }
   _smokeParticles.geometry.attributes.position.needsUpdate = true;
   _smokeParticles.geometry.attributes.color.needsUpdate = true;
@@ -1089,9 +1193,11 @@ function updateCamera(delta) {
   if (state === STATE.GAME_OVER && _gameOverOrbit) {
     _gameOverOrbit.angle += delta * 0.22;
     camera.position.set(
-      _gameOverOrbit.cx + Math.sin(_gameOverOrbit.angle) * _gameOverOrbit.radius,
+      _gameOverOrbit.cx +
+        Math.sin(_gameOverOrbit.angle) * _gameOverOrbit.radius,
       _gameOverOrbit.height,
-      _gameOverOrbit.cz + Math.cos(_gameOverOrbit.angle) * _gameOverOrbit.radius,
+      _gameOverOrbit.cz +
+        Math.cos(_gameOverOrbit.angle) * _gameOverOrbit.radius,
     );
     camera.lookAt(_gameOverOrbit.cx, 1.5, _gameOverOrbit.cz);
     return;
@@ -1604,10 +1710,14 @@ if (isMobile) {
 
   const btnReloadMob = document.getElementById("btn-reload-mob");
   if (btnReloadMob) {
-    btnReloadMob.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      if (player) player.triggerReload();
-    }, { passive: false });
+    btnReloadMob.addEventListener(
+      "touchstart",
+      (e) => {
+        e.preventDefault();
+        if (player) player.triggerReload();
+      },
+      { passive: false },
+    );
   }
 
   const btnPauseMob = document.getElementById("btn-pause-mob");
@@ -1714,9 +1824,11 @@ document.getElementById("btn-menu-training")?.addEventListener("click", () => {
 document.getElementById("btn-menu-howto")?.addEventListener("click", () => {
   showMenuPanel("howto");
 });
-document.getElementById("btn-menu-howto-back")?.addEventListener("click", () => {
-  showMenuPanel("main");
-});
+document
+  .getElementById("btn-menu-howto-back")
+  ?.addEventListener("click", () => {
+    showMenuPanel("main");
+  });
 
 document.getElementById("btn-menu-settings")?.addEventListener("click", () => {
   // Sync current audio state to sliders before showing
@@ -1840,7 +1952,9 @@ document
     resetAiBtn.addEventListener("click", () => {
       nn.resetWeights();
       resetAiBtn.textContent = "DONE";
-      setTimeout(() => { resetAiBtn.textContent = "RESET"; }, 1500);
+      setTimeout(() => {
+        resetAiBtn.textContent = "RESET";
+      }, 1500);
     });
   }
 }
