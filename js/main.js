@@ -705,7 +705,7 @@ async function _restartTrainingWave() {
   player.hp = player.maxHp;
   player.resetWaveStats();
   audio.setWave(1);
-  waveManager.startWave(1, gameBounds, player.hp, [0.7, 0.1, 0.1, 0.1], player.position);
+  waveManager.startWave(1, gameBounds, player.hp, player.maxHp, [0.7, 0.1, 0.1, 0.1], player.position);
   state = STATE.PLAYING;
 }
 
@@ -769,7 +769,7 @@ async function startNextWave() {
   player.resetWaveStats();
   audio.setWave(waveNum);
   // Pass nn.probs so each enemy draws its own tactic from the distribution
-  waveManager.startWave(waveNum, gameBounds, player.hp, nn.probs, player.position);
+  waveManager.startWave(waveNum, gameBounds, player.hp, player.maxHp, nn.probs, player.position);
   // Start intro fly-in BEFORE the wave message await so camera transitions
   // smoothly from wherever the idle orbit left it — no jarring snap.
   if (waveNum === 1) _startIntroShot();

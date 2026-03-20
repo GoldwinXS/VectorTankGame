@@ -30,12 +30,14 @@ export class WaveManager {
   }
 
   // tacticProbs: [p_rush, p_flank, p_suppress, p_encircle] from nn.probs
-  startWave(waveNum, bounds, playerHp, tacticProbs, playerPos = null) {
+  startWave(waveNum, bounds, playerHp, playerMaxHp, tacticProbs, playerPos = null) {
     this.waveNum = waveNum;
     this._waveStartTime = performance.now() / 1000;
     this._waveStartHp = playerHp;
     this.enemies = [];
     this._pendingBoss = false;
+    // Tell the NN the starting conditions for this wave's first tactic session
+    this.nn.beginSession(playerHp / playerMaxHp, this._tacticIdx);
 
     // Difficulty: starts gentle, ramps hard — 0.5 at wave 1, ~2.4 at wave 20
     const difficulty = 0.5 + (waveNum - 1) * 0.1;
@@ -260,7 +262,7 @@ export class WaveManager {
     playerMaxHp,
     shotsFired,
     shotsHit,
-    distanceTraveled,
+    _distanceTraveled,
   ) {
     const clearTime = performance.now() / 1000 - this._waveStartTime;
     const healthLost = this._waveStartHp - playerHp;
@@ -268,40 +270,33 @@ export class WaveManager {
     const healthRatio = Math.min(healthLost / playerMaxHp, 1);
     const inaccuracy =
       shotsFired > 0 ? Math.max(0, 1 - shotsHit / shotsFired) : 0.5;
-    const mobility = Math.min(distanceTraveled / (clearTime * 6 * 0.4), 1);
     const challenge =
       0.5 * healthRatio +
       0.3 * inaccuracy +
       0.2 * Math.min(clearTime / TARGET_CLEAR_TIME, 1);
 
-    this.nn.train(this._tacticIdx, challenge);
+    // Record the last tactic session's outcome, then pick the next wave's tactic
+    const hpRatio = playerHp / playerMaxHp;
+    const { tactic, idx } = this.nn.selectNext(hpRatio);
+    // End-of-wave bonus reinforcement on top of the session reward
+    this.nn.train(idx, challenge);
 
-    const { tactic, idx } = this.nn.selectTactic(
-      healthRatio,
-      inaccuracy,
-      mobility,
-    );
     this._tactic = tactic;
     this._tacticIdx = idx;
     return tactic;
   }
 
   // Called mid-wave to let the NN switch tactics if the player's situation changes.
+  // Updates Q-weights for the just-finished session, then picks the next tactic.
   // Returns the new tactic name if a switch occurred, null otherwise.
-  adaptMidWave(playerHp, playerMaxHp, shotsHit, shotsFired) {
+  adaptMidWave(playerHp, playerMaxHp, _shotsHit, _shotsFired) {
     const aliveCount = this.enemies.filter((e) => e.alive).length;
     if (aliveCount === 0) return null;
 
-    const healthLostRatio = Math.min(1 - playerHp / playerMaxHp, 1);
-    const inaccuracy =
-      shotsFired > 0 ? Math.max(0, 1 - shotsHit / shotsFired) : 0.5;
-    const { tactic, idx } = this.nn.selectTactic(
-      healthLostRatio,
-      inaccuracy,
-      0.5,
-    );
+    const hpRatio = playerHp / playerMaxHp;
+    const { tactic, idx } = this.nn.selectNext(hpRatio);
 
-    if (tactic === this._tactic) return null; // no change
+    if (tactic === this._tactic) return null; // Q updated, no switch needed
 
     this._tactic = tactic;
     this._tacticIdx = idx;

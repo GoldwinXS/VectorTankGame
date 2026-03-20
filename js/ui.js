@@ -215,7 +215,7 @@ export class UI {
   showGameOver(score, waves, summary, onRestart) {
     this.finalScore.textContent    = score;
     this.wavesSurvived.textContent = waves;
-    this.aiInsightText.textContent = summary;
+    this.aiInsightText.innerHTML = summary;
     this.gameOverScreen.classList.remove('hidden');
     $('btn-restart').onclick = () => {
       this.gameOverScreen.classList.add('hidden');
