@@ -625,48 +625,32 @@ function updateCrosshair() {
     return;
   }
 
-  // In FPV mode: crosshair stays at screen center
-  if (viewMode === 0) {
-    crosshairEl.style.left = "50%";
-    crosshairEl.style.top = "50%";
-    const charge = player.aimCharge;
-    const movePenVis =
-      Math.min(1, player._velMag / 2) * (player.movementSpreadMult ?? 1);
-    const turretPenVis =
-      Math.min(1, player._turretVelMag / 0.6) *
-      (player.movementSpreadMult ?? 1);
-    const size = Math.round(
-      44 - charge * 32 + (movePenVis + turretPenVis * 0.7) * 22,
-    );
-    const r = Math.round(charge * 255);
-    crosshairEl.style.width = size + "px";
-    crosshairEl.style.height = size + "px";
-    crosshairEl.style.borderColor = `rgb(${r},255,255)`;
-    crosshairEl.style.opacity = String(0.55 + charge * 0.45);
-    return;
+  // All views: floating reticle at the ballistic landing point of a shell fired right now
+  {
+    const barrelAngle = player.barrelWorldAngle;
+    const pitch = player.barrelPitch;
+    const speed = player.bulletSpeed;
+    const cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const vx = Math.sin(barrelAngle) * cp * speed;
+    const vy = sp * speed;
+    const vz = Math.cos(barrelAngle) * cp * speed;
+
+    // Shell starts at terrain height + turret offset (~0.75 above hull base)
+    const startY = player.position.y + 0.75;
+    // Solve 0 = startY + vy·t – ½g·t²
+    const disc = vy * vy + 2 * GRAVITY * startY;
+    if (disc < 0) { crosshairEl.style.opacity = "0"; return; }
+    const t = (vy + Math.sqrt(disc)) / GRAVITY;
+
+    const lx = player.position.x + vx * t;
+    const lz = player.position.z + vz * t;
+    _landingPt.set(lx, terrainH(lx, lz), lz);
+
+    const projected = _landingPt.clone().project(camera);
+    if (projected.z > 1) { crosshairEl.style.opacity = "0"; return; }
+    crosshairEl.style.left = (projected.x *  0.5 + 0.5) * window.innerWidth  + "px";
+    crosshairEl.style.top  = (projected.y * -0.5 + 0.5) * window.innerHeight + "px";
   }
-
-  // Compute ballistic landing spot of a shell fired right now
-  const barrelAngle = player.barrelWorldAngle;
-  const pitch = player.barrelPitch;
-  const speed = player.bulletSpeed;
-  const cp = Math.cos(pitch),
-    sp = Math.sin(pitch);
-  const vx = Math.sin(barrelAngle) * cp * speed;
-  const vy = sp * speed;
-  const vz = Math.cos(barrelAngle) * cp * speed;
-  const oy = 0.75; // barrel spawn height
-
-  // Solve 0 = oy + vy*t - 0.5*GRAVITY*t²  →  t = (vy + sqrt(vy²+2·g·oy)) / g
-  const t = (vy + Math.sqrt(vy * vy + 2 * GRAVITY * oy)) / GRAVITY;
-  _landingPt.set(player.position.x + vx * t, 0, player.position.z + vz * t);
-
-  // Project landing spot to screen
-  _landingPt.project(camera);
-  const sx = (_landingPt.x * 0.5 + 0.5) * window.innerWidth;
-  const sy = (-_landingPt.y * 0.5 + 0.5) * window.innerHeight;
-  crosshairEl.style.left = sx + "px";
-  crosshairEl.style.top = sy + "px";
 
   const charge = player.aimCharge;
   const movePenVis =
