@@ -83,11 +83,14 @@ export class UI {
     this._flashTimeout = setTimeout(() => this.damageFlash.classList.remove('active'), 120);
   }
 
-  flashHit() {
+  flashHit(killed = false) {
     if (!this.hitMarker) return;
+    this.hitMarker.classList.toggle('kill', killed);
     this.hitMarker.classList.add('active');
     clearTimeout(this._hitTimeout);
-    this._hitTimeout = setTimeout(() => this.hitMarker.classList.remove('active'), 80);
+    this._hitTimeout = setTimeout(() => {
+      this.hitMarker.classList.remove('active', 'kill');
+    }, killed ? 200 : 80);
   }
 
   updateAmmo(ammo, maxAmmo, reloading) {

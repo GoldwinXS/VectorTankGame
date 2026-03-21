@@ -703,7 +703,7 @@ function showScorePopup(points, worldPos) {
   el.style.left = sx + "px";
   el.style.top = sy + "px";
   document.getElementById("ui").appendChild(el);
-  setTimeout(() => el.remove(), 1200);
+  setTimeout(() => el.remove(), 1350);
 }
 
 // ── Pickups ───────────────────────────────────────────────────────────────────
@@ -990,7 +990,7 @@ function checkCollisions() {
             }
           }
           player.recordHit();
-          ui.flashHit();
+          ui.flashHit(!e.alive);
           proj.destroy();
           projectiles.splice(pi, 1);
           break;

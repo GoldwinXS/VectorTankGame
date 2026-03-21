@@ -151,8 +151,11 @@ html, body {
   text-align: center;
   text-shadow: 0 0 24px var(--cyan);
   white-space: nowrap;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
 }
-#wave-msg.hidden { display: none; }
+#wave-msg.hidden { opacity: 0; }
 
 /* ── Hit marker ── */
 #hit-marker {
@@ -163,13 +166,18 @@ html, body {
   z-index: 25;
   width: 20px; height: 20px;
   opacity: 0;
-  transition: opacity 0.06s;
+  transition: opacity 0.08s ease-out;
 }
 #hit-marker.active { opacity: 1; }
+#hit-marker.kill { width: 28px; height: 28px; }
 #hit-marker::before, #hit-marker::after {
   content: '';
   position: absolute;
   background: #ffffff;
+  transition: background 0.08s;
+}
+#hit-marker.kill::before, #hit-marker.kill::after {
+  background: #ff8800;
 }
 #hit-marker::before {
   top: 50%; left: 0;
