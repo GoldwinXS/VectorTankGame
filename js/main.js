@@ -625,7 +625,7 @@ function updateCrosshair() {
     return;
   }
 
-  // All views: floating reticle at the ballistic landing point of a shell fired right now
+  // All views: floating reticle at ballistic hit point (enemy or ground)
   {
     const barrelAngle = player.barrelWorldAngle;
     const pitch = player.barrelPitch;
@@ -637,14 +637,38 @@ function updateCrosshair() {
 
     // Shell starts at terrain height + turret offset (~0.75 above hull base)
     const startY = player.position.y + 0.75;
-    // Solve 0 = startY + vy·t – ½g·t²
+    // Solve 0 = startY + vy·t – ½g·t² for ground-landing time
     const disc = vy * vy + 2 * GRAVITY * startY;
     if (disc < 0) { crosshairEl.style.opacity = "0"; return; }
-    const t = (vy + Math.sqrt(disc)) / GRAVITY;
+    const tGround = (vy + Math.sqrt(disc)) / GRAVITY;
 
-    const lx = player.position.x + vx * t;
-    const lz = player.position.z + vz * t;
-    _landingPt.set(lx, terrainH(lx, lz), lz);
+    // Step along trajectory and check enemy bounding spheres
+    const STEPS = 80;
+    const px0 = player.position.x, pz0 = player.position.z;
+    const enemies = waveManager ? waveManager.enemies : [];
+    let hitX = px0 + vx * tGround;
+    let hitY = terrainH(hitX, pz0 + vz * tGround);
+    let hitZ = pz0 + vz * tGround;
+
+    outer: for (let i = 1; i <= STEPS; i++) {
+      const t = (i / STEPS) * tGround;
+      const sx = px0 + vx * t;
+      const sy = startY + vy * t - 0.5 * GRAVITY * t * t;
+      const sz = pz0 + vz * t;
+      for (const e of enemies) {
+        if (!e.alive) continue;
+        const ep = e.group.position;
+        const r = e.radius + 0.3; // slight extra tolerance
+        const eCx = ep.x, eCy = ep.y + 1.0, eCz = ep.z; // enemy center ~1 unit up
+        const dx = sx - eCx, dy = sy - eCy, dz = sz - eCz;
+        if (dx * dx + dy * dy + dz * dz < r * r) {
+          hitX = sx; hitY = sy; hitZ = sz;
+          break outer;
+        }
+      }
+    }
+
+    _landingPt.set(hitX, hitY, hitZ);
 
     const projected = _landingPt.clone().project(camera);
     if (projected.z > 1) { crosshairEl.style.opacity = "0"; return; }
