@@ -642,7 +642,9 @@ function updateCrosshair() {
     if (disc < 0) { crosshairEl.style.opacity = "0"; return; }
     const tGround = (vy + Math.sqrt(disc)) / GRAVITY;
 
-    // Step along trajectory and check enemy bounding spheres
+    // Step along trajectory and check enemy bounding spheres.
+    // Skip the first 1.5 units (through the player's own body) to avoid
+    // false positives where the huge close-range sphere engulfs early steps.
     const STEPS = 80;
     const px0 = player.position.x, pz0 = player.position.z;
     const enemies = waveManager ? waveManager.enemies : [];
@@ -650,7 +652,9 @@ function updateCrosshair() {
     let hitY = terrainH(hitX, pz0 + vz * tGround);
     let hitZ = pz0 + vz * tGround;
 
-    outer: for (let i = 1; i <= STEPS; i++) {
+    const tSkip = 1.5 / speed;
+    const startStep = Math.min(STEPS, Math.ceil((tSkip / tGround) * STEPS) + 1);
+    outer: for (let i = startStep; i <= STEPS; i++) {
       const t = (i / STEPS) * tGround;
       const sx = px0 + vx * t;
       const sy = startY + vy * t - 0.5 * GRAVITY * t * t;
@@ -658,7 +662,7 @@ function updateCrosshair() {
       for (const e of enemies) {
         if (!e.alive) continue;
         const ep = e.group.position;
-        const r = e.radius + 0.3; // slight extra tolerance
+        const r = e.radius; // no extra tolerance — keeps detection precise at close range
         const eCx = ep.x, eCy = ep.y + 1.0, eCz = ep.z; // enemy center ~1 unit up
         const dx = sx - eCx, dy = sy - eCy, dz = sz - eCz;
         if (dx * dx + dy * dy + dz * dz < r * r) {
