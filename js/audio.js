@@ -117,8 +117,15 @@ class AudioEngine {
     // Bass — silent in break
     if (!isBreak) this._bass(t, step);
 
-    // Layer 1+: warm pad
-    if (this._waveLayer >= 1 && (step === 0 || step === 8)) this._pad(t, bar);
+    // Layer 1+: pad — sound changes per track so the run stays fresh
+    // Track 0 → triangle (warm/organ, keep for early game)
+    // Track 1 & 3 → string ensemble (darker, more ominous)
+    // Track 2 & 4 → pulse synth (aggressive, high-intensity)
+    if (this._waveLayer >= 1 && (step === 0 || step === 8)) {
+      if      (this._trackIdx === 0)                       this._pad(t, bar);
+      else if (this._trackIdx === 1 || this._trackIdx === 3) this._strPad(t, bar);
+      else                                                   this._pulsePad(t, bar);
+    }
     // Layer 2+: gentle soft arp (half density, skip break)
     if (this._waveLayer >= 2 && step % 4 === 0 && !isBreak) this._gentleArp(t, step);
     // Layer 3+: clap + crash
@@ -353,6 +360,53 @@ class AudioEngine {
         osc.connect(g); g.connect(this._musicBus);
         osc.start(t); osc.stop(t + dur);
       }
+    }
+  }
+
+  // String ensemble pad — detuned sawtooth trio + lowpass (tracks 1 & 3)
+  _strPad(t, bar) {
+    const chord   = this._CHORDS[bar % this._CHORDS.length];
+    const beatDur = 60 / this._BPM;
+    const dur     = beatDur * 7.5;
+    for (const freq of chord) {
+      for (const detune of [-10, 0, 10]) {
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = freq;
+        osc.detune.value    = detune;
+        const filt = this.ctx.createBiquadFilter();
+        filt.type = 'lowpass'; filt.frequency.value = 1600; filt.Q.value = 0.4;
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.012, t + 0.3);  // slow string attack
+        g.gain.setValueAtTime(0.012, t + dur - 0.25);
+        g.gain.linearRampToValueAtTime(0, t + dur);
+        osc.connect(filt); filt.connect(g); g.connect(this._musicBus);
+        osc.start(t); osc.stop(t + dur);
+      }
+    }
+  }
+
+  // Pulse synth pad — square wave + filter sweep (tracks 2 & 4, high intensity)
+  _pulsePad(t, bar) {
+    const chord   = this._CHORDS[bar % this._CHORDS.length];
+    const beatDur = 60 / this._BPM;
+    const dur     = beatDur * 7.5;
+    for (const freq of chord) {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.value = freq * 0.5; // octave down — squarewaves are bright
+      const filt = this.ctx.createBiquadFilter();
+      filt.type = 'lowpass'; filt.Q.value = 1.5;
+      filt.frequency.setValueAtTime(900, t);
+      filt.frequency.linearRampToValueAtTime(500, t + 0.5);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.009, t + 0.08);
+      g.gain.setValueAtTime(0.009, t + dur - 0.2);
+      g.gain.linearRampToValueAtTime(0, t + dur);
+      osc.connect(filt); filt.connect(g); g.connect(this._musicBus);
+      osc.start(t); osc.stop(t + dur);
     }
   }
 

@@ -642,31 +642,38 @@ function updateCrosshair() {
     if (disc < 0) { crosshairEl.style.opacity = "0"; return; }
     const tGround = (vy + Math.sqrt(disc)) / GRAVITY;
 
-    // Step along trajectory and check enemy bounding spheres.
-    // Skip the first 1.5 units (through the player's own body) to avoid
-    // false positives where the huge close-range sphere engulfs early steps.
-    const STEPS = 80;
+    // Step along trajectory — extended past flat-ground landing to handle
+    // downhill terrain. Terrain is checked at every step for slope accuracy.
+    const STEPS = 100;
+    const tMax = tGround + 0.6; // extra 0.6 s reaches ~1.5 m below y = 0
     const px0 = player.position.x, pz0 = player.position.z;
     const enemies = waveManager ? waveManager.enemies : [];
+
+    // Default fallback: quadratic ground landing point
     let hitX = px0 + vx * tGround;
     let hitY = terrainH(hitX, pz0 + vz * tGround);
     let hitZ = pz0 + vz * tGround;
 
     const tSkip = 1.5 / speed;
-    const startStep = Math.min(STEPS, Math.ceil((tSkip / tGround) * STEPS) + 1);
+    const startStep = Math.min(STEPS, Math.ceil((tSkip / tMax) * STEPS) + 1);
     outer: for (let i = startStep; i <= STEPS; i++) {
-      const t = (i / STEPS) * tGround;
+      const t = (i / STEPS) * tMax;
       const sx = px0 + vx * t;
       const sy = startY + vy * t - 0.5 * GRAVITY * t * t;
       const sz = pz0 + vz * t;
+      const th = terrainH(sx, sz);
+      if (sy <= th) {
+        hitX = sx; hitY = th; hitZ = sz;
+        break outer;
+      }
       for (const e of enemies) {
         if (!e.alive) continue;
         const ep = e.group.position;
-        const r = e.radius; // no extra tolerance — keeps detection precise at close range
-        const eCx = ep.x, eCy = ep.y + 1.0, eCz = ep.z; // enemy center ~1 unit up
+        const r = e.radius;
+        const eCx = ep.x, eCy = ep.y + 1.0, eCz = ep.z; // enemy centre ~1 unit up
         const dx = sx - eCx, dy = sy - eCy, dz = sz - eCz;
         if (dx * dx + dy * dy + dz * dz < r * r) {
-          hitX = sx; hitY = sy; hitZ = sz;
+          hitX = sx; hitY = eCy; hitZ = sz; // snap Y to enemy body, not ankle
           break outer;
         }
       }
