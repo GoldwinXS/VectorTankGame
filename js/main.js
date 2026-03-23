@@ -626,6 +626,7 @@ window.addEventListener("contextmenu", (e) => e.preventDefault());
 
 // ── Crosshair / Heading / Buffs ───────────────────────────────────────────────
 const crosshairEl = document.getElementById("crosshair");
+const turretDotEl  = document.getElementById("turret-dot");
 const lowHpVignetteEl = document.getElementById("low-hp-vignette");
 const waveStandbyEl = document.getElementById("wave-standby");
 const headingCanvas = document.getElementById("heading-canvas");
@@ -735,10 +736,12 @@ const _landingPt = new THREE.Vector3();
 function updateCrosshair() {
   if (!player || state !== STATE.PLAYING) {
     crosshairEl.style.opacity = "0";
+    turretDotEl.style.opacity = "0";
     return;
   }
 
-  // All views: floating reticle at ballistic hit point (enemy or ground)
+  // Barrel reticle — floating circle at ballistic hit point (enemy or ground)
+  let _aimOnEnemy = false;
   {
     const barrelAngle = player.barrelWorldAngle;
     const pitch = player.barrelPitch;
@@ -752,7 +755,7 @@ function updateCrosshair() {
     const startY = player.position.y + 0.75;
     // Solve 0 = startY + vy·t – ½g·t² for ground-landing time
     const disc = vy * vy + 2 * GRAVITY * startY;
-    if (disc < 0) { crosshairEl.style.opacity = "0"; return; }
+    if (disc < 0) { crosshairEl.style.opacity = "0"; turretDotEl.style.opacity = "0"; return; }
     const tGround = (vy + Math.sqrt(disc)) / GRAVITY;
 
     // Step along trajectory — extended past flat-ground landing to handle
@@ -769,7 +772,6 @@ function updateCrosshair() {
 
     const tSkip = 1.5 / speed;
     const startStep = Math.min(STEPS, Math.ceil((tSkip / tMax) * STEPS) + 1);
-    let _aimOnEnemy = false;
     outer: for (let i = startStep; i <= STEPS; i++) {
       const t = (i / STEPS) * tMax;
       const sx = px0 + vx * t;
@@ -797,9 +799,21 @@ function updateCrosshair() {
     _landingPt.set(hitX, hitY, hitZ);
 
     const projected = _landingPt.clone().project(camera);
-    if (projected.z > 1) { crosshairEl.style.opacity = "0"; return; }
+    if (projected.z > 1) { crosshairEl.style.opacity = "0"; turretDotEl.style.opacity = "0"; return; }
     crosshairEl.style.left = (projected.x *  0.5 + 0.5) * window.innerWidth  + "px";
     crosshairEl.style.top  = (projected.y * -0.5 + 0.5) * window.innerHeight + "px";
+  }
+
+  // Turret heading dot — projects the aim target (where turret traverses toward)
+  {
+    const dp = aimTarget.clone().project(camera);
+    if (dp.z <= 1) {
+      turretDotEl.style.left    = (dp.x *  0.5 + 0.5) * window.innerWidth  + "px";
+      turretDotEl.style.top     = (dp.y * -0.5 + 0.5) * window.innerHeight + "px";
+      turretDotEl.style.opacity = "1";
+    } else {
+      turretDotEl.style.opacity = "0";
+    }
   }
 
   const charge = player.aimCharge;
@@ -808,7 +822,7 @@ function updateCrosshair() {
   const turretPenVis =
     Math.min(1, player._turretVelMag / 0.6) * (player.movementSpreadMult ?? 1);
   const size = Math.round(
-    44 - charge * 32 + (movePenVis + turretPenVis * 0.7) * 22,
+    68 - charge * 48 + (movePenVis + turretPenVis * 0.7) * 38,
   );
   crosshairEl.style.width = size + "px";
   crosshairEl.style.height = size + "px";

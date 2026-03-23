@@ -19,8 +19,11 @@
 <body>
   <canvas id="canvas"></canvas>
 
-  <!-- Aim circle — fixed at screen center, size reflects aim charge -->
+  <!-- Aim circle — ballistic landing point of current barrel angle -->
   <div id="crosshair"></div>
+
+  <!-- Turret heading dot — where the turret is currently aimed (desired aim point) -->
+  <div id="turret-dot"></div>
 
   <!-- Hit marker — flashes white on enemy hit -->
   <div id="hit-marker"></div>

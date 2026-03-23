@@ -49,6 +49,21 @@ html, body {
   border-radius: 50%;
 }
 
+/* ── Turret heading dot — desired aim point the turret traverses toward ── */
+#turret-dot {
+  position: fixed;
+  top: 0; left: 0;                  /* JS positions each frame */
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 19;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
 #ui {
   position: fixed;
   inset: 0;
