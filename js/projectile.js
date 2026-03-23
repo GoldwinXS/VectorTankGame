@@ -142,5 +142,29 @@ export class Projectile {
         }
       }
     }, 18);
+
+    // Persistent ground scorch (med + high quality)
+    if ((window._vfxLevel ?? 2) >= 1) {
+      const sGeo = new THREE.RingGeometry(0.08, 0.65 + Math.random() * 0.4, 9);
+      sGeo.rotateX(-Math.PI / 2);
+      const sMat = new THREE.MeshBasicMaterial({
+        color: 0x080810, transparent: true, opacity: 0.72,
+        side: THREE.DoubleSide, depthWrite: false,
+      });
+      const scorch = new THREE.Mesh(sGeo, sMat);
+      scorch.position.copy(pos);
+      scorch.position.y += 0.03;
+      this.scene.add(scorch);
+      let sT = 0;
+      const sIv = setInterval(() => {
+        sT += 0.25;
+        sMat.opacity = 0.72 * Math.max(0, 1 - sT / 9);
+        if (sT >= 9) {
+          clearInterval(sIv);
+          this.scene.remove(scorch);
+          sGeo.dispose(); sMat.dispose();
+        }
+      }, 250);
+    }
   }
 }

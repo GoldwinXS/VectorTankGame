@@ -16,6 +16,10 @@ import {
 } from "./scene.js";
 import { GRAVITY } from "./projectile.js";
 import { Player } from "./player.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass }      from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass }      from "three/addons/postprocessing/OutputPass.js";
 import { WaveManager } from "./wave.js";
 import { TacticSelector } from "./nn.js";
 import { UI } from "./ui.js";
@@ -221,6 +225,57 @@ const isMobile = "ontouchstart" in window || forceMobile;
 const canvas = document.getElementById("canvas");
 const { scene, camera, renderer, boundaryGeo, fog, ambientLight, dirLight } =
   createScene(canvas);
+
+// ── Post-processing (bloom) ───────────────────────────────────────────────────
+const composer   = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const _bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.45,  // strength
+  0.65,  // radius
+  0.76,  // threshold — only bright emissives/lights bloom
+);
+composer.addPass(_bloomPass);
+composer.addPass(new OutputPass());
+window.addEventListener("resize", () => composer.setSize(window.innerWidth, window.innerHeight));
+
+// ── Atmospheric drifting particles ────────────────────────────────────────────
+const _ATM_COUNT = 220;
+const _atmPos    = new Float32Array(_ATM_COUNT * 3);
+const _atmSpeeds = new Float32Array(_ATM_COUNT);
+for (let i = 0; i < _ATM_COUNT; i++) {
+  _atmPos[i*3]     = (Math.random() - 0.5) * 52;
+  _atmPos[i*3 + 1] = Math.random() * 10 + 0.3;
+  _atmPos[i*3 + 2] = (Math.random() - 0.5) * 52;
+  _atmSpeeds[i]    = 0.4 + Math.random() * 0.8;
+}
+const _atmGeo = new THREE.BufferGeometry();
+_atmGeo.setAttribute("position", new THREE.BufferAttribute(_atmPos, 3));
+const _atmMat = new THREE.PointsMaterial({
+  color: 0x3355aa, size: 0.15, sizeAttenuation: true,
+  transparent: true, opacity: 0.28, depthWrite: false, fog: true,
+});
+const _atmPoints = new THREE.Points(_atmGeo, _atmMat);
+_atmPoints.frustumCulled = false;
+scene.add(_atmPoints);
+
+let _atmT = 0;
+function _updateAtmosphere(delta) {
+  if (!_atmPoints.visible) return;
+  _atmT += delta;
+  for (let i = 0; i < _ATM_COUNT; i++) {
+    const s = _atmSpeeds[i];
+    _atmPos[i*3]     += Math.sin(_atmT * s * 0.7 + i * 1.3) * 0.003;
+    _atmPos[i*3 + 1] += 0.018 * delta * s;
+    _atmPos[i*3 + 2] += Math.cos(_atmT * s * 0.5 + i * 0.9) * 0.003;
+    if (_atmPos[i*3 + 1] > 11) {
+      _atmPos[i*3 + 1] = 0.2;
+      _atmPos[i*3]     = (Math.random() - 0.5) * 52;
+      _atmPos[i*3 + 2] = (Math.random() - 0.5) * 52;
+    }
+  }
+  _atmGeo.attributes.position.needsUpdate = true;
+}
 
 // ── Stage vibe system (advances at start of each boss wave: 5, 10, 15, 20…) ──
 // Each stage shifts fog, sky, ambient light, and directional light for a full
@@ -506,14 +561,27 @@ let _introCam = null; // intro fly-in sequence state
 // ── Graphics / app settings ───────────────────────────────────────────────────
 let _gfxQuality = localStorage.getItem("vec_gfx_quality");
 if (!_gfxQuality) {
-  const mem = navigator.deviceMemory ?? 4;
-  _gfxQuality = mem < 2 ? "low" : mem < 4 ? "med" : "high";
+  const mem   = navigator.deviceMemory   ?? 4;
+  const cores = navigator.hardwareConcurrency ?? 4;
+  const touch = "ontouchstart" in window;
+  // Mobile devices are capped at med (thermals); low-spec hardware gets low
+  if (mem < 2 || cores < 2) {
+    _gfxQuality = "low";
+  } else if (touch || mem < 4 || cores < 6) {
+    _gfxQuality = "med";
+  } else {
+    _gfxQuality = "high";
+  }
 }
 let _shakeEnabled = localStorage.getItem("vec_shake") !== "0";
 
 function applyGraphicsQuality(q) {
   _gfxQuality = q;
   localStorage.setItem("vec_gfx_quality", q);
+  const lvl = q === "low" ? 0 : q === "med" ? 1 : 2;
+  window._vfxLevel     = lvl;
+  _bloomPass.enabled   = lvl >= 2;
+  _atmPoints.visible   = lvl >= 1;
   if (q === "low") {
     renderer.setPixelRatio(1);
     renderer.shadowMap.enabled = false;
@@ -525,6 +593,7 @@ function applyGraphicsQuality(q) {
     renderer.shadowMap.enabled = true;
   }
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
   ["low", "med", "high"].forEach((k) =>
     document
       .getElementById(`btn-gfx-${k}`)
@@ -1725,7 +1794,8 @@ function loop(ts) {
     lowHpVignetteEl?.classList.toggle("lhp-critical", _hpRatio < 0.12);
   }
 
-  renderer.render(scene, camera);
+  _updateAtmosphere(delta);
+  composer.render();
 }
 
 // ── Pointer lock ──────────────────────────────────────────────────────────────

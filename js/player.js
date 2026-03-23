@@ -60,6 +60,7 @@ export class Player {
 
     this._invincTimer = 0; // seconds of post-respawn invincibility remaining
     this._recoilT = 0;              // barrel recoil animation (0–1, decays to 0)
+    this._dustTimer = 0;            // tread dust emission accumulator
     this._velMag = 0;               // hull movement speed this frame (units/sec)
     this._turretVelMag = 0;         // world-space turret angular speed (rad/sec)
     this._prevTurretWorldAngle = 0; // previous frame world turret angle
@@ -469,6 +470,47 @@ export class Player {
     const _dx = this.group.position.x - _px0, _dz = this.group.position.z - _pz0;
     this._velMag = Math.sqrt(_dx * _dx + _dz * _dz) / Math.max(delta, 0.001);
 
+    // Tread dust (high quality only) — puff of particles from each side of hull
+    if ((window._vfxLevel ?? 2) >= 2 && this._velMag > 0.4) {
+      this._dustTimer += delta;
+      if (this._dustTimer >= 0.09) {
+        this._dustTimer = 0;
+        const ang = this.group.rotation.y;
+        const cx = Math.cos(ang), sx = Math.sin(ang);
+        for (const side of [-0.85, 0.85]) {
+          const sp = new THREE.Mesh(
+            new THREE.SphereGeometry(0.07 + Math.random() * 0.06, 3, 3),
+            new THREE.MeshBasicMaterial({ color: 0x334466, transparent: true, opacity: 0.32, depthWrite: false }),
+          );
+          sp.position.set(
+            this.group.position.x + cx * side,
+            this.group.position.y + 0.06,
+            this.group.position.z - sx * side,
+          );
+          const driftX = cx * side * 0.25 + (Math.random() - 0.5) * 0.3;
+          const driftZ = -sx * side * 0.25 + (Math.random() - 0.5) * 0.3;
+          sp._vel = new THREE.Vector3(driftX, 0.28 + Math.random() * 0.35, driftZ);
+          this.scene.add(sp);
+          let life = 0;
+          const iv = setInterval(() => {
+            life += 0.016;
+            const pct = life / 1.1;
+            sp.position.addScaledVector(sp._vel, 0.016);
+            sp._vel.y *= 0.97;
+            sp.material.opacity = 0.32 * Math.max(0, 1 - pct * pct);
+            sp.scale.setScalar(1 + pct * 3.5);
+            if (pct >= 1) {
+              clearInterval(iv);
+              this.scene.remove(sp);
+              sp.geometry.dispose(); sp.material.dispose();
+            }
+          }, 16);
+        }
+      }
+    } else {
+      this._dustTimer = 0;
+    }
+
     // Clamp to arena
     const p = this.group.position;
     const r = this.radius;
@@ -695,6 +737,43 @@ export class Player {
     flash.position.copy(pos);
     this.scene.add(flash);
     setTimeout(() => this.scene.remove(flash), 55);
+
+    // Muzzle smoke puff (high quality only)
+    if ((window._vfxLevel ?? 2) >= 2) {
+      const fwd = new THREE.Vector3(
+        Math.sin(barrelAngle) * Math.cos(pitch),
+        Math.sin(pitch),
+        Math.cos(barrelAngle) * Math.cos(pitch),
+      );
+      for (let i = 0; i < 7; i++) {
+        const sp = new THREE.Mesh(
+          new THREE.SphereGeometry(0.09 + Math.random() * 0.07, 4, 4),
+          new THREE.MeshBasicMaterial({ color: 0x8899bb, transparent: true, opacity: 0.48, depthWrite: false }),
+        );
+        sp.position.copy(pos);
+        const spread = (Math.random() - 0.5) * 0.9;
+        sp._vel = new THREE.Vector3(
+          fwd.x * (1.4 + Math.random() * 0.8) + Math.cos(barrelAngle) * spread,
+          fwd.y * (1.4 + Math.random() * 0.8) + 0.5 + Math.random() * 0.6,
+          fwd.z * (1.4 + Math.random() * 0.8) - Math.sin(barrelAngle) * spread,
+        );
+        this.scene.add(sp);
+        let life = 0;
+        const iv = setInterval(() => {
+          life += 0.016;
+          const pct = life / 0.85;
+          sp.position.addScaledVector(sp._vel, 0.016);
+          sp._vel.multiplyScalar(0.91);
+          sp.material.opacity = 0.48 * Math.max(0, 1 - pct * pct);
+          sp.scale.setScalar(1 + pct * 2.8);
+          if (pct >= 1) {
+            clearInterval(iv);
+            this.scene.remove(sp);
+            sp.geometry.dispose(); sp.material.dispose();
+          }
+        }, 16);
+      }
+    }
   }
 
   takeDamage(amount) {
