@@ -122,9 +122,8 @@ class AudioEngine {
     // Track 1 & 3 → string ensemble (darker, more ominous)
     // Track 2 & 4 → pulse synth (aggressive, high-intensity)
     if (this._waveLayer >= 1 && (step === 0 || step === 8)) {
-      if      (this._trackIdx === 0)                       this._pad(t, bar);
-      else if (this._trackIdx === 1 || this._trackIdx === 3) this._strPad(t, bar);
-      else                                                   this._pulsePad(t, bar);
+      if (this._trackIdx === 1 || this._trackIdx === 3) this._strPad(t, bar);
+      else                                               this._pulsePad(t, bar);
     }
     // Layer 2+: gentle soft arp (half density, skip break)
     if (this._waveLayer >= 2 && step % 4 === 0 && !isBreak) this._gentleArp(t, step);
