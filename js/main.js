@@ -415,6 +415,7 @@ let score = 0,
   lastTime = 0;
 let shakeIntensity = 0;
 const scoreRef = { value: 0 };
+let _killStreak = 0, _lastKillTime = 0;
 let _nnAdaptTimer = 0;
 const NN_ADAPT_INTERVAL = 22; // seconds between mid-wave tactic re-evaluations
 
@@ -768,6 +769,7 @@ function updateCrosshair() {
 
     const tSkip = 1.5 / speed;
     const startStep = Math.min(STEPS, Math.ceil((tSkip / tMax) * STEPS) + 1);
+    let _aimOnEnemy = false;
     outer: for (let i = startStep; i <= STEPS; i++) {
       const t = (i / STEPS) * tMax;
       const sx = px0 + vx * t;
@@ -785,7 +787,8 @@ function updateCrosshair() {
         const eCx = ep.x, eCy = ep.y + 1.0, eCz = ep.z; // enemy centre ~1 unit up
         const dx = sx - eCx, dy = sy - eCy, dz = sz - eCz;
         if (dx * dx + dy * dy + dz * dz < r * r) {
-          hitX = sx; hitY = eCy; hitZ = sz; // snap Y to enemy body, not ankle
+          hitX = sx; hitY = eCy; hitZ = sz;
+          _aimOnEnemy = true;
           break outer;
         }
       }
@@ -807,10 +810,11 @@ function updateCrosshair() {
   const size = Math.round(
     44 - charge * 32 + (movePenVis + turretPenVis * 0.7) * 22,
   );
-  const r = Math.round(charge * 255);
   crosshairEl.style.width = size + "px";
   crosshairEl.style.height = size + "px";
-  crosshairEl.style.borderColor = `rgb(${r},255,255)`;
+  crosshairEl.style.borderColor = _aimOnEnemy
+    ? `rgb(255,${Math.round(80 + charge * 80)},0)`
+    : `rgb(${Math.round(charge * 255)},255,255)`;
   crosshairEl.style.opacity = String(0.55 + charge * 0.45);
 }
 
@@ -865,6 +869,7 @@ function init() {
   scoreRef.value = 0;
   waveNum = 0;
   shakeIntensity = 0;
+  _killStreak = 0; _lastKillTime = 0;
   distanceTraveled = 0;
   expansionStep = 0;
   camYaw = 0;
@@ -1101,6 +1106,19 @@ function checkCollisions() {
               Math.round(baseScore * player.scoreMult),
               e.position.clone(),
             );
+            // Kill streak bonus
+            const _now = performance.now() / 1000;
+            _killStreak = (_now - _lastKillTime < 3.5) ? _killStreak + 1 : 1;
+            _lastKillTime = _now;
+            if (_killStreak >= 2) {
+              const _streakLabels = ['', '', 'DOUBLE KILL', 'TRIPLE KILL', 'QUAD KILL', 'RAMPAGE'];
+              const _bonus = Math.round((_killStreak - 1) * 75 * player.scoreMult);
+              score += _bonus;
+              ui.showHitFeedback(
+                _streakLabels[Math.min(_killStreak, _streakLabels.length - 1)] + '  +' + _bonus,
+                _killStreak >= 4 ? '#ff3300' : '#ffaa00',
+              );
+            }
             player.hp = Math.min(player.maxHp, player.hp + player.hpPerKill);
             if (e.isBoss) {
               shakeIntensity = 1.8;
