@@ -732,7 +732,8 @@ function updateBuffDisplay() {
   }
 }
 
-const _landingPt = new THREE.Vector3();
+const _landingPt  = new THREE.Vector3();
+const _dotLandPt  = new THREE.Vector3();
 function updateCrosshair() {
   if (!player || state !== STATE.PLAYING) {
     crosshairEl.style.opacity = "0";
@@ -804,15 +805,58 @@ function updateCrosshair() {
     crosshairEl.style.top  = (projected.y * -0.5 + 0.5) * window.innerHeight + "px";
   }
 
-  // Turret heading dot — projects the aim target (where turret traverses toward)
+  // Turret heading dot — same ballistic calc but using the desired aim angle,
+  // so the dot shows exactly where the circle will land once the turret catches up.
   {
-    const dp = aimTarget.clone().project(camera);
-    if (dp.z <= 1) {
-      turretDotEl.style.left    = (dp.x *  0.5 + 0.5) * window.innerWidth  + "px";
-      turretDotEl.style.top     = (dp.y * -0.5 + 0.5) * window.innerHeight + "px";
-      turretDotEl.style.opacity = "1";
-    } else {
-      turretDotEl.style.opacity = "0";
+    const desiredAngle = Math.atan2(
+      aimTarget.x - player.position.x,
+      aimTarget.z - player.position.z,
+    );
+    const pitch = player.barrelPitch;
+    const speed = player.bulletSpeed;
+    const cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const dvx = Math.sin(desiredAngle) * cp * speed;
+    const dvy = sp * speed;
+    const dvz = Math.cos(desiredAngle) * cp * speed;
+    const startY = player.position.y + 0.75;
+    const ddisc = dvy * dvy + 2 * GRAVITY * startY;
+    if (ddisc > 0) {
+      const tGround = (dvy + Math.sqrt(ddisc)) / GRAVITY;
+      const STEPS = 100;
+      const tMax = tGround + 0.6;
+      const px0 = player.position.x, pz0 = player.position.z;
+      const enemies = waveManager ? waveManager.enemies : [];
+      let hitX = px0 + dvx * tGround;
+      let hitY = terrainH(hitX, pz0 + dvz * tGround);
+      let hitZ = pz0 + dvz * tGround;
+      const tSkip = 1.5 / speed;
+      const startStep = Math.min(STEPS, Math.ceil((tSkip / tMax) * STEPS) + 1);
+      dotOuter: for (let i = startStep; i <= STEPS; i++) {
+        const t = (i / STEPS) * tMax;
+        const sx = px0 + dvx * t;
+        const sy = startY + dvy * t - 0.5 * GRAVITY * t * t;
+        const sz = pz0 + dvz * t;
+        const th = terrainH(sx, sz);
+        if (sy <= th) { hitX = sx; hitY = th; hitZ = sz; break dotOuter; }
+        for (const e of enemies) {
+          if (!e.alive) continue;
+          const ep = e.group.position;
+          const r = e.radius;
+          const eCx = ep.x, eCy = ep.y + 1.0, eCz = ep.z;
+          const dx = sx - eCx, dy = sy - eCy, dz = sz - eCz;
+          if (dx * dx + dy * dy + dz * dz < r * r) {
+            hitX = sx; hitY = eCy; hitZ = sz; break dotOuter;
+          }
+        }
+      }
+      const dp = _dotLandPt.set(hitX, hitY, hitZ).clone().project(camera);
+      if (dp.z <= 1) {
+        turretDotEl.style.left    = (dp.x *  0.5 + 0.5) * window.innerWidth  + "px";
+        turretDotEl.style.top     = (dp.y * -0.5 + 0.5) * window.innerHeight + "px";
+        turretDotEl.style.opacity = "1";
+      } else {
+        turretDotEl.style.opacity = "0";
+      }
     }
   }
 
