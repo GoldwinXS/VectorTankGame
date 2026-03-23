@@ -996,6 +996,18 @@ button:hover {
 .hull-choice[data-hull="specter"]:hover     { border-color: rgba(68,136,255,0.6); background: rgba(0,8,25,0.9); }
 .hull-choice[data-hull="colossus"]:hover    { border-color: rgba(255,153,0,0.6);  background: rgba(22,14,0,0.9); }
 
+/* ── Hull confirm button — fixed so it's always in thumb reach ── */
+#btn-hull-confirm {
+  position: fixed;
+  bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  box-shadow: 0 0 32px rgba(2,11,24,0.95), 0 0 18px rgba(0,255,255,0.2);
+  white-space: nowrap;
+}
+#hull-select-screen .screen-content { padding-bottom: 88px; }
+
 /* ── Classified archives section ── */
 .hull-archives {
   width: 100%;

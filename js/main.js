@@ -2045,6 +2045,13 @@ document.getElementById("btn-skip-track")?.addEventListener("click", () => {
   audio.skipTrack();
 });
 
+// Pause → give up (ends run, triggers game-over with full CP payout)
+document.getElementById("btn-give-up")?.addEventListener("click", () => {
+  ui.hidePause();
+  paused = false;
+  if (player) { player.hp = 0; player.alive = false; }
+});
+
 // Pause → main menu
 document.getElementById("btn-pause-menu")?.addEventListener("click", () => {
   ui.hidePause();

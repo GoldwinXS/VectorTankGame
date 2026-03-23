@@ -128,26 +128,38 @@ export class Player {
     const hullGeo = new THREE.BoxGeometry(hullW, hullH, hullL);
     const hull = new THREE.Mesh(hullGeo, hullMat);
     hull.castShadow = true;
+    // Phantom hovers — lift the hull body above wheel-line
+    if (ht === 'phantom') hull.position.y = 0.38;
     this.group.add(hull);
 
     const edgeMat = new THREE.LineBasicMaterial({ color: c.edge, opacity: 0.7, transparent: true });
     this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), edgeMat));
 
-    // ── Road wheels — all hulls ───────────────────────────────────────────────
-    const wGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.10, 7);
-    wGeo.rotateZ(Math.PI / 2);
-    const wMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0.4 });
-    const wXOff = hullW / 2 + 0.06;
-    [-wXOff, wXOff].forEach(xOff => {
-      for (let i = 0; i < wheelCount; i++) {
-        const w = new THREE.Mesh(wGeo, wMat);
-        w.position.set(xOff, -hullH / 2 + 0.12, -hullL / 2 + 0.2 + i * ((hullL - 0.4) / (wheelCount - 1)));
-        this.group.add(w);
-      }
-    });
+    // ── Road wheels — tracked hulls only (hover/phantom use repulsor pads) ──────
+    if (ht !== 'phantom') {
+      const wGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.10, 7);
+      wGeo.rotateZ(Math.PI / 2);
+      const wMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0.4 });
+      const wXOff = hullW / 2 + 0.06;
+      [-wXOff, wXOff].forEach(xOff => {
+        for (let i = 0; i < wheelCount; i++) {
+          const w = new THREE.Mesh(wGeo, wMat);
+          w.position.set(xOff, -hullH / 2 + 0.12, -hullL / 2 + 0.2 + i * ((hullL - 0.4) / (wheelCount - 1)));
+          this.group.add(w);
+        }
+      });
+    } else {
+      // Phantom repulsor pads — glowing discs below hull
+      const padMat = new THREE.MeshStandardMaterial({ color: c.emissive, emissive: c.emissive, emissiveIntensity: 1.2, roughness: 0.1 });
+      [[-0.35, -0.6], [0.35, -0.6], [-0.35, 0.6], [0.35, 0.6]].forEach(([px, pz]) => {
+        const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.20, 0.06, 8), padMat);
+        pad.position.set(px, 0.06, pz);
+        this.group.add(pad);
+      });
+    }
 
     // ── Hull-specific decorations ─────────────────────────────────────────────
-    if (ht === 'bastion' || ht === 'ironclad') {
+    if (ht === 'ironclad') {
       // Heavy side skirts
       [-hullW / 2 - 0.12, hullW / 2 + 0.12].forEach(xOff => {
         const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.22, hullH * 0.58, hullL + 0.1), hullMat.clone());
@@ -172,10 +184,10 @@ export class Player {
     }
 
     if (ht === 'phantom') {
-      // Swept-back stealth fins — wing-like sponsons
+      // Swept-back stealth fins — lifted to match hovering hull
       [-0.62, 0.62].forEach(xOff => {
         const wing = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.07, 1.1), hullMat.clone());
-        wing.position.set(xOff, 0, -0.2);
+        wing.position.set(xOff, 0.38, -0.2); // y matches hull.position.y
         wing.rotation.z = xOff > 0 ? 0.08 : -0.08;
         this.group.add(wing);
       });
@@ -275,7 +287,10 @@ export class Player {
 
     // ── Turret ────────────────────────────────────────────────────────────────
     this.turret = new THREE.Group();
-    this.turret.position.y = hullH / 2 + 0.3;
+    // Phantom hull is raised 0.38 — mount turret flush against the raised hull top
+    const hullLift    = ht === 'phantom' ? 0.38 : 0;
+    const turretRing  = ht === 'phantom' ? 0.12 : 0.30; // phantom: flush mount; others: standard ring
+    this.turret.position.y = hullLift + hullH / 2 + turretRing;
     this.group.add(this.turret);
 
     const turretMat = new THREE.MeshStandardMaterial({

@@ -929,6 +929,7 @@ export class Enemy {
       lead.y = 0;
       aimTarget.add(lead);
     }
+    this._aimTarget = aimTarget; // stored for vertical correction in _shoot()
 
     const toAim = new THREE.Vector3().subVectors(aimTarget, this.group.position);
     toAim.y = 0;
@@ -988,6 +989,7 @@ export class Enemy {
     // ── Movement ─────────────────────────────────────────────────────────
     let shootCdMult  = 1.0;
     const minSep     = this.radius + PLAYER_RADIUS + 0.3;
+    const engageDist = Math.max(minSep, 5.5); // minimum range player can realistically aim at
     const prevPos    = this.group.position.clone();
 
     // If LOS is blocked AND enemy is at range, move toward a flanking spot
@@ -999,7 +1001,7 @@ export class Enemy {
       this.group.position.addScaledVector(lateralDir, this.def.speed * 0.9 * delta);
       this.group.position.addScaledVector(dir, this.def.speed * 0.4 * delta); // also close in
     } else if (activeTactic === 'RUSH') {
-      if (dist > minSep) {
+      if (dist > engageDist) {
         this.group.position.addScaledVector(dir, this.def.speed * 1.3 * delta);
       }
     } else if (activeTactic === 'SUPPRESS') {
@@ -1031,7 +1033,9 @@ export class Enemy {
         if (strafe) {
           this._jitterTimer -= delta;
           if (this._jitterTimer <= 0) { this._strafeDir *= -1; this._jitterTimer = 0.6 + Math.random() * 0.6; }
-          moveDir.addScaledVector(new THREE.Vector3(-dir.z, 0, dir.x), this._strafeDir * 0.6).normalize();
+          // Dampen strafe when turret is off-target so aim can settle before firing
+          const strafeDamp = Math.max(0.15, 1.0 - this._aimDelta * 2.0);
+          moveDir.addScaledVector(new THREE.Vector3(-dir.z, 0, dir.x), this._strafeDir * 0.6 * strafeDamp).normalize();
         }
         this.group.position.addScaledVector(moveDir, this.def.speed * delta);
       } else if (dist < pref - 2) {
@@ -1128,9 +1132,14 @@ export class Enemy {
         }
       }
     } else if (this.shootTimer <= 0 && dist <= this.def.shootRange && (!this._losBlocked || this.def.hasSplash)) {
-      if (this.def.hasSplash) this._shootMortar(aimTarget);
-      else this._shoot();
-      this.shootTimer = this.def.shootCd * shootCdMult;
+      if (this.def.hasSplash) {
+        this._shootMortar(aimTarget);
+        this.shootTimer = this.def.shootCd * shootCdMult;
+      } else if (!this.def.isHover || this.aimCharge > 0.28) {
+        // Hover-type enemies (drone, wraith, hover) must settle aim before firing — reduces zig-zag misses
+        this._shoot();
+        this.shootTimer = this.def.shootCd * shootCdMult;
+      }
     }
 
     // ── Visual damage update ──────────────────────────────────────────────
@@ -1155,7 +1164,7 @@ export class Enemy {
     const spread = this.def.baseSpread * (1 - this.aimCharge * 0.75) * accuracyMult;
     dir.x += (Math.random() - 0.5) * spread;
     dir.z += (Math.random() - 0.5) * spread;
-    dir.normalize();
+    // y will be set after spawn position is known — normalize happens below
 
     // Spawn from actual barrel tip in world space — fixes bullets appearing at hull center
     let spawnPos;
@@ -1166,6 +1175,16 @@ export class Enemy {
       spawnPos = new THREE.Vector3(0, 0, 1.3);
       this.turretGroup.localToWorld(spawnPos);
     }
+
+    // Vertical correction — aim at player center mass instead of shooting flat.
+    // Fixes hover/drone enemies whose barrels are above the player, causing shots to pass over.
+    if (this._aimTarget && !this.def.arcShot) {
+      const hd = Math.max(1.5, Math.sqrt(
+        (this._aimTarget.x - spawnPos.x) ** 2 + (this._aimTarget.z - spawnPos.z) ** 2,
+      ));
+      dir.y = (0.45 - spawnPos.y) / hd; // 0.45 ≈ player hull center height
+    }
+    dir.normalize();
 
     // Arc shot — lob shell on a ballistic trajectory (tanky and other arcShot types)
     let launchDir = dir;
