@@ -183,6 +183,20 @@ export const TYPES = {
     // leadFactor: 0 — mortar computes its own TOF-accurate lead inside _shootMortar
     leadFactor: 0, turnRate: 0.7,
   },
+  wraith: {
+    // Ghostly stealth flanker — translucent hull, fast, accurate from range
+    color: 0x00eeff, emissive: 0x00ccff, scale: 0.82,
+    speed: 2.2, hp: 60, damage: 18, shootRange: 46, shootCd: 2.6,
+    bulletSpeed: 30, preferDist: 22, traverseSpeed: 4.0, baseSpread: 0.09,
+    isHover: true, leadFactor: 0.65, turnRate: 3.5,
+  },
+  titan: {
+    // Massive twin-barrel artillery — very slow, enormous HP, devastating shots
+    color: 0xaa3300, emissive: 0x772200, scale: 1.55,
+    speed: 0.65, hp: 280, damage: 60, shootRange: 52, shootCd: 4.2,
+    bulletSpeed: 24, preferDist: 28, traverseSpeed: 0.5, baseSpread: 0.07,
+    hasGravity: true, arcShot: true, leadFactor: 0.7, turnRate: 0.9,
+  },
 };
 
 const PLAYER_RADIUS = 1.0;
@@ -344,6 +358,8 @@ export class Enemy {
     if (this.type === 'lancer') { this._buildLancerMesh(); return; }
     if (this.type === 'drone')  { this._buildDroneMesh();  return; }
     if (this.type === 'mortar') { this._buildMortarMesh(); return; }
+    if (this.type === 'wraith') { this._buildWraithMesh(); return; }
+    if (this.type === 'titan')  { this._buildTitanMesh();  return; }
 
     this.group = new THREE.Group();
     this.group.scale.setScalar(this.def.scale);
@@ -399,6 +415,18 @@ export class Enemy {
       dish.position.set(0.3, 1.35, -0.3); dish.rotation.z = Math.PI / 2;
       this.group.add(dish);
     }
+
+    // ── Road wheels — 5 per side for a proper tank silhouette ─────────────
+    const wGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.11, 7);
+    wGeo.rotateZ(Math.PI / 2);
+    const wMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9, metalness: 0.4 });
+    [-0.77, 0.77].forEach(xOff => {
+      for (let i = 0; i < 5; i++) {
+        const w = new THREE.Mesh(wGeo, wMat);
+        w.position.set(xOff, -0.32, -0.9 + i * 0.45);
+        this.group.add(w);
+      }
+    });
 
     // ── Turret ────────────────────────────────────────────────────────────
     this.turretGroup = new THREE.Group();
@@ -673,6 +701,146 @@ export class Enemy {
 
     this.turretGroup = new THREE.Group();
     this.group.add(this.turretGroup);
+    if (this.isBoss) this._buildBossExtras();
+  }
+
+  _buildWraithMesh() {
+    this.group = new THREE.Group();
+    this.group.scale.setScalar(this.def.scale);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.55, roughness: 0.05, metalness: 1.0,
+      transparent: true, opacity: 0.38,
+    });
+    const edgeMat = new THREE.LineBasicMaterial({ color: this.def.color, opacity: 0.95, transparent: true });
+
+    // Sleek elongated body — much lower profile than standard tanks
+    const bodyGeo = new THREE.BoxGeometry(0.72, 0.22, 2.4);
+    this.group.add(new THREE.Mesh(bodyGeo, mat));
+    this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(bodyGeo), edgeMat));
+
+    // Swept-back wings — wide, thin, stealth-aircraft silhouette
+    [-0.68, 0.68].forEach(xOff => {
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.07, 1.3), mat.clone());
+      wing.position.set(xOff, 0, -0.25);
+      wing.rotation.z = xOff > 0 ? 0.1 : -0.1;
+      this.group.add(wing);
+    });
+
+    // Angled nose wedge
+    const nose = new THREE.Mesh(new THREE.BoxGeometry(0.70, 0.18, 0.55), mat.clone());
+    nose.position.set(0, 0, 1.38);
+    nose.rotation.x = -0.28;
+    this.group.add(nose);
+
+    // Flat disc turret — barely rises above hull
+    this.turretGroup = new THREE.Group();
+    this.turretGroup.position.y = 0.2;
+    this.group.add(this.turretGroup);
+
+    const turretMat = new THREE.MeshStandardMaterial({
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 1.1, roughness: 0, metalness: 1.0,
+      transparent: true, opacity: 0.65,
+    });
+    const turretGeo = new THREE.CylinderGeometry(0.3, 0.36, 0.17, 8);
+    this.turretGroup.add(new THREE.Mesh(turretGeo, turretMat));
+
+    // Thin glowing barrel
+    const barrelMat = new THREE.MeshStandardMaterial({
+      color: this.def.emissive, emissive: this.def.emissive, emissiveIntensity: 2.2,
+      roughness: 0, metalness: 1,
+    });
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 1.2, 5), barrelMat);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.z = 0.72;
+    this.turretGroup.add(barrel);
+
+    // Signature underside glow
+    const glow = new THREE.PointLight(this.def.emissive, 2.2, 5);
+    glow.position.y = -0.35;
+    this.group.add(glow);
+
+    if (this.isBoss) this._buildBossExtras();
+  }
+
+  _buildTitanMesh() {
+    this.group = new THREE.Group();
+    this.group.scale.setScalar(this.def.scale);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.18, roughness: 0.6, metalness: 0.8,
+    });
+    const edgeMat = new THREE.LineBasicMaterial({ color: this.def.emissive, opacity: 0.5, transparent: true });
+
+    // Extra-wide, low hull
+    const hullGeo = new THREE.BoxGeometry(2.05, 0.85, 2.2);
+    this.group.add(new THREE.Mesh(hullGeo, mat));
+    this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), edgeMat));
+
+    // Heavy sloped front glacis
+    const glacis = new THREE.Mesh(new THREE.BoxGeometry(2.07, 0.65, 0.35), mat.clone());
+    glacis.position.set(0, 0.14, 1.12);
+    glacis.rotation.x = 0.42;
+    this.group.add(glacis);
+
+    // Thick side skirts
+    [-1.14, 1.14].forEach(xOff => {
+      const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.62, 2.3), mat.clone());
+      skirt.position.set(xOff, -0.18, 0);
+      this.group.add(skirt);
+    });
+
+    // Raised rear engine block
+    const engine = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.44, 0.62), mat.clone());
+    engine.position.set(0, 0.38, -0.92);
+    this.group.add(engine);
+
+    // Twin exhaust stacks
+    [-0.44, 0.44].forEach(xOff => {
+      const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.7, 6), mat.clone());
+      stack.position.set(xOff, 0.76, -0.8);
+      this.group.add(stack);
+    });
+
+    // Road wheels — 6 per side (wide hull needs more)
+    const wGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.12, 7);
+    wGeo.rotateZ(Math.PI / 2);
+    const wMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9, metalness: 0.4 });
+    [-1.2, 1.2].forEach(xOff => {
+      for (let i = 0; i < 6; i++) {
+        const w = new THREE.Mesh(wGeo, wMat);
+        w.position.set(xOff, -0.33, -1.0 + i * 0.4);
+        this.group.add(w);
+      }
+    });
+
+    // Wide heavy turret
+    this.turretGroup = new THREE.Group();
+    this.turretGroup.position.y = 0.7;
+    this.group.add(this.turretGroup);
+
+    const turretMat = new THREE.MeshStandardMaterial({
+      color: this.def.color, emissive: this.def.emissive,
+      emissiveIntensity: 0.32, roughness: 0.4, metalness: 0.9,
+    });
+    const turretGeo = new THREE.BoxGeometry(1.45, 0.52, 1.0);
+    this.turretGroup.add(new THREE.Mesh(turretGeo, turretMat));
+    this.turretGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(turretGeo), edgeMat.clone()));
+
+    // Twin barrels side by side — the Titan's signature
+    const barrelMat = new THREE.MeshStandardMaterial({
+      color: this.def.emissive, emissive: this.def.emissive,
+      emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.95,
+    });
+    [-0.3, 0.3].forEach(xOff => {
+      const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 1.5), barrelMat);
+      barrel.position.set(xOff, 0, 0.88);
+      this.turretGroup.add(barrel);
+    });
+
     if (this.isBoss) this._buildBossExtras();
   }
 

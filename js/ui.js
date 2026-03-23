@@ -215,13 +215,34 @@ export class UI {
   showStartScreen()  { this.startScreen.classList.remove('hidden'); }
   hideStartScreen()  { this.startScreen.classList.add('hidden'); }
 
-  showGameOver(score, waves, summary, onRestart) {
+  showGameOver(score, waves, summary, onRestart, cpInfo) {
     this.finalScore.textContent    = score;
     this.wavesSurvived.textContent = waves;
-    this.aiInsightText.innerHTML = summary;
+    this.aiInsightText.innerHTML   = summary;
+
+    const cpSection = $('go-cp-section');
+    if (cpSection && cpInfo) {
+      $('go-cp-earned').textContent = '+' + cpInfo.cpEarned;
+      $('go-cp-total').textContent  = cpInfo.newTotal.toLocaleString();
+      const nextEl = $('go-cp-next');
+      if (cpInfo.newlyUnlocked) {
+        nextEl.innerHTML = `<span class="cp-unlock-banner">&#9889; ${cpInfo.newlyUnlocked} UNLOCKED</span>`;
+      } else if (cpInfo.nextUnlock) {
+        const pct = (cpInfo.nextUnlock.progress / cpInfo.nextUnlock.cost * 100).toFixed(1);
+        nextEl.innerHTML =
+          `<div class="cp-next-label">NEXT UNLOCK: ${cpInfo.nextUnlock.hull}</div>` +
+          `<div class="cp-bar-track"><div class="cp-bar-fill" style="width:${pct}%"></div></div>` +
+          `<div class="cp-next-cost">${cpInfo.nextUnlock.progress.toLocaleString()} / ${cpInfo.nextUnlock.cost.toLocaleString()} CP</div>`;
+      } else {
+        nextEl.innerHTML = '<div class="cp-all-done">ALL HULLS UNLOCKED</div>';
+      }
+      cpSection.classList.remove('hidden');
+    }
+
     this.gameOverScreen.classList.remove('hidden');
     $('btn-restart').onclick = () => {
       this.gameOverScreen.classList.add('hidden');
+      if (cpSection) cpSection.classList.add('hidden');
       onRestart();
     };
   }

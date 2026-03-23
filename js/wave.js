@@ -38,8 +38,8 @@ export class WaveManager {
     this.enemies = [];
     this._pendingBoss = false;
 
-    // Difficulty: starts gentle, ramps hard — 0.5 at wave 1, ~2.4 at wave 20
-    const difficulty = 0.5 + (waveNum - 1) * 0.1;
+    // Difficulty: softer early ramp — 0.45 at wave 1, ~2.0 at wave 20
+    const difficulty = 0.45 + (waveNum - 1) * 0.08;
     const probs = tacticProbs || [0.7, 0.1, 0.1, 0.1];
     const hpRatio = playerMaxHp > 0 ? playerHp / playerMaxHp : 1.0;
 
@@ -57,7 +57,7 @@ export class WaveManager {
         this._pendingBoss = false;
       }, delay);
     } else {
-      const count = Math.min(2 + Math.floor((waveNum - 1) * 0.65), 18);
+      const count = Math.min(2 + Math.floor((waveNum - 1) * 0.52), 16);
       const composition = this._buildComposition(count, waveNum);
       this._compBucket = compBucketOf(composition);
       this.nn.beginSession(hpRatio, this._compBucket, this._tacticIdx);
@@ -121,15 +121,17 @@ export class WaveManager {
 
   _buildComposition(total, waveNum) {
     // Gate enemy types by wave — introduce gradually
-    const hasTanky = waveNum >= 3;
-    const hasScout = waveNum >= 4;
-    const hasSwarm = waveNum >= 5;
-    const hasGunner = waveNum >= 6;
-    const hasLancer = waveNum >= 7;
-    const hasStug = waveNum >= 8;
+    const hasTanky  = waveNum >= 3;
+    const hasScout  = waveNum >= 4;
+    const hasSwarm  = waveNum >= 6;   // was 5
+    const hasGunner = waveNum >= 7;   // was 6
+    const hasLancer = waveNum >= 8;   // was 7
+    const hasStug   = waveNum >= 9;   // was 8
     const hasHover  = waveNum >= 10;
-    const hasDrone  = waveNum >= 6;
-    const hasMortar = waveNum >= 9;
+    const hasDrone  = waveNum >= 9;   // was 6
+    const hasMortar = waveNum >= 12;  // was 9 — mortars are very oppressive in groups
+    const hasWraith = waveNum >= 11;
+    const hasTitan  = waveNum >= 14;
 
     const p = Math.min((waveNum - 1) / 10, 1);
     const wF = 1 - p * 0.25;
@@ -141,8 +143,10 @@ export class WaveManager {
     const wSt = hasStug ? 0.08 + p * 0.12 : 0;
     const wHv = hasHover  ? 0.10 + p * 0.3 : 0;
     const wDr = hasDrone  ? 0.12 + p * 0.2 : 0;
-    const wMo = hasMortar ? 0.22 + p * 0.25 : 0;
-    const sum = wF + wT + wSc + wSw + wG + wL + wSt + wHv + wDr + wMo;
+    const wMo = hasMortar ? 0.12 + p * 0.18 : 0;  // reduced — mortars were too dominant
+    const wWr = hasWraith ? 0.08 + p * 0.14 : 0;
+    const wTi = hasTitan  ? 0.06 + p * 0.10 : 0;
+    const sum = wF + wT + wSc + wSw + wG + wL + wSt + wHv + wDr + wMo + wWr + wTi;
 
     const nFast = Math.max(1, Math.round((wF / sum) * total));
     const nScout = hasScout ? Math.max(0, Math.round((wSc / sum) * total)) : 0;
@@ -163,12 +167,18 @@ export class WaveManager {
       ? Math.max(0, Math.min(4, Math.round((wDr / sum) * total)))
       : 0;
     const nMortar = hasMortar
-      ? Math.max(1, Math.min(2, Math.round((wMo / sum) * total)))
+      ? Math.max(0, Math.min(2, Math.round((wMo / sum) * total)))  // min 0, not 1
+      : 0;
+    const nWraith = hasWraith
+      ? Math.max(0, Math.min(2, Math.round((wWr / sum) * total)))
+      : 0;
+    const nTitan = hasTitan
+      ? Math.max(0, Math.min(1, Math.round((wTi / sum) * total)))
       : 0;
     const nTanky = hasTanky
       ? Math.max(
           0,
-          total - nFast - nScout - nSwarm - nGunner - nLancer - nStug - nHover - nDrone - nMortar,
+          total - nFast - nScout - nSwarm - nGunner - nLancer - nStug - nHover - nDrone - nMortar - nWraith - nTitan,
         )
       : 0;
 
@@ -183,6 +193,8 @@ export class WaveManager {
       ...Array(nHover).fill("hover"),
       ...Array(nDrone).fill("drone"),
       ...Array(nMortar).fill("mortar"),
+      ...Array(nWraith).fill("wraith"),
+      ...Array(nTitan).fill("titan"),
     ];
     // Shuffle
     for (let i = types.length - 1; i > 0; i--) {

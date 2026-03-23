@@ -95,151 +95,272 @@ export class Player {
 
     // Hull-type colour palette
     const PALETTES = {
-      vanguard: {
-        body: 0x003344,
-        body2: 0x002233,
-        emissive: 0x00ffff,
-        edge: 0x00ffff,
-        barrel: 0x00ffff,
-        glow: 0x00ffff,
-      },
-      blitzer: {
-        body: 0x1a3300,
-        body2: 0x0d1a00,
-        emissive: 0x88ff00,
-        edge: 0x88ff00,
-        barrel: 0x88ff00,
-        glow: 0x88ff00,
-      },
-      bastion: {
-        body: 0x331100,
-        body2: 0x1a0a00,
-        emissive: 0xff5500,
-        edge: 0xff6600,
-        barrel: 0xff5500,
-        glow: 0xff4400,
-      },
+      vanguard: { body: 0x003344, body2: 0x002233, emissive: 0x00ffff, edge: 0x00ffff, barrel: 0x00ffff, glow: 0x00ffff },
+      blitzer:  { body: 0x1a3300, body2: 0x0d1a00, emissive: 0x88ff00, edge: 0x88ff00, barrel: 0x88ff00, glow: 0x88ff00 },
+      bastion:  { body: 0x331100, body2: 0x1a0a00, emissive: 0xff5500, edge: 0xff6600, barrel: 0xff5500, glow: 0xff4400 },
+      phantom:  { body: 0x1a0033, body2: 0x0d001a, emissive: 0xcc44ff, edge: 0xcc44ff, barrel: 0xcc44ff, glow: 0xaa33ee },
+      ironclad: { body: 0x2a1a00, body2: 0x1a0f00, emissive: 0xffcc00, edge: 0xffcc00, barrel: 0xffcc00, glow: 0xffaa00 },
+      reaper:   { body: 0x220011, body2: 0x110008, emissive: 0xdd0033, edge: 0xee0044, barrel: 0xff0033, glow: 0xcc0022 },
+      viper:    { body: 0x002211, body2: 0x001108, emissive: 0x00ffaa, edge: 0x00ffaa, barrel: 0x00ffaa, glow: 0x00ddaa },
+      specter:  { body: 0x001133, body2: 0x000d22, emissive: 0x4488ff, edge: 0x5599ff, barrel: 0x6699ff, glow: 0x3366ff },
+      colossus: { body: 0x221500, body2: 0x150d00, emissive: 0xff9900, edge: 0xffaa00, barrel: 0xff9900, glow: 0xff8800 },
     };
     const c = PALETTES[this.hullType] ?? PALETTES.vanguard;
+    const ht = this.hullType;
+
+    // ── Hull dimensions — one lookup per hull type ────────────────────────────
+    const HULL_DIMS = {
+      vanguard: { hullW:1.40, hullH:0.90, hullL:2.0, tW:0.95, tH:0.38, tL:1.05, barrelR:0.090, barrelLen:1.1, wheelCount:5 },
+      blitzer:  { hullW:1.20, hullH:0.70, hullL:2.2, tW:0.78, tH:0.30, tL:0.88, barrelR:0.090, barrelLen:1.1, wheelCount:5 },
+      bastion:  { hullW:1.65, hullH:1.00, hullL:2.0, tW:1.10, tH:0.48, tL:1.15, barrelR:0.110, barrelLen:1.3, wheelCount:5 },
+      phantom:  { hullW:1.05, hullH:0.55, hullL:2.5, tW:0.62, tH:0.22, tL:0.72, barrelR:0.065, barrelLen:1.4, wheelCount:6 },
+      ironclad: { hullW:1.80, hullH:1.00, hullL:2.0, tW:1.35, tH:0.52, tL:1.10, barrelR:0.100, barrelLen:1.1, wheelCount:5 },
+      reaper:   { hullW:1.00, hullH:0.68, hullL:3.0, tW:0.72, tH:0.28, tL:0.85, barrelR:0.075, barrelLen:2.2, wheelCount:7 },
+      viper:    { hullW:1.50, hullH:0.88, hullL:2.1, tW:1.05, tH:0.42, tL:1.10, barrelR:0.095, barrelLen:1.2, wheelCount:5 },
+      specter:  { hullW:1.15, hullH:0.62, hullL:2.3, tW:0.58, tH:0.24, tL:0.78, barrelR:0.070, barrelLen:1.2, wheelCount:6 },
+      colossus: { hullW:2.00, hullH:1.10, hullL:2.3, tW:1.55, tH:0.62, tL:1.25, barrelR:0.135, barrelLen:1.5, wheelCount:6 },
+    };
+    const { hullW, hullH, hullL, tW, tH, tL, barrelR, barrelLen, wheelCount } = HULL_DIMS[ht] ?? HULL_DIMS.vanguard;
 
     const hullMat = new THREE.MeshStandardMaterial({
-      color: c.body,
-      emissive: c.emissive,
-      emissiveIntensity: 0.15,
-      roughness: 0.4,
-      metalness: 0.8,
+      color: c.body, emissive: c.emissive, emissiveIntensity: 0.15, roughness: 0.4, metalness: 0.8,
     });
-    const hullGeo = new THREE.BoxGeometry(1.4, 0.9, 2.0);
+    const hullGeo = new THREE.BoxGeometry(hullW, hullH, hullL);
     const hull = new THREE.Mesh(hullGeo, hullMat);
     hull.castShadow = true;
     this.group.add(hull);
 
-    const edgeMat = new THREE.LineBasicMaterial({
-      color: c.edge,
-      opacity: 0.7,
-      transparent: true,
-    });
-    this.group.add(
-      new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), edgeMat),
-    );
+    const edgeMat = new THREE.LineBasicMaterial({ color: c.edge, opacity: 0.7, transparent: true });
+    this.group.add(new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), edgeMat));
 
-    // Glacis plate — angled front armour
-    const glacis = new THREE.Mesh(
-      new THREE.BoxGeometry(1.35, 0.38, 0.42),
-      hullMat,
-    );
-    glacis.position.set(0, 0.25, 0.9);
+    // ── Road wheels — all hulls ───────────────────────────────────────────────
+    const wGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.10, 7);
+    wGeo.rotateZ(Math.PI / 2);
+    const wMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0.4 });
+    const wXOff = hullW / 2 + 0.06;
+    [-wXOff, wXOff].forEach(xOff => {
+      for (let i = 0; i < wheelCount; i++) {
+        const w = new THREE.Mesh(wGeo, wMat);
+        w.position.set(xOff, -hullH / 2 + 0.12, -hullL / 2 + 0.2 + i * ((hullL - 0.4) / (wheelCount - 1)));
+        this.group.add(w);
+      }
+    });
+
+    // ── Hull-specific decorations ─────────────────────────────────────────────
+    if (ht === 'bastion' || ht === 'ironclad') {
+      // Heavy side skirts
+      [-hullW / 2 - 0.12, hullW / 2 + 0.12].forEach(xOff => {
+        const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.22, hullH * 0.58, hullL + 0.1), hullMat.clone());
+        skirt.position.set(xOff, -hullH * 0.18, 0);
+        this.group.add(skirt);
+      });
+    }
+
+    if (ht === 'blitzer') {
+      // Rear spoiler fins — aerodynamic look
+      [-0.48, 0.48].forEach(xOff => {
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.35, 0.44), hullMat.clone());
+        fin.position.set(xOff, hullH * 0.1, -hullL / 2 + 0.22);
+        fin.rotation.z = xOff > 0 ? 0.2 : -0.2;
+        this.group.add(fin);
+      });
+      // Low wedge front skid plate
+      const skid = new THREE.Mesh(new THREE.BoxGeometry(hullW, 0.18, 0.48), hullMat.clone());
+      skid.position.set(0, -hullH * 0.28, hullL / 2 - 0.24);
+      skid.rotation.x = 0.5;
+      this.group.add(skid);
+    }
+
+    if (ht === 'phantom') {
+      // Swept-back stealth fins — wing-like sponsons
+      [-0.62, 0.62].forEach(xOff => {
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.07, 1.1), hullMat.clone());
+        wing.position.set(xOff, 0, -0.2);
+        wing.rotation.z = xOff > 0 ? 0.08 : -0.08;
+        this.group.add(wing);
+      });
+    }
+
+    if (ht === 'ironclad') {
+      // Rear engine block — heavy and square
+      const eng = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 0.58), hullMat.clone());
+      eng.position.set(0, 0.24, -hullL / 2 + 0.29);
+      this.group.add(eng);
+      // Twin exhaust stacks
+      [-0.38, 0.38].forEach(xOff => {
+        const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.65, 6), hullMat.clone());
+        stack.position.set(xOff, hullH / 2 + 0.33, -hullL / 2 + 0.38);
+        this.group.add(stack);
+      });
+    }
+
+    if (ht === 'reaper') {
+      // Sloped casemate superstructure — tank-destroyer look
+      const casemate = new THREE.Mesh(new THREE.BoxGeometry(hullW - 0.05, 0.3, hullL * 0.55), hullMat.clone());
+      casemate.position.set(0, hullH * 0.5, 0.15);
+      casemate.rotation.x = 0.07;
+      this.group.add(casemate);
+      // Side exhaust vents
+      [-hullW / 2 + 0.05, hullW / 2 - 0.05].forEach(xOff => {
+        const vent = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.52), hullMat.clone());
+        vent.position.set(xOff, hullH * 0.3, -hullL / 2 + 0.38);
+        this.group.add(vent);
+      });
+    }
+
+    if (ht === 'viper') {
+      // Double-layered skirts — aggressive armour plating
+      [-hullW / 2 - 0.10, hullW / 2 + 0.10].forEach(xOff => {
+        const skirt1 = new THREE.Mesh(new THREE.BoxGeometry(0.18, hullH * 0.50, hullL + 0.05), hullMat.clone());
+        skirt1.position.set(xOff, -hullH * 0.22, 0);
+        this.group.add(skirt1);
+        const skirt2 = new THREE.Mesh(new THREE.BoxGeometry(0.10, hullH * 0.30, hullL * 0.70), hullMat.clone());
+        skirt2.position.set(xOff + (xOff > 0 ? 0.14 : -0.14), -hullH * 0.28, 0);
+        this.group.add(skirt2);
+      });
+      // Front chin fangs
+      [-0.42, 0.42].forEach(xOff => {
+        const fang = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.24, 0.32), hullMat.clone());
+        fang.position.set(xOff, -hullH * 0.15, hullL / 2 + 0.05);
+        fang.rotation.x = -0.3;
+        this.group.add(fang);
+      });
+    }
+
+    if (ht === 'specter') {
+      // Angled stealth side panels — like a stealth aircraft's facets
+      [-hullW / 2 - 0.06, hullW / 2 + 0.06].forEach(xOff => {
+        const panel = new THREE.Mesh(new THREE.BoxGeometry(0.14, hullH * 0.60, hullL * 0.72), hullMat.clone());
+        panel.position.set(xOff, 0, 0.1);
+        panel.rotation.z = xOff > 0 ? -0.25 : 0.25;
+        this.group.add(panel);
+      });
+      // Glowing hull strip (emissive accent)
+      const stripMat = new THREE.MeshStandardMaterial({ color: c.emissive, emissive: c.emissive, emissiveIntensity: 0.9, roughness: 0.2 });
+      const strip = new THREE.Mesh(new THREE.BoxGeometry(hullW * 0.85, 0.055, hullL * 0.78), stripMat);
+      strip.position.set(0, hullH / 2 + 0.01, 0.05);
+      this.group.add(strip);
+    }
+
+    if (ht === 'colossus') {
+      // Massive side armour plates
+      [-hullW / 2 - 0.20, hullW / 2 + 0.20].forEach(xOff => {
+        const plate = new THREE.Mesh(new THREE.BoxGeometry(0.32, hullH * 0.80, hullL + 0.15), hullMat.clone());
+        plate.position.set(xOff, -hullH * 0.08, 0);
+        this.group.add(plate);
+      });
+      // Huge rear engine block
+      const eng = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.68, 0.70), hullMat.clone());
+      eng.position.set(0, 0.30, -hullL / 2 + 0.35);
+      this.group.add(eng);
+      // Triple exhaust stacks
+      [-0.55, 0, 0.55].forEach(xOff => {
+        const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.85, 6), hullMat.clone());
+        stack.position.set(xOff, hullH / 2 + 0.46, -hullL / 2 + 0.42);
+        this.group.add(stack);
+      });
+    }
+
+    // Glacis plate — angled front armour (size scaled to hull width)
+    const glacis = new THREE.Mesh(new THREE.BoxGeometry(hullW - 0.06, 0.38, 0.42), hullMat);
+    glacis.position.set(0, hullH * 0.28, hullL / 2 - 0.1);
     glacis.rotation.x = -0.3;
     this.group.add(glacis);
 
-    // Engine hatch — rear indicator
-    const hatchMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: 0x88ffff,
-      emissiveIntensity: 1.0,
-      roughness: 0.2,
-      metalness: 0.5,
-    });
-    const hatch = new THREE.Mesh(
-      new THREE.BoxGeometry(0.8, 0.12, 0.42),
-      hatchMat,
-    );
-    hatch.position.set(0, 0.56, -0.5);
+    // Engine hatch — rear indicator light
+    const hatchMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: c.emissive, emissiveIntensity: 1.0, roughness: 0.2, metalness: 0.5 });
+    const hatch = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.12, 0.38), hatchMat);
+    hatch.position.set(0, hullH / 2 + 0.06, -hullL / 2 + 0.22);
     this.group.add(hatch);
 
+    // ── Turret ────────────────────────────────────────────────────────────────
     this.turret = new THREE.Group();
-    this.turret.position.y = 0.75;
+    this.turret.position.y = hullH / 2 + 0.3;
     this.group.add(this.turret);
 
     const turretMat = new THREE.MeshStandardMaterial({
-      color: c.body2,
-      emissive: c.emissive,
-      emissiveIntensity: 0.2,
-      roughness: 0.3,
-      metalness: 0.9,
+      color: c.body2, emissive: c.emissive, emissiveIntensity: 0.2, roughness: 0.3, metalness: 0.9,
     });
-    this.turret.add(
-      new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.38, 1.05), turretMat),
-    );
 
-    // Mantlet (gun shield on turret front)
-    const mantlet = new THREE.Mesh(
-      new THREE.BoxGeometry(0.5, 0.3, 0.16),
-      turretMat,
-    );
-    mantlet.position.set(0, 0, 0.58);
+    const tGeo = new THREE.BoxGeometry(tW, tH, tL);
+    this.turret.add(new THREE.Mesh(tGeo, turretMat));
+
+    // Mantlet
+    const mantletW = ht === 'colossus' ? 0.85 : ht === 'ironclad' ? 0.65 : 0.5;
+    const mantlet = new THREE.Mesh(new THREE.BoxGeometry(mantletW, tH + 0.08, 0.16), turretMat);
+    mantlet.position.set(0, 0, tL / 2 + 0.04);
     this.turret.add(mantlet);
 
-    // Commander's cupola (small hatch on turret top-left)
-    const cupola = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.17, 0.19, 0.2, 8),
-      turretMat,
-    );
-    cupola.position.set(-0.25, 0.28, -0.12);
-    this.turret.add(cupola);
+    // Commander's cupola — not on stealth/low-profile hulls
+    const noCupola = ht === 'phantom' || ht === 'reaper' || ht === 'specter';
+    if (!noCupola) {
+      const cupola = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.19, 0.2, 8), turretMat);
+      cupola.position.set(-0.25, tH / 2 + 0.1, -0.12);
+      this.turret.add(cupola);
+    }
 
     // Stowage box on turret rear
-    const stowMat = new THREE.MeshStandardMaterial({
-      color: 0x002233,
-      roughness: 0.8,
-      metalness: 0.3,
-    });
-    const stowBox = new THREE.Mesh(
-      new THREE.BoxGeometry(0.65, 0.18, 0.32),
-      stowMat,
-    );
-    stowBox.position.set(0, 0.2, -0.58);
-    this.turret.add(stowBox);
+    const stowMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8, metalness: 0.3 });
+    const noStow = ht === 'phantom' || ht === 'reaper' || ht === 'specter';
+    if (!noStow) {
+      const stowBox = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.18, 0.32), stowMat);
+      stowBox.position.set(0, tH * 0.4, -tL / 2 - 0.16);
+      this.turret.add(stowBox);
+    }
 
-    // Barrel pivot — child of turret, rotates on X for elevation
+    // Reaper: tactical scope on turret left
+    if (ht === 'reaper') {
+      const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.50, 6), turretMat);
+      scope.rotation.z = Math.PI / 2;
+      scope.position.set(-tW / 2 - 0.02, 0.06, tL / 2 - 0.18);
+      this.turret.add(scope);
+    }
+
+    // Bastion: extra armour blocks on turret sides
+    if (ht === 'bastion') {
+      [-tW / 2 - 0.08, tW / 2 + 0.08].forEach(xOff => {
+        const block = new THREE.Mesh(new THREE.BoxGeometry(0.18, tH * 0.75, tL * 0.6), turretMat.clone());
+        block.position.set(xOff, 0, 0);
+        this.turret.add(block);
+      });
+    }
+
+    // ── Barrel pivot ──────────────────────────────────────────────────────────
     this.barrelPivot = new THREE.Group();
     this.turret.add(this.barrelPivot);
 
-    // Cannon barrel — cylinder aligned along Z for recoil animation
-    const cannonGeo = new THREE.CylinderGeometry(0.09, 0.09, 1.1, 8);
-    this.cannonBarrel = new THREE.Mesh(
-      cannonGeo,
-      new THREE.MeshStandardMaterial({
-        color: c.barrel,
-        emissive: c.barrel,
-        emissiveIntensity: 0.5,
-      }),
-    );
-    this.cannonBarrel.rotation.x = Math.PI / 2; // align cylinder along Z axis
-    this.cannonBarrel.position.z = 0.9;
-    this.barrelPivot.add(this.cannonBarrel);
+    const barrelMat = new THREE.MeshStandardMaterial({ color: c.barrel, emissive: c.barrel, emissiveIntensity: 0.5 });
 
-    // Coaxial MG barrel — thin, offset to the right of main barrel
-    const mgBarrel = new THREE.Mesh(
-      new THREE.BoxGeometry(0.07, 0.07, 0.85),
-      new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        emissive: 0xaaffff,
-        emissiveIntensity: 0.4,
-      }),
-    );
-    mgBarrel.position.set(0.22, -0.04, 0.72);
-    this.barrelPivot.add(mgBarrel);
+    this._barrelBaseZ = tL / 2 + barrelLen / 2 - 0.05;
+
+    if (ht === 'ironclad' || ht === 'colossus') {
+      // Twin side-by-side barrels
+      const bThick = ht === 'colossus' ? 0.18 : 0.13;
+      const bOffset = ht === 'colossus' ? 0.30 : 0.22;
+      const bL = new THREE.Mesh(new THREE.BoxGeometry(bThick, bThick, barrelLen), barrelMat.clone());
+      const bR = new THREE.Mesh(new THREE.BoxGeometry(bThick, bThick, barrelLen), barrelMat.clone());
+      bL.position.set(-bOffset, 0, this._barrelBaseZ);
+      bR.position.set( bOffset, 0, this._barrelBaseZ);
+      this.barrelPivot.add(bL, bR);
+      this.cannonBarrel  = bL;
+      this._ironBarRight = bR;
+    } else {
+      const cannonGeo = new THREE.CylinderGeometry(barrelR, barrelR, barrelLen, 8);
+      this.cannonBarrel = new THREE.Mesh(cannonGeo, barrelMat);
+      this.cannonBarrel.rotation.x = Math.PI / 2;
+      this.cannonBarrel.position.z = this._barrelBaseZ;
+      this.barrelPivot.add(this.cannonBarrel);
+    }
+
+    // Coaxial MG — not on twin-barrel hulls
+    if (ht !== 'ironclad' && ht !== 'colossus') {
+      const mgBarrel = new THREE.Mesh(
+        new THREE.BoxGeometry(0.07, 0.07, 0.85),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xaaffff, emissiveIntensity: 0.4 }),
+      );
+      mgBarrel.position.set(0.22, -0.04, tL / 2 + 0.28);
+      this.barrelPivot.add(mgBarrel);
+    }
 
     const glow = new THREE.PointLight(c.glow, 3, 5);
     glow.position.y = -0.5;
@@ -400,7 +521,8 @@ export class Player {
 
     // Barrel recoil decay — only moves cannon barrel, not MG
     this._recoilT = Math.max(0, this._recoilT - delta * 7);
-    this.cannonBarrel.position.z = 0.9 - 0.35 * this._recoilT;
+    this.cannonBarrel.position.z = this._barrelBaseZ - 0.35 * this._recoilT;
+    if (this._ironBarRight) this._ironBarRight.position.z = this.cannonBarrel.position.z;
 
     // R key — manual MG reload
     if (keys["KeyR"] && !this.mgReloading && this.mgAmmo < this.mgMaxAmmo) {

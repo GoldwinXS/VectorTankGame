@@ -971,6 +971,187 @@ button:hover {
 .hull-choice[data-hull="bastion"].selected  { border-color: #ff5500; box-shadow: 0 0 22px rgba(255,85,0,0.3);  background: rgba(30,10,0,0.95); }
 .hull-choice[data-hull="blitzer"]:hover     { border-color: rgba(136,255,0,0.6); background: rgba(5,20,0,0.9); }
 .hull-choice[data-hull="bastion"]:hover     { border-color: rgba(255,85,0,0.6);  background: rgba(20,5,0,0.9); }
+.hull-choice[data-hull="phantom"]  .hull-name { color: #cc44ff; text-shadow: 0 0 10px #cc44ff; }
+.hull-choice[data-hull="ironclad"] .hull-name { color: #ffcc00; text-shadow: 0 0 10px #ffcc00; }
+.hull-choice[data-hull="phantom"]  .hull-role { color: #aa33dd; }
+.hull-choice[data-hull="ironclad"] .hull-role { color: #ddaa00; }
+.hull-choice[data-hull="phantom"].selected  { border-color: #cc44ff; box-shadow: 0 0 22px rgba(204,68,255,0.3);  background: rgba(20,0,30,0.95); }
+.hull-choice[data-hull="ironclad"].selected { border-color: #ffcc00; box-shadow: 0 0 22px rgba(255,204,0,0.3);   background: rgba(30,25,0,0.95); }
+.hull-choice[data-hull="phantom"]:hover     { border-color: rgba(204,68,255,0.6); background: rgba(15,0,25,0.9); }
+.hull-choice[data-hull="ironclad"]:hover    { border-color: rgba(255,204,0,0.6);  background: rgba(25,20,0,0.9); }
+.hull-choice[data-hull="reaper"]   .hull-name { color: #dd0033; text-shadow: 0 0 10px #dd0033; }
+.hull-choice[data-hull="viper"]    .hull-name { color: #00ffaa; text-shadow: 0 0 10px #00ffaa; }
+.hull-choice[data-hull="specter"]  .hull-name { color: #4488ff; text-shadow: 0 0 10px #4488ff; }
+.hull-choice[data-hull="colossus"] .hull-name { color: #ff9900; text-shadow: 0 0 10px #ff9900; }
+.hull-choice[data-hull="reaper"]   .hull-role { color: #aa0022; }
+.hull-choice[data-hull="viper"]    .hull-role { color: #00cc88; }
+.hull-choice[data-hull="specter"]  .hull-role { color: #3366cc; }
+.hull-choice[data-hull="colossus"] .hull-role { color: #cc7700; }
+.hull-choice[data-hull="reaper"].selected   { border-color: #dd0033; box-shadow: 0 0 22px rgba(221,0,51,0.3);   background: rgba(25,0,5,0.95); }
+.hull-choice[data-hull="viper"].selected    { border-color: #00ffaa; box-shadow: 0 0 22px rgba(0,255,170,0.3);  background: rgba(0,25,15,0.95); }
+.hull-choice[data-hull="specter"].selected  { border-color: #4488ff; box-shadow: 0 0 22px rgba(68,136,255,0.3); background: rgba(0,10,30,0.95); }
+.hull-choice[data-hull="colossus"].selected { border-color: #ff9900; box-shadow: 0 0 22px rgba(255,153,0,0.3);  background: rgba(28,18,0,0.95); }
+.hull-choice[data-hull="reaper"]:hover      { border-color: rgba(221,0,51,0.6);   background: rgba(20,0,4,0.9); }
+.hull-choice[data-hull="viper"]:hover       { border-color: rgba(0,255,170,0.6);  background: rgba(0,20,12,0.9); }
+.hull-choice[data-hull="specter"]:hover     { border-color: rgba(68,136,255,0.6); background: rgba(0,8,25,0.9); }
+.hull-choice[data-hull="colossus"]:hover    { border-color: rgba(255,153,0,0.6);  background: rgba(22,14,0,0.9); }
+
+/* ── Classified archives section ── */
+.hull-archives {
+  width: 100%;
+  max-width: 700px;
+  margin: 8px 0 24px;
+}
+.hull-archives-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  border-top: 1px solid rgba(120,50,0,0.35);
+  padding-top: 14px;
+}
+.hull-archives-badge {
+  background: rgba(80,20,0,0.8);
+  border: 1px solid rgba(180,60,0,0.6);
+  color: #cc4400;
+  padding: 3px 10px;
+  font-size: 9px;
+  letter-spacing: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.hull-archives-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #664422;
+}
+.hull-archives-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+/* Compact cards inside archives — show name/role/cost only */
+.hull-archives-grid .hull-choice {
+  min-width: 130px;
+  max-width: 150px;
+  padding: 14px 12px 12px;
+}
+.hull-archives-grid .hull-choice .hull-stats,
+.hull-archives-grid .hull-choice .hull-desc { display: none; }
+.hull-archives-grid .hull-choice .hull-name { font-size: 14px; letter-spacing: 3px; }
+.hull-archives-grid .hull-choice .hull-role { font-size: 9px; letter-spacing: 2px; margin-bottom: 10px; }
+
+/* ── Locked hull cards ── */
+.hull-choice.hull-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.hull-lock-info {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 10px;
+}
+.hull-cp-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #ffaa00;
+  margin-bottom: 6px;
+}
+.hull-cp-bar-track {
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  margin-bottom: 5px;
+}
+.hull-cp-bar-fill {
+  height: 100%;
+  background: #ffaa00;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+.hull-cp-progress {
+  font-size: 10px;
+  color: #777;
+  letter-spacing: 1px;
+}
+
+/* ── CP header on hull select ── */
+.hull-select-cp-row {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #ffaa00;
+  margin-bottom: 6px;
+}
+.hull-select-cp-val {
+  color: #ffdd44;
+  font-size: 15px;
+}
+
+/* ── Game over CP section ── */
+#go-cp-section {
+  margin: 14px 0 6px;
+  padding: 14px 18px;
+  border: 1px solid rgba(255,170,0,0.3);
+  background: rgba(20,14,0,0.7);
+  width: 100%;
+  box-sizing: border-box;
+}
+.go-cp-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #aabbcc;
+  padding: 3px 0;
+}
+.go-cp-val { color: #ffdd44; }
+#go-cp-next { margin-top: 10px; }
+.cp-next-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #ffaa44;
+  margin-bottom: 5px;
+}
+.cp-bar-track {
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  margin-bottom: 4px;
+}
+.cp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff8800, #ffcc00);
+  border-radius: 2px;
+}
+.cp-next-cost {
+  font-size: 10px;
+  color: #777;
+  letter-spacing: 1px;
+  text-align: right;
+}
+.cp-unlock-banner {
+  display: block;
+  font-size: 14px;
+  letter-spacing: 4px;
+  color: #ffdd00;
+  text-shadow: 0 0 20px #ffaa00, 0 0 40px #ff8800;
+  text-align: center;
+  padding: 8px 0;
+  animation: cpUnlockPulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes cpUnlockPulse {
+  from { opacity: 0.75; text-shadow: 0 0 20px #ffaa00; }
+  to   { opacity: 1.0;  text-shadow: 0 0 30px #ffaa00, 0 0 60px #ff8800; }
+}
+.cp-all-done {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #00ffaa;
+  text-align: center;
+  padding: 6px 0;
+}
 
 /* ── Wave standby indicator ── */
 #wave-standby {

@@ -47,6 +47,66 @@ function safeExitPointerLock() {
   } catch (_) {}
 }
 
+// ── Command Points — cross-run meta progression ────────────────────────────────
+const CP_KEY      = "vec_cp_v1";
+const UNLOCKS_KEY = "vec_unlocks_v1";
+const HULL_CP_COSTS = { phantom: 500, ironclad: 1500, reaper: 2500, viper: 3500, specter: 5000, colossus: 8000 };
+
+function loadCP()      { return parseInt(localStorage.getItem(CP_KEY) ?? "0", 10); }
+function saveCP(n)     { localStorage.setItem(CP_KEY, String(n)); }
+function loadUnlocks() {
+  try { return JSON.parse(localStorage.getItem(UNLOCKS_KEY)) ?? []; } catch { return []; }
+}
+function saveUnlocks(u) { localStorage.setItem(UNLOCKS_KEY, JSON.stringify(u)); }
+
+function _getNextUnlock(total, unlocks) {
+  for (const [hull, cost] of Object.entries(HULL_CP_COSTS)) {
+    if (!unlocks.includes(hull)) return { hull: hull.toUpperCase(), cost, progress: Math.min(total, cost) };
+  }
+  return null;
+}
+
+function _refreshHullSelect() {
+  const total      = loadCP();
+  const unlocks    = loadUnlocks();
+  const cpEl       = document.getElementById("hull-select-cp");
+  const mainGrid   = document.getElementById("hull-grid");
+  const archivesEl = document.getElementById("hull-archives");
+  const archivesGrid = document.getElementById("hull-archives-grid");
+  if (cpEl) cpEl.textContent = total.toLocaleString();
+
+  document.querySelectorAll(".hull-choice").forEach(card => {
+    const hull = card.dataset.hull;
+    const cost = HULL_CP_COSTS[hull];
+    if (!cost) return; // base hulls always available
+    const unlocked = unlocks.includes(hull);
+    card.classList.toggle("hull-locked", !unlocked);
+
+    // Graduate unlocked hulls into the main selectable grid
+    if (unlocked && mainGrid && archivesGrid && card.closest("#hull-archives-grid")) {
+      mainGrid.appendChild(card);
+    }
+
+    const bar      = card.querySelector(".hull-cp-bar-fill");
+    const progress = card.querySelector(".hull-cp-progress");
+    if (bar)      bar.style.width = (Math.min(total, cost) / cost * 100).toFixed(1) + "%";
+    if (progress) progress.textContent = unlocked ? "UNLOCKED" : `${Math.min(total, cost).toLocaleString()} / ${cost.toLocaleString()} CP`;
+  });
+
+  // Hide archives section entirely once all hulls are unlocked
+  if (archivesEl && archivesGrid) {
+    archivesEl.style.display = archivesGrid.children.length > 0 ? "" : "none";
+  }
+
+  // Ensure selected hull is actually available
+  const sel = document.querySelector(".hull-choice.selected");
+  if (!sel || sel.classList.contains("hull-locked")) {
+    document.querySelectorAll(".hull-choice").forEach(b => b.classList.remove("selected"));
+    const first = document.querySelector(".hull-choice:not(.hull-locked)");
+    if (first) { first.classList.add("selected"); chosenHull = first.dataset.hull; }
+  }
+}
+
 // ── Leaderboard (localStorage) ────────────────────────────────────────────────
 const LS_KEY = "vector_highscores_v1";
 
@@ -286,9 +346,61 @@ function _applyHullChoice(p) {
     p.damageMult = 1.3;
     p.reloadMult = 1.25;
     p.armorMult = 0.85;
-    p.traverseMult = 0.65; // heavy slow turret
-    p.movementSpreadMult = 0.65; // heavier chassis = better stabilizer
-    p.aimChargeMult = 0.75; // but sluggish mechanisms mean slower aim charge
+    p.traverseMult = 0.65;
+    p.movementSpreadMult = 0.65;
+    p.aimChargeMult = 0.75;
+  } else if (chosenHull === "phantom") {
+    p.maxHp = 70; p.hp = 70;
+    p.speedMult = 1.55;
+    p.damageMult = 0.82;
+    p.reloadMult = 0.68;
+    p.traverseMult = 1.9;
+    p.movementSpreadMult = 1.5;  // moving hurts accuracy a lot
+    p.aimChargeMult = 2.2;       // but charges aim very fast when still
+  } else if (chosenHull === "ironclad") {
+    p.maxHp = 200; p.hp = 200;
+    p.speedMult = 0.55;
+    p.damageMult = 1.45;
+    p.reloadMult = 1.3;
+    p.traverseMult = 0.58;
+    p.armorMult = 0.72;
+    p.movementSpreadMult = 0.45;
+    p.aimChargeMult = 0.6;
+    p.cannonSplash = 3.5;        // splash radius on cannon hits
+  } else if (chosenHull === "reaper") {
+    p.maxHp = 80;  p.hp = 80;
+    p.speedMult = 0.90;
+    p.damageMult = 1.65;
+    p.reloadMult = 0.55;         // very fast reload
+    p.traverseMult = 0.45;       // slow, heavy turret
+    p.movementSpreadMult = 2.2;  // terrible accuracy on the move — must stop
+    p.aimChargeMult = 3.0;       // but charges aim instantly when still
+  } else if (chosenHull === "viper") {
+    p.maxHp = 110; p.hp = 110;
+    p.speedMult = 1.15;
+    p.damageMult = 1.18;
+    p.reloadMult = 0.85;
+    p.traverseMult = 1.25;
+    p.movementSpreadMult = 0.85;
+    p.aimChargeMult = 1.2;
+  } else if (chosenHull === "specter") {
+    p.maxHp = 65;  p.hp = 65;
+    p.speedMult = 1.45;
+    p.damageMult = 0.95;
+    p.reloadMult = 0.62;
+    p.traverseMult = 2.2;        // fastest traverse in the game
+    p.movementSpreadMult = 1.3;
+    p.aimChargeMult = 2.5;
+  } else if (chosenHull === "colossus") {
+    p.maxHp = 280; p.hp = 280;
+    p.speedMult = 0.40;
+    p.damageMult = 1.85;
+    p.reloadMult = 1.45;
+    p.traverseMult = 0.40;
+    p.armorMult = 0.55;
+    p.movementSpreadMult = 0.20;
+    p.aimChargeMult = 0.45;
+    p.cannonSplash = 5.0;        // massive splash — bigger than ironclad
   }
   // vanguard = defaults (movementSpreadMult 1.0, aimChargeMult 1.0)
 }
@@ -965,6 +1077,16 @@ function checkCollisions() {
           const dot = projDir.dot(eFwd);
           const dirMult = dot > 0.5 ? 1.5 : dot < -0.5 ? 0.65 : 1.2;
           e.takeDamage(Math.round(proj.damage * dirMult));
+          // Ironclad: cannon splash damages nearby enemies
+          if (!proj.isMG && player.cannonSplash) {
+            const sr = player.cannonSplash;
+            for (const other of waveManager.enemies) {
+              if (!other.alive || other === e) continue;
+              const dx = other.group.position.x - e.group.position.x;
+              const dz = other.group.position.z - e.group.position.z;
+              if (dx * dx + dz * dz < sr * sr) other.takeDamage(Math.round(proj.damage * 0.35));
+            }
+          }
           if (dot > 0.5) ui.showHitFeedback("REAR HIT  ×1.5", "#ff8800");
           else if (dot < -0.5)
             ui.showHitFeedback("FRONT ARMOR  ×0.65", "#44aaff");
@@ -1472,12 +1594,32 @@ function loop(ts) {
         saveScore(score, waveNum - 1, chosenHull);
         document.getElementById("controls-hint")?.classList.add("hidden");
         _startGameOverCinematic(player.position.clone());
+
+        // CP meta-progression
+        const _cpEarned    = Math.floor(score / 8) + (waveNum - 1) * 20;
+        const _cpPrev      = loadCP();
+        const _cpNew       = _cpPrev + _cpEarned;
+        saveCP(_cpNew);
+        const _prevUnlocks = loadUnlocks();
+        const _newUnlocks  = [..._prevUnlocks];
+        let   _newlyUnlocked = null;
+        for (const [hull, cost] of Object.entries(HULL_CP_COSTS)) {
+          if (!_prevUnlocks.includes(hull) && _cpNew >= cost) {
+            _newUnlocks.push(hull);
+            if (!_newlyUnlocked) _newlyUnlocked = hull.toUpperCase();
+          }
+        }
+        saveUnlocks(_newUnlocks);
+
         setTimeout(() => {
           ui.showGameOver(
             score,
             waveNum - 1,
             nn.summary(waveNum - 1),
             showMainMenu,
+            { cpEarned: _cpEarned, newTotal: _cpNew,
+              newlyUnlocked: _newlyUnlocked,
+              nextUnlock: _getNextUnlock(_cpNew, _newUnlocks) },
           );
         }, 1400);
       }
@@ -1810,9 +1952,8 @@ _wireAudio("pause-btn-mute", "pause-vol-master");
 // ── Hull selection ────────────────────────────────────────────────────────────
 document.querySelectorAll(".hull-choice").forEach((btn) => {
   btn.addEventListener("click", () => {
-    document
-      .querySelectorAll(".hull-choice")
-      .forEach((b) => b.classList.remove("selected"));
+    if (btn.classList.contains("hull-locked")) return;
+    document.querySelectorAll(".hull-choice").forEach((b) => b.classList.remove("selected"));
     btn.classList.add("selected");
     chosenHull = btn.dataset.hull;
   });
@@ -1826,6 +1967,7 @@ document.getElementById("btn-hull-confirm")?.addEventListener("click", () => {
 // ── Main menu button wiring ───────────────────────────────────────────────────
 document.getElementById("btn-menu-engage")?.addEventListener("click", () => {
   document.getElementById("main-menu-screen").classList.add("hidden");
+  _refreshHullSelect();
   document.getElementById("hull-select-screen").classList.remove("hidden");
 });
 
